@@ -233,9 +233,6 @@ dotnet test
 
 # Package for distribution
 dotnet pack src/AgentLauncher --output dist/
-
-# Validate CI/CD setup locally
-./scripts/validate-cicd.sh
 ```
 
 ### Updating the Tool
