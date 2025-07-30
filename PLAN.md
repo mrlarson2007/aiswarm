@@ -46,7 +46,8 @@ The `aiswarm` tool will be developed as a proper Python package and installed vi
 
 ### Phase 3: Review & Integration
 
-1.  The `aiswarm review` and `aiswarm complete` commands manage the Pull Request and cleanup workflow as planned.
+1.  **Local Review:** The user performs a local review of the changes within the worktree.
+2.  The `aiswarm complete` command is used to merge the changes and clean up the worktree.
 
 ---
 
