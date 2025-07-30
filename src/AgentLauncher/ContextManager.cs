@@ -77,20 +77,4 @@ public static class ContextManager
     {
         return AgentResources.ContainsKey(agentType.ToLowerInvariant());
     }
-
-    /// <summary>
-    /// Check if an agent type needs its own worktree
-    /// </summary>
-    /// <param name="agentType">The agent type to check</param>
-    /// <returns>True if the agent needs a worktree, false otherwise</returns>
-    public static bool NeedsWorktree(string agentType)
-    {
-        return agentType.ToLowerInvariant() switch
-        {
-            "planner" => false,  // Planner stays on main/master
-            "reviewer" => false, // Reviewer works in existing workspace
-            "implementer" => true, // Implementer gets own worktree
-            _ => true // Default to true for custom agent types
-        };
-    }
 }
