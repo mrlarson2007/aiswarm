@@ -25,7 +25,6 @@ public class Program
             IsRequired = false
         };
         modelOption.AddAlias("-m");
-        modelOption.FromAmong("gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp");
 
         // Define the worktree option
         var worktreeOption = new Option<string?>(
@@ -92,10 +91,10 @@ public class Program
         Console.WriteLine("  implementer - Implements code and features (creates worktree)");
         Console.WriteLine("  reviewer    - Reviews and tests code (creates worktree)");
         Console.WriteLine();
-        Console.WriteLine("Available models:");
-        Console.WriteLine("  gemini-1.5-flash    - Fast model (default)");
-        Console.WriteLine("  gemini-1.5-pro      - More capable model");
-        Console.WriteLine("  gemini-2.0-flash-exp - Experimental flash model");
+        Console.WriteLine("Models:");
+        Console.WriteLine("  Any Gemini model name can be used (e.g., gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash-exp)");
+        Console.WriteLine("  Default: gemini-1.5-flash");
+        Console.WriteLine("  Future: Dynamic model discovery from Gemini CLI");
     }
 
     private static async Task LaunchAgent(string agentType, string model, string? worktree, string? directory)
