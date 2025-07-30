@@ -20,10 +20,9 @@ public class Program
         agentOption.FromAmong(availableAgents);
 
         // Define the model option
-        var modelOption = new Option<string>(
+        var modelOption = new Option<string?>(
             name: "--model",
-            description: "The Gemini model to use",
-            getDefaultValue: () => "gemini-1.5-flash")
+            description: "The Gemini model to use (uses Gemini CLI default if not specified)")
         {
             IsRequired = false
         };
@@ -110,14 +109,14 @@ public class Program
         Console.WriteLine();
         Console.WriteLine("Models:");
         Console.WriteLine("  Any Gemini model name can be used (e.g., gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash-exp)");
-        Console.WriteLine("  Default: gemini-1.5-flash");
+        Console.WriteLine("  Default: Uses Gemini CLI default if --model not specified");
         Console.WriteLine("  Future: Dynamic model discovery from Gemini CLI");
     }
 
-    private static async Task LaunchAgent(string agentType, string model, string? worktree, string? directory)
+    private static async Task LaunchAgent(string agentType, string? model, string? worktree, string? directory)
     {
         Console.WriteLine($"Launching {agentType} agent...");
-        Console.WriteLine($"Model: {model}");
+        Console.WriteLine($"Model: {model ?? "Gemini CLI default"}");
         
         // Determine worktree behavior
         if (!string.IsNullOrEmpty(worktree))
