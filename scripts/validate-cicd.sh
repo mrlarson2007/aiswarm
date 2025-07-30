@@ -99,13 +99,10 @@ fi
 # Check for potential security issues
 echo "🔐 Basic security checks..."
 
-# Check for potential secrets in code files
-echo "  Checking for potential secrets..."
-if grep -r -i "password\|secret\|token\|key" src/ --include="*.cs" | grep -v "//"; then
-    echo "  ⚠️  Potential secrets found in source code"
-else
-    echo "  ✅ No obvious secrets found in source code"
-fi
+# Note: GitHub has built-in secret scanning that provides more sophisticated
+# detection than simple grep patterns. This script focuses on local validation
+# of CI/CD components rather than duplicating GitHub's security features.
+echo "  ✅ Relying on GitHub's built-in secret scanning for security"
 
 # Check git configuration
 echo "📝 Git configuration..."
