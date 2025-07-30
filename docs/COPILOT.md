@@ -19,9 +19,8 @@ Our development process is a partnership between a human manager (you) and a swa
     -   `aiswarm task "Add assertion for password strength." --test-file "tests/test_user.py" --test-action modify`
 3.  **Task (Code):** Implement the code to make the test pass.
     -   `aiswarm task "Implement the code for the login button to pass the test."`
-4.  **Review:** When the feature is complete, create a Pull Request.
-    -   `aiswarm review login-feature`
-5.  **Complete:** After the PR is merged, clean up the local environment.
+4.  **Review:** When the feature is complete, perform a local review of the changes within the worktree.
+5.  **Complete:** After the local review, merge the changes and clean up the local environment.
     -   `aiswarm complete login-feature`
 
 ## `aiswarm` CLI Command Cheat Sheet
@@ -39,9 +38,7 @@ Our development process is a partnership between a human manager (you) and a swa
         -   `aiswarm task "Add assertion for password strength." --test-file "tests/test_user.py" --test-action modify`
         -   `aiswarm task "Implement the user registration feature."`
 
--   `aiswarm review <task_name>`
-    -   **Purpose:** Creates a GitHub Pull Request for the specified task.
-    -   **When to use:** When a feature is complete and ready for team review.
+
 
 -   `aiswarm complete <task_name>`
     -   **Purpose:** Merges the completed task and cleans up the worktree.
