@@ -3,7 +3,7 @@ import os
 import json
 import re
 import subprocess
-
+import requests
 
 @click.group()
 def cli():
@@ -51,68 +51,16 @@ def init(test_command, port, default_branch):
             json.dump(config_data, f, indent=4)
         click.echo("Created configuration file: {}".format(config_file))
 
-        # Create/update Gemini's settings.json
-        gemini_config_dir = ".gemini"
-        if not os.path.exists(gemini_config_dir):
-            os.makedirs(gemini_config_dir)
-            click.echo("Created Gemini configuration directory: {}".format(gemini_config_dir))
-
-        settings_data = {
-            "mcp": {
-                "servers": {
-                    "jetbrains": {
-                        "command": "npx",
-                        "args": ["-y", "@jetbrains/mcp-proxy"],
-                        "env": {
-                            "IDE_PORT": str(port),
-                            "HOST": "localhost"
-                        }
-                    }
-                }
-            }
-        }
-        settings_file = os.path.join(gemini_config_dir, "settings.json")
-        with open(settings_file, 'w') as f:
-            json.dump(settings_data, f, indent=4)
-        click.echo("Created Gemini's settings file: {}".format(settings_file))
-
     else:
         click.echo("Configuration file already exists.")
-        # If config.json exists, check for settings.json and create if missing
-        gemini_config_dir = ".gemini"
-        settings_file = os.path.join(gemini_config_dir, "settings.json")
-        if not os.path.exists(settings_file):
-            click.echo("Gemini's settings.json not found. Creating it now...")
-            # Read existing config.json to get port
-            try:
-                with open(config_file, 'r') as f:
-                    config = json.load(f)
-                existing_port = config.get("mcp_jetbrains_server", "http://localhost:63342").split(":")[-1]
-                if existing_port.isdigit():
-                    existing_port = int(existing_port)
-                else:
-                    existing_port = 63342 # Default if parsing fails
-            except Exception:
-                existing_port = 63342 # Default if config.json is missing or invalid
-
-            if not os.path.exists(gemini_config_dir):
-                os.makedirs(gemini_config_dir)
-                click.echo("Created Gemini configuration directory: {}".format(gemini_config_dir))
-
-            settings_data = {
-                "mcpserver": {
-                    "host": "localhost",
-                    "port": existing_port
-                }
-            }
-            with open(settings_file, 'w') as f:
-                json.dump(settings_data, f, indent=4)
-            click.echo("Created Gemini's settings file: {}".format(settings_file))
-        else:
-            click.echo("Gemini's settings.json already exists.")
         
     click.echo("Project initialized.")
 
+def get_sanitized_branch_name(prompt):
+    """Creates a sanitized branch name from the task prompt."""
+    sanitized = re.sub(r'[^a-zA-Z0-9 ]', '', prompt).lower()
+    sanitized = re.sub(r'\s+', '-', sanitized)
+    return sanitized[:50]
 
 @cli.command()
 @click.argument('prompt', nargs=-1)
@@ -126,11 +74,11 @@ def task(prompt, from_branch, test_file, test_action):
     if os.path.isfile(prompt_or_path):
         with open(prompt_or_path, 'r', encoding='utf-8') as f:
             prompt_text = f.read()
-        branch_name = os.path.basename(prompt_or_path)
+        branch_name = get_sanitized_branch_name(os.path.basename(prompt_or_path))
         click.echo(f"Received new task from file: {prompt_or_path}")
     else:
         prompt_text = prompt_or_path
-        branch_name = prompt_text
+        branch_name = get_sanitized_branch_name(prompt_text)
         click.echo(f"Received new task: {prompt_text}")
 
     # Determine the source branch
@@ -245,7 +193,54 @@ def complete(task_name):
 def refactor(file_path, action):
     """Triggers a refactoring action on a file using the JetBrains MCP server."""
     click.echo(f"Refactoring {file_path} with action '{action}'...")
-    click.echo("This command is intended to trigger Gemini's internal refactoring capabilities, configured via its settings.json.")
+
+    config_file = os.path.join(".aiswarm", "config.json")
+    if not os.path.exists(config_file):
+        click.echo("Error: config.json not found. Please run 'aiswarm init' first.", err=True)
+        return
+
+    try:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        click.echo("Error: config.json not found. Please run 'aiswarm init' first.", err=True)
+        return
+    except json.JSONDecodeError:
+        click.echo("Error: Invalid JSON in config.json.", err=True)
+        return
+    except Exception as e:
+        click.echo(f"An unexpected error occurred while reading config.json: {e}", err=True)
+        return
+
+    mcp_server_url = config.get("mcp_jetbrains_server")
+    if not mcp_server_url:
+        click.echo("Error: 'mcp_jetbrains_server' not found in config.json. Please run 'aiswarm init' again.", err=True)
+        return
+
+        try:
+            # Construct the full URL for the refactoring action
+            refactor_url = f"{mcp_server_url}/refactor"
+            
+            # Prepare the payload
+            payload = {
+                "filePath": os.path.abspath(file_path),
+                "action": action
+            }
+
+            click.echo(f"Sending request to {refactor_url} with payload: {payload}")
+            response = requests.post(refactor_url, json=payload)
+            response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
+
+            click.echo("Refactoring request sent successfully.")
+            click.echo(f"Server response: {response.json()}")
+
+        except requests.exceptions.ConnectionError:
+            click.echo(f"Error: Could not connect to JetBrains MCP server at {mcp_server_url}. Is the server running?", err=True)
+        except requests.exceptions.HTTPError as e:
+            click.echo(f"Error during refactoring request: {e}", err=True)
+            click.echo(f"Server response: {e.response.text}", err=True)
+        except Exception as e:
+            click.echo(f"An unexpected error occurred: {e}", err=True)
 
 
 @cli.command()
