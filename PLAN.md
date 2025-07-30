@@ -1,65 +1,123 @@
-# AI Swarm Development Plan: Gemini + JetBrains
 
-This document outlines the plan for creating a "swarm" development model where a managing agent (GitHub Copilot + User) directs tasks to worker agents (Gemini) that operate in isolated environments, with a JetBrains IDE acting as a dedicated refactoring and code analysis server.
+# C# CLI Agent Launcher Plan
 
-## Core Concepts
+## Purpose
+- Launch Gemini CLI agents with a context file containing detailed instructions (persona).
+- All instruction/context files are built-in resources (embedded in the executable).
+- The CLI is self-contained for easy installation and deployment.
 
-1.  **Manager/Orchestrator:** The user, assisted by GitHub Copilot, acts as the high-level manager.
-2.  **Worker Agents (Gemini):** Gemini instances execute discrete tasks.
-3.  **Isolated Environments (`git worktrees`):** Each task is performed in a separate `git worktree`.
-4.  **Guideline Enforcement (`gemini.md`):** A `gemini.md` file provides instructions for Gemini agents.
-5.  **BDD & TDD:** The workflow combines Behavior-Driven and Test-Driven Development.
-6.  **Automated Refactoring Server (JetBrains + `mcp-jetbrains`):** A JetBrains IDE performs programmatic refactoring.
-7.  **Formal Documentation:** The process includes System Design docs, Feature Files, and ADRs.
-8.  **State Management:** A central log tracks the status of all tasks.
-9.  **Context Reinforcement:** A multi-layered strategy ensures GitHub Copilot remains aware of the workflow and current task state.
+## Features (Initial Version)
+- **Agent Launching:**
+  - Launch Gemini CLI in a new console window for each agent.
+  - Pass a context file (persona/instructions) to Gemini using the correct flag.
+  - Allow selection of Gemini model (e.g., default, pro) per agent launch; default is configurable, can override per launch.
+  - Use Gemini CLI flags: `-m <model>` for model selection, `-i <prompt>` for interactive session with initial prompt.
+- **Context File Management:**
+  - Provide built-in context/instruction files for planner, implementer, reviewer, etc.
+  - Option to select which agent persona to launch.
+- **Worktree Management:**
+  - Optionally create a git worktree for each agent (except planner, which stays on main/master).
+  - Automatically switch to the correct branch/worktree for each agent.
+- **Simple CLI Interface:**
+  - List available agent types/personas.
+  - Launch agent with selected persona and context.
+  - Optionally specify worktree/branch for agent.
 
----
+## Future Features
+- Add/modify context files (personas) via CLI.
+- Support for custom agent types.
+- Integration with other LLMs or tools.
+- Automated merging of agent worktrees.
+- More advanced agent communication.
 
-## Packaging & Distribution
-
-The `aiswarm` tool will be developed as a proper Python package and installed via `pip`. This allows for easy installation, dependency management, and makes the `aiswarm` command globally available in the user's environment.
-
--   **Setup:** A `setup.py` file will define the package metadata, dependencies (e.g., `click`), and the console script entry point.
--   **Installation:** The tool will be installed in editable mode (`pip install -e .`) during development.
-
----
-
-## The End-to-End Workflow
-
-### Phase 1: Project Setup
-
-1.  In a new project, the user runs `aiswarm init`.
-2.  The command creates a `.aiswarm/config.json` file in that project's directory, prompting the user for the project-specific test command and JetBrains server port.
-
-### Phase 2: Task Execution (TDD Cycle)
-
-1.  **Task Definition (User):** The user defines a clear, small task.
-2.  **Task Initiation (CLI):**
-    ```bash
-    aiswarm task "Create a failing test for the login button."
-    ```
-3.  **Worktree & Context Setup (CLI):**
-    *   The script creates a `git worktree` and a dynamic `.aiswarm/context.md` file.
-    *   It prepends `gemini.md` guidelines to the prompt for the Gemini agent.
-4.  **Code Generation & Verification:** The cycle of code generation, test verification, and automated refactoring proceeds as planned.
-
-### Phase 3: Review & Integration
-
-1.  **Local Review:** The user performs a local review of the changes within the worktree.
-2.  The `aiswarm complete` command is used to merge the changes and clean up the worktree.
+## Flow
+1. User runs CLI tool.
+2. User selects agent type/persona.
+3. User selects Gemini model (default or override).
+4. Tool creates worktree (if needed) and context file from built-in resources.
+5. Tool launches Gemini CLI in a new console window, passing the context file and model flag using `-m <model> -i <prompt>`.
+6. Planner agent stays on main/master; other agents get their own worktree/branch.
 
 ---
 
-## GitHub Copilot Integration
+## Updated Design Decisions & Clarifications
 
-The multi-layered context strategy (Master Guide, Dynamic Context File, State-Aware CLI, IDE Snippets) remains a core part of the plan.
+### Persona/Context Files
+- Use Markdown for default personas and instructions (human-friendly, easy to edit).
+- Default templates are embedded resources; users can add more in a well-known directory (per OS).
+- CLI will support loading additional templates from this directory in future versions.
 
-## Next Steps
+### Worktree Management
+- CLI will create git worktrees for agents (except planner, which stays on main/master).
+- Automated merging/cleanup will be added after basic worktree creation is working.
+- User confirmation for destructive actions (e.g., cleanup) can be added as needed.
 
-1.  **Restructure Project:** Convert the existing code into a proper Python package structure.
-    *   Create a `setup.py` file.
-    *   Rename `aiswarm-cli` to `aiswarm_cli`.
-    *   Move the script logic into `aiswarm_cli/main.py`.
-2.  **Implement `init` Command:** Finalize the `init` command logic within the new package structure.
-3.  **Implement `task` Command:** Begin implementation of the `task` command, focusing on the `git worktree` creation logic.
+### Gemini CLI Integration
+- Assume Gemini CLI is available in PATH.
+- Use PowerShell on Windows, bash/shell on Mac/Linux for launching agents.
+- Design is flexible to support other LLM agent tools in the future.
+
+### Agent Communication
+- Agents communicate with the user or a planning agent via markdown files in their workspace.
+- No direct agent-to-agent communication for now; keep it simple.
+
+### Logging & Activity
+- Logging is optional and can be added for debugging or development.
+
+### Cross-Platform Support
+- Focus on Windows for first pass, but avoid hard-coding Windows-only logic.
+- Keep code open for future Mac/Linux support.
+
+### Deployment
+- Prefer .NET tool install (`dotnet tool install -g ...`) for easy installation, updates, and cross-platform support.
+
+### Security & Permissions
+- No restrictions for now; can be added later if needed.
+
+---
+
+
+---
+
+## Implementation Roadmap (Phased)
+
+### Phase 1: Scaffold CLI Tool
+- Create a new dotnet CLI tool using the built-in template (`dotnet new tool`).
+- Set up basic project structure and ensure it builds and runs.
+
+### Phase 2: Command Line Arguments
+- Add support for command line arguments:
+  - Agent type/persona selection
+  - Gemini model selection (with default and override)
+  - Worktree/branch specification
+- Validate argument parsing and help output.
+
+### Phase 3: Context File Management
+- Embed default markdown persona/instruction files as resources.
+- Add logic to copy or generate context files in agent workspace.
+- Support loading additional templates from a well-known directory (future).
+
+### Phase 4: Worktree Creation
+- Implement git worktree creation for agents (except planner).
+- Switch to correct branch/worktree for each agent.
+- Add user confirmation for destructive actions (cleanup, delete).
+
+### Phase 5: Gemini CLI Launch
+- Launch Gemini CLI in a new console window for each agent.
+- Pass context file and model flag using `-m <model> -i <prompt>`.
+- Use PowerShell on Windows, bash/shell on Mac/Linux.
+
+### Phase 6: Review & Polish
+- Test all features end-to-end.
+- Add optional logging for debugging/development.
+- Refine CLI help, error handling, and user experience.
+
+### Phase 7: Future Enhancements
+- Add/modify context files via CLI.
+- Support custom agent types and other LLMs.
+- Implement automated merging/cleanup of worktrees.
+- Add advanced agent communication and central state tracking.
+
+---
+
+Work through each phase sequentially, ensuring each piece is working before moving to the next. Adjust priorities and add features as needed based on feedback and usage.

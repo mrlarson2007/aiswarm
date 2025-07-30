@@ -1,6 +1,0 @@
-Metadata-Version: 2.4
-Name: aiswarm
-Version: 0.1.0
-Requires-Dist: click
-Requires-Dist: requests
-Dynamic: requires-dist
