@@ -14,7 +14,10 @@ public class Program
             IsRequired = false
         };
         agentOption.AddAlias("-a");
-        agentOption.FromAmong("planner", "implementer", "reviewer");
+        
+        // Get available agent types dynamically from ContextManager
+        var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
+        agentOption.FromAmong(availableAgents);
 
         // Define the model option
         var modelOption = new Option<string>(
@@ -87,9 +90,19 @@ public class Program
     private static void ListAgentTypes()
     {
         Console.WriteLine("Available agent types:");
-        Console.WriteLine("  planner     - Plans and breaks down tasks (stays on main/master branch)");
-        Console.WriteLine("  implementer - Implements code and features (creates worktree)");
-        Console.WriteLine("  reviewer    - Reviews and tests code (creates worktree)");
+        
+        foreach (var agentType in ContextManager.GetAvailableAgentTypes())
+        {
+            var description = agentType switch
+            {
+                "planner" => "Plans and breaks down tasks (stays on main/master branch)",
+                "implementer" => "Implements code and features (creates worktree)",
+                "reviewer" => "Reviews and tests code (creates worktree)",
+                _ => "Custom agent type"
+            };
+            Console.WriteLine($"  {agentType,-12} - {description}");
+        }
+        
         Console.WriteLine();
         Console.WriteLine("Models:");
         Console.WriteLine("  Any Gemini model name can be used (e.g., gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash-exp)");
@@ -102,13 +115,27 @@ public class Program
         Console.WriteLine($"Launching {agentType} agent...");
         Console.WriteLine($"Model: {model}");
         Console.WriteLine($"Worktree: {worktree ?? "auto-generated"}");
-        Console.WriteLine($"Directory: {directory ?? Environment.CurrentDirectory}");
         
-        // TODO: Phase 3 - Implement context file management
-        // TODO: Phase 4 - Implement worktree creation
-        // TODO: Phase 5 - Implement Gemini CLI integration
+        // Determine working directory
+        var workingDirectory = directory ?? Environment.CurrentDirectory;
+        Console.WriteLine($"Directory: {workingDirectory}");
         
-        Console.WriteLine("Implementation coming in next phases...");
+        try
+        {
+            // Create context file
+            Console.WriteLine("Creating context file...");
+            var contextFilePath = await ContextManager.CreateContextFile(agentType, workingDirectory);
+            Console.WriteLine($"Context file created: {contextFilePath}");
+            
+            // TODO: Phase 4 - Implement worktree creation
+            // TODO: Phase 5 - Implement Gemini CLI integration
+            
+            Console.WriteLine("Implementation coming in next phases...");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
         
         await Task.CompletedTask;
     }
