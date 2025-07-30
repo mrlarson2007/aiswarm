@@ -14,8 +14,9 @@ Our development process is a partnership between a human manager (you) and a swa
 ## The Workflow: A Step-by-Step Guide
 
 1.  **Plan:** Define a new feature by creating a System Design doc and a `.feature` file.
-2.  **Task (Test):** Start the work by creating a failing test.
-    -   `aiswarm task "Create a failing test for the login button."`
+2.  **Task (Test):** Start the work by creating a failing test or adding a new assertion to an existing test.
+    -   `aiswarm task "Create a failing test for the login button." --test-file "tests/test_auth.py" --test-action create`
+    -   `aiswarm task "Add assertion for password strength." --test-file "tests/test_user.py" --test-action modify`
 3.  **Task (Code):** Implement the code to make the test pass.
     -   `aiswarm task "Implement the code for the login button to pass the test."`
 4.  **Review:** When the feature is complete, create a Pull Request.
@@ -29,9 +30,14 @@ Our development process is a partnership between a human manager (you) and a swa
     -   **Purpose:** Sets up the project for the first time.
     -   **When to use:** Run this once when you clone the repository.
 
--   `aiswarm task "<prompt>"`
+-   `aiswarm task "<prompt>" [--test-file <path>] [--test-action <create|modify>]`
     -   **Purpose:** The primary command to get work done. It starts a new task or continues an existing one in a dedicated worktree.
-    -   **Example:** `aiswarm task "Refactor the user model to include a profile picture URL."`
+    -   `--test-file`: Specifies a test file to create or modify.
+    -   `--test-action`: Defines whether to `create` a new failing test or `modify` an existing test with a new assertion (defaults to `create`).
+    -   **Examples:**
+        -   `aiswarm task "Create a failing test for the login button." --test-file "tests/test_auth.py" --test-action create`
+        -   `aiswarm task "Add assertion for password strength." --test-file "tests/test_user.py" --test-action modify`
+        -   `aiswarm task "Implement the user registration feature."`
 
 -   `aiswarm review <task_name>`
     -   **Purpose:** Creates a GitHub Pull Request for the specified task.
