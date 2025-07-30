@@ -131,6 +131,8 @@ jobs:
         VERSION="${{ steps.version.outputs.version }}"
         VERSION_NUMBER="${VERSION#v}"
         sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AgentLauncher/AgentLauncher.csproj
+        rm src/AgentLauncher/AgentLauncher.csproj.bak
+      shell: bash
       
     - name: Restore dependencies
       run: dotnet restore
