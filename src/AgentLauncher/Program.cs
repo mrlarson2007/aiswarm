@@ -89,20 +89,44 @@ public class Program
     private static void ListAgentTypes()
     {
         Console.WriteLine("Available agent types:");
-        
-        foreach (var agentType in ContextManager.GetAvailableAgentTypes())
+        Console.WriteLine();
+
+        var sources = ContextManager.GetAgentTypeSources();
+        foreach (var kvp in sources.OrderBy(x => x.Key))
         {
-            var description = agentType switch
+            var description = kvp.Key switch
             {
                 "planner" => "Plans and breaks down tasks",
                 "implementer" => "Implements code and features using TDD",
                 "reviewer" => "Reviews and tests code",
                 _ => "Custom agent type"
             };
-            Console.WriteLine($"  {agentType,-12} - {description}");
+            Console.WriteLine($"  {kvp.Key,-12} - {description} ({kvp.Value})");
         }
-        
+
         Console.WriteLine();
+        Console.WriteLine("Persona file locations (in priority order):");
+        Console.WriteLine($"  1. Local project: {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
+        
+        var envPaths = Environment.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
+        if (!string.IsNullOrEmpty(envPaths))
+        {
+            var paths = envPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < paths.Length; i++)
+            {
+                Console.WriteLine($"  {i + 2}. Environment: {paths[i]}");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"  2. Environment variable AISWARM_PERSONAS_PATH not set");
+        }
+        Console.WriteLine($"  3. Embedded: Built-in personas");
+        Console.WriteLine();
+        Console.WriteLine("To add custom personas:");
+        Console.WriteLine($"  - Create .md files with '_prompt' suffix in {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
+        Console.WriteLine($"  - Or set AISWARM_PERSONAS_PATH environment variable to additional directories");
+        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type");        Console.WriteLine();
         Console.WriteLine("Workspace Options:");
         Console.WriteLine("  --worktree <name>   - Create a git worktree with specified name");
         Console.WriteLine("  (default)           - Work in current branch if no worktree specified");
