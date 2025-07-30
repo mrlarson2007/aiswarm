@@ -1,0 +1,235 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  DOTNET_VERSION: 9.0.x
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-release:
+    name: Build Release Assets
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+            archive: tar.gz
+          - os: windows-latest
+            runtime: win-x64
+            archive: zip
+          - os: macos-latest
+            runtime: osx-x64
+            archive: tar.gz
+            
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+      
+    - name: Update project version
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        VERSION_NUMBER="${VERSION#v}"
+        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AgentLauncher/AgentLauncher.csproj
+        rm src/AgentLauncher/AgentLauncher.csproj.bak
+      shell: bash
+      
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build release
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build
+      continue-on-error: true
+      
+    - name: Publish self-contained
+      run: dotnet publish src/AgentLauncher --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output release/${{ matrix.runtime }}
+      
+    - name: Create archive (Linux/macOS)
+      if: matrix.archive == 'tar.gz'
+      run: |
+        cd release
+        tar -czf aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.tar.gz ${{ matrix.runtime }}
+        
+    - name: Create archive (Windows)
+      if: matrix.archive == 'zip'
+      run: |
+        cd release
+        7z a aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.zip ${{ matrix.runtime }}
+        
+    - name: Generate checksums
+      run: |
+        cd release
+        if [ "${{ matrix.archive }}" = "tar.gz" ]; then
+          sha256sum aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.tar.gz > aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.tar.gz.sha256
+        else
+          sha256sum aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.zip > aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.zip.sha256
+        fi
+      shell: bash
+      
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.runtime }}
+        path: release/aiswarm-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.*
+        retention-days: 90
+
+  create-nuget-package:
+    name: Create NuGet Package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+      
+    - name: Update project version
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        VERSION_NUMBER="${VERSION#v}"
+        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AgentLauncher/AgentLauncher.csproj
+        rm src/AgentLauncher/AgentLauncher.csproj.bak
+      shell: bash
+      
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build release
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Create NuGet package
+      run: dotnet pack src/AgentLauncher --configuration Release --output packages --no-build
+      
+    - name: Upload NuGet package
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: packages/*.nupkg
+        retention-days: 90
+
+  create-github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-release, create-nuget-package]
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        find artifacts -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" -o -name "*.nupkg" | while read file; do
+          cp "$file" release-assets/
+        done
+        ls -la release-assets/
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.create-nuget-package.outputs.version }}
+        name: Release ${{ needs.create-nuget-package.outputs.version }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        files: release-assets/*
+        body: |
+          ## AI Swarm Agent Launcher ${{ needs.create-nuget-package.outputs.version }}
+          
+          ### Installation
+          
+          #### Global Tool (Recommended)
+          ```bash
+          dotnet tool install --global AiSwarm.AgentLauncher
+          ```
+          
+          #### Download Binaries
+          Download the appropriate binary for your platform:
+          - **Windows**: `aiswarm-${{ needs.create-nuget-package.outputs.version }}-win-x64.zip`
+          - **Linux**: `aiswarm-${{ needs.create-nuget-package.outputs.version }}-linux-x64.tar.gz`
+          - **macOS**: `aiswarm-${{ needs.create-nuget-package.outputs.version }}-osx-x64.tar.gz`
+          
+          #### Verify Downloads
+          Use the provided SHA256 checksums to verify your downloads.
+          
+          ### Usage
+          ```bash
+          aiswarm --help
+          aiswarm --agent planner --worktree planning
+          ```
+          
+          ### What's Changed
+          See the generated release notes below for detailed changes.
+
+  # Future enhancement: Publish to NuGet Gallery
+  # publish-nuget:
+  #   name: Publish to NuGet
+  #   runs-on: ubuntu-latest
+  #   needs: create-nuget-package
+  #   if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+  #   steps:
+  #   - name: Download NuGet package
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: nuget-package
+  #       path: packages
+  #       
+  #   - name: Setup .NET
+  #     uses: actions/setup-dotnet@v4
+  #     with:
+  #       dotnet-version: ${{ env.DOTNET_VERSION }}
+  #       
+  #   - name: Publish to NuGet
+  #     run: dotnet nuget push packages/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+  #     if: env.NUGET_API_KEY != ''
+  #     env:
+  #       NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

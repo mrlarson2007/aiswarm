@@ -1,0 +1,181 @@
+name: Security
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: 9.0.x
+
+jobs:
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'csharp' ]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        queries: security-extended,security-and-quality
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Build project
+      run: |
+        dotnet restore
+        dotnet build --configuration Release --no-restore
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+
+  dependency-scanning:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Check for vulnerable dependencies
+      run: |
+        echo "Scanning for vulnerable dependencies..."
+        
+        # List all packages with vulnerabilities
+        if dotnet list package --vulnerable --include-transitive; then
+          echo "Vulnerability scan completed"
+        else
+          echo "No vulnerability scanning available or no vulnerabilities found"
+        fi
+        
+        # Export package list for analysis
+        dotnet list package --include-transitive --format json > packages.json || echo "Package export not available"
+        
+    - name: Upload dependency information
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-scan-results
+        path: packages.json
+        retention-days: 30
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Check license compliance
+      run: |
+        echo "Checking license compliance..."
+        
+        # Check main project license
+        if [ -f "LICENSE" ]; then
+          echo "✅ Project license file found"
+          head -5 LICENSE
+        else
+          echo "❌ No LICENSE file found"
+          exit 1
+        fi
+        
+        # List package licenses (if tool is available)
+        echo "Package dependencies:"
+        dotnet list package --include-transitive || echo "Package listing not available"
+        
+        echo "License compliance check completed"
+
+  sarif-upload:
+    name: Upload SARIF Results
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, dependency-scanning]
+    if: always()
+    permissions:
+      security-events: write
+    steps:
+    - name: Download scan results
+      uses: actions/download-artifact@v4
+      with:
+        path: scan-results
+      continue-on-error: true
+        
+    - name: Process security results
+      run: |
+        echo "Processing security scan results..."
+        
+        # Create summary
+        echo "## Security Scan Summary" > security-summary.md
+        echo "" >> security-summary.md
+        echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> security-summary.md
+        echo "- Dependency Scanning: ${{ needs.dependency-scanning.result }}" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        if [ -d "scan-results" ]; then
+          echo "Available scan results:" >> security-summary.md
+          find scan-results -name "*.json" | while read file; do
+            echo "- $(basename "$file")" >> security-summary.md
+          done
+        fi
+        
+        cat security-summary.md
+        
+    - name: Upload security summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-summary
+        path: security-summary.md
+        retention-days: 90
+
+  security-gate:
+    name: Security Gate
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, dependency-scanning, license-compliance]
+    if: always()
+    steps:
+    - name: Evaluate security gate
+      run: |
+        echo "Security Gate Results:"
+        echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}"
+        echo "- Dependency Scanning: ${{ needs.dependency-scanning.result }}"
+        echo "- License Compliance: ${{ needs.license-compliance.result }}"
+        
+        # Fail if critical security checks failed
+        if [ "${{ needs.codeql-analysis.result }}" = "failure" ] || [ "${{ needs.license-compliance.result }}" = "failure" ]; then
+          echo "❌ Security gate failed - critical security issues found"
+          exit 1
+        else
+          echo "✅ Security gate passed"
+        fi

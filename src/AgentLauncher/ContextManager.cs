@@ -98,7 +98,7 @@ public static class ContextManager
 
         var assembly = Assembly.GetExecutingAssembly();
         using var stream = assembly.GetManifestResourceStream(resourceName);
-        
+
         if (stream == null)
         {
             throw new InvalidOperationException($"Resource not found: {resourceName}");
