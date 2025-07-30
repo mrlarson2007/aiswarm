@@ -84,7 +84,7 @@ The CI/CD pipeline consists of four main workflows that ensure code quality, sec
 **Triggers:**
 - Push to `main` or `master` branch
 - Pull requests targeting `main` or `master`
-- Daily scheduled runs (2 AM UTC)
+- Daily scheduled runs (2 AM UTC) (implemented via `schedule` trigger in `security.yml`)
 - Manual workflow dispatch
 
 **Security Scans:**
