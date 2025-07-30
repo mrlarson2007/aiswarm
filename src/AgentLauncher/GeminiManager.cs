@@ -35,8 +35,8 @@ public static class GeminiManager
             {
                 // Extract version from output, ignoring warnings
                 var lines = result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var versionLine = lines.FirstOrDefault(line => 
-                    !line.Contains("DeprecationWarning") && 
+                var versionLine = lines.FirstOrDefault(line =>
+                    !line.Contains("DeprecationWarning") &&
                     !line.Contains("trace-deprecation") &&
                     !string.IsNullOrWhiteSpace(line));
                 return versionLine?.Trim();
@@ -69,7 +69,7 @@ public static class GeminiManager
         {
             // Build the Gemini command
             var arguments = BuildGeminiArguments(contextFilePath, model);
-            
+
             Console.WriteLine($"Launching Gemini CLI...");
             Console.WriteLine($"Command: gemini {arguments}");
             Console.WriteLine($"Working Directory: {workingDirectory ?? Environment.CurrentDirectory}");
@@ -81,7 +81,7 @@ public static class GeminiManager
 
             // Launch Gemini CLI in interactive mode
             var success = await LaunchGeminiInteractiveProcess(arguments, workingDirectory);
-            
+
             if (success)
             {
                 Console.WriteLine();
@@ -89,7 +89,7 @@ public static class GeminiManager
                 Console.WriteLine(" GEMINI CLI SESSION STARTED");
                 Console.WriteLine("=" + new string('=', 60));
             }
-            
+
             return success;
         }
         catch (Exception ex)
@@ -131,7 +131,7 @@ public static class GeminiManager
     {
         // Use PowerShell to launch Gemini CLI since it's likely a PowerShell function/command
         var powershellCommand = $"gemini {arguments}";
-        
+
         var startInfo = new ProcessStartInfo
         {
             FileName = "pwsh.exe", // Try PowerShell Core first
@@ -146,10 +146,10 @@ public static class GeminiManager
         {
             using var process = new Process { StartInfo = startInfo };
             process.Start();
-            
+
             Console.WriteLine("Gemini CLI session started in new terminal window.");
             Console.WriteLine("The session will run independently. You can close this launcher.");
-            
+
             // Don't wait for the process to exit since it's interactive
             await Task.CompletedTask;
             return true;
@@ -158,17 +158,17 @@ public static class GeminiManager
         {
             // PowerShell Core not found, try Windows PowerShell
             Console.WriteLine("PowerShell Core (pwsh.exe) not found, trying Windows PowerShell...");
-            
+
             startInfo.FileName = "powershell.exe";
-            
+
             try
             {
                 using var process = new Process { StartInfo = startInfo };
                 process.Start();
-                
+
                 Console.WriteLine("Gemini CLI session started in new terminal window.");
                 Console.WriteLine("The session will run independently. You can close this launcher.");
-                
+
                 await Task.CompletedTask;
                 return true;
             }
@@ -196,7 +196,7 @@ public static class GeminiManager
     {
         // Use PowerShell to run Gemini commands since it's likely a PowerShell function
         var powershellCommand = $"gemini {arguments}";
-        
+
         var startInfo = new ProcessStartInfo
         {
             FileName = "pwsh.exe", // Try PowerShell Core first
@@ -212,7 +212,7 @@ public static class GeminiManager
         {
             using var process = new Process { StartInfo = startInfo };
             process.Start();
-            
+
             // Wait for exit with timeout
             using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
             try
@@ -230,10 +230,10 @@ public static class GeminiManager
                     ExitCode = -1
                 };
             }
-            
+
             var output = await process.StandardOutput.ReadToEndAsync();
             var error = await process.StandardError.ReadToEndAsync();
-            
+
             return new GeminiCommandResult
             {
                 IsSuccess = process.ExitCode == 0,
@@ -246,12 +246,12 @@ public static class GeminiManager
         {
             // PowerShell Core not found, try Windows PowerShell
             startInfo.FileName = "powershell.exe";
-            
+
             try
             {
                 using var process = new Process { StartInfo = startInfo };
                 process.Start();
-                
+
                 using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
                 try
                 {
@@ -268,10 +268,10 @@ public static class GeminiManager
                         ExitCode = -1
                     };
                 }
-                
+
                 var output = await process.StandardOutput.ReadToEndAsync();
                 var error = await process.StandardError.ReadToEndAsync();
-                
+
                 return new GeminiCommandResult
                 {
                     IsSuccess = process.ExitCode == 0,

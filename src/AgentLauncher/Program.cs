@@ -14,7 +14,7 @@ public class Program
             IsRequired = false
         };
         agentOption.AddAlias("-a");
-        
+
         // Get available agent types dynamically from ContextManager
         var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
         agentOption.FromAmong(availableAgents);
@@ -73,7 +73,7 @@ public class Program
 
         // Create the root command
         var rootCommand = new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
-        
+
         rootCommand.AddOption(agentOption);
         rootCommand.AddOption(modelOption);
         rootCommand.AddOption(worktreeOption);
@@ -131,7 +131,7 @@ public class Program
         Console.WriteLine();
         Console.WriteLine("Persona file locations (in priority order):");
         Console.WriteLine($"  1. Local project: {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
-        
+
         var envPaths = Environment.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
         if (!string.IsNullOrEmpty(envPaths))
         {
@@ -150,7 +150,7 @@ public class Program
         Console.WriteLine("To add custom personas:");
         Console.WriteLine($"  - Create .md files with '_prompt' suffix in {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
         Console.WriteLine($"  - Or set AISWARM_PERSONAS_PATH environment variable to additional directories");
-        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type");        Console.WriteLine();
+        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type"); Console.WriteLine();
         Console.WriteLine("Workspace Options:");
         Console.WriteLine("  --worktree <name>   - Create a git worktree with specified name");
         Console.WriteLine("  (default)           - Work in current branch if no worktree specified");
@@ -178,7 +178,7 @@ public class Program
 
             // Get existing worktrees
             var worktrees = await GitManager.GetExistingWorktreesAsync();
-            
+
             if (worktrees.Count == 0)
             {
                 Console.WriteLine("  No worktrees found.");
@@ -208,23 +208,23 @@ public class Program
     {
         Console.WriteLine($"Launching {agentType} agent...");
         Console.WriteLine($"Model: {model ?? "Gemini CLI default"}");
-        
+
         try
         {
             string workingDirectory;
-            
+
             // Handle worktree creation if specified
             if (!string.IsNullOrEmpty(worktree))
             {
                 Console.WriteLine($"Creating worktree: {worktree}");
-                
+
                 // Validate worktree name
                 if (!GitManager.IsValidWorktreeName(worktree))
                 {
                     Console.WriteLine($"Error: Invalid worktree name '{worktree}'. Use only letters, numbers, hyphens, and underscores.");
                     return;
                 }
-                
+
                 // Check if we're in a git repository
                 if (!await GitManager.IsGitRepositoryAsync())
                 {
@@ -232,7 +232,7 @@ public class Program
                     Console.WriteLine("Either run from a git repository or omit the --worktree option to work in the current directory.");
                     return;
                 }
-                
+
                 // Create the worktree
                 workingDirectory = await GitManager.CreateWorktreeAsync(worktree);
                 Console.WriteLine($"Worktree created at: {workingDirectory}");
@@ -243,14 +243,14 @@ public class Program
                 workingDirectory = directory ?? Environment.CurrentDirectory;
                 Console.WriteLine("Workspace: Current branch (no worktree)");
             }
-            
+
             Console.WriteLine($"Working directory: {workingDirectory}");
-            
+
             // Create context file
             Console.WriteLine("Creating context file...");
             var contextFilePath = await ContextManager.CreateContextFile(agentType, workingDirectory);
             Console.WriteLine($"Context file created: {contextFilePath}");
-            
+
             if (dryRun)
             {
                 Console.WriteLine();
@@ -259,11 +259,11 @@ public class Program
                 Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
                 return;
             }
-            
+
             // Launch Gemini CLI
             Console.WriteLine();
             var success = await GeminiManager.LaunchInteractiveAsync(contextFilePath, model, workingDirectory);
-            
+
             if (!success)
             {
                 Console.WriteLine();
@@ -271,7 +271,7 @@ public class Program
                 Console.WriteLine("You can manually run:");
                 Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
             }
-            
+
         }
         catch (ArgumentException ex)
         {
