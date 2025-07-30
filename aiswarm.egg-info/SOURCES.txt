@@ -7,3 +7,4 @@ aiswarm.egg-info/requires.txt
 aiswarm.egg-info/top_level.txt
 aiswarm_cli/__init__.py
 aiswarm_cli/main.py
+tests/test_auth.py
