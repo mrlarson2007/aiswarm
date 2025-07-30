@@ -24,7 +24,7 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/aiswarm.git
+git clone https://github.com/mrlarson2007/aiswarm.git
 cd aiswarm
 
 # Build and install the tool globally
@@ -39,7 +39,7 @@ aiswarm --list
 
 ```bash
 # Clone and run directly
-git clone https://github.com/yourusername/aiswarm.git
+git clone https://github.com/mrlarson2007/aiswarm.git
 cd aiswarm
 dotnet run --project src/AgentLauncher -- --list
 ```
@@ -222,9 +222,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- Create an [issue](https://github.com/yourusername/aiswarm/issues) for bug reports
-- Start a [discussion](https://github.com/yourusername/aiswarm/discussions) for questions
-- Check the [documentation](https://github.com/yourusername/aiswarm/wiki) for detailed guides
+- Create an [issue](https://github.com/mrlarson2007/aiswarm/issues) for bug reports
+- Start a [discussion](https://github.com/mrlarson2007/aiswarm/discussions) for questions
+- Check the [documentation](https://github.com/mrlarson2007/aiswarm/wiki) for detailed guides
 
 ---
 
