@@ -203,6 +203,8 @@ This project uses GitHub Actions for continuous integration and deployment:
 - **Security**: Runs CodeQL analysis and dependency vulnerability scanning
 - **Release**: Automated release creation with cross-platform binaries
 
+📖 **[Complete CI/CD Documentation](docs/CICD.md)**
+
 ### Release Process
 
 1. **Automated Releases**: Tag a commit with `v*.*.*` format to trigger automatic release
@@ -231,6 +233,9 @@ dotnet test
 
 # Package for distribution
 dotnet pack src/AgentLauncher --output dist/
+
+# Validate CI/CD setup locally
+./scripts/validate-cicd.sh
 ```
 
 ### Updating the Tool
