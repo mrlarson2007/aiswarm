@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace AgentLauncher;
 
@@ -129,16 +130,84 @@ public static class GeminiManager
     /// <returns>True if process completed successfully</returns>
     private static async Task<bool> LaunchGeminiInteractiveProcess(string arguments, string? workingDirectory)
     {
+        var effectiveWorkingDirectory = workingDirectory ?? Environment.CurrentDirectory;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return await LaunchMacOSTerminal(arguments, effectiveWorkingDirectory);
+        }
+        else
+        {
+            return await LaunchWindowsPowerShell(arguments, effectiveWorkingDirectory);
+        }
+    }
+
+    /// <summary>
+    /// Launch Gemini CLI in macOS Terminal.app
+    /// </summary>
+    /// <param name="arguments">Gemini CLI arguments</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <returns>True if launched successfully</returns>
+    private static async Task<bool> LaunchMacOSTerminal(string arguments, string workingDirectory)
+    {
+        // Check if gemini command is available
+        if (!await IsCommandAvailableAsync("gemini"))
+        {
+            Console.WriteLine("Error: 'gemini' command not found. Please ensure Gemini CLI is installed and in your PATH.");
+            Console.WriteLine("To install Gemini CLI, follow the instructions at: https://ai.google.dev/gemini-api/docs/cli");
+            return false;
+        }
+
+        try
+        {
+            // Build the shell command for macOS
+            var shellCommand = GetShellCommand(workingDirectory, arguments);
+            
+            // Create process to launch Terminal.app
+            var startInfo = CreateMacOSProcessStartInfo(shellCommand, workingDirectory);
+            
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode == 0)
+            {
+                Console.WriteLine("Gemini CLI session started in new Terminal window.");
+                Console.WriteLine("The session will run independently. You can close this launcher.");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine($"Failed to launch Terminal.app: Exit code {process.ExitCode}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to start Terminal.app: {ex.Message}");
+            Console.WriteLine("Please ensure macOS Terminal.app is available and try again.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Launch Gemini CLI in Windows PowerShell
+    /// </summary>
+    /// <param name="arguments">Gemini CLI arguments</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <returns>True if launched successfully</returns>
+    private static async Task<bool> LaunchWindowsPowerShell(string arguments, string workingDirectory)
+    {
         // Use PowerShell to launch Gemini CLI since it's likely a PowerShell function/command
         var powershellCommand = $"gemini {arguments}";
 
         var startInfo = new ProcessStartInfo
         {
             FileName = "pwsh.exe", // Try PowerShell Core first
-            Arguments = $"-NoExit -Command \"& {{Set-Location '{workingDirectory ?? Environment.CurrentDirectory}'; {powershellCommand}}}\"",
+            Arguments = $"-NoExit -Command \"& {{Set-Location '{workingDirectory}'; {powershellCommand}}}\"",
             UseShellExecute = true,  // This ensures it opens in a new window
             CreateNoWindow = false,
-            WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory,
+            WorkingDirectory = workingDirectory,
             WindowStyle = ProcessWindowStyle.Normal
         };
 
@@ -193,6 +262,89 @@ public static class GeminiManager
     /// <param name="timeoutMs">Timeout in milliseconds</param>
     /// <returns>Command result</returns>
     private static async Task<GeminiCommandResult> RunGeminiCommandAsync(string arguments, int timeoutMs = 10000)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return await RunGeminiCommandMacOSAsync(arguments, timeoutMs);
+        }
+        else
+        {
+            return await RunGeminiCommandWindowsAsync(arguments, timeoutMs);
+        }
+    }
+
+    /// <summary>
+    /// Run a Gemini command on macOS using shell
+    /// </summary>
+    /// <param name="arguments">Command arguments</param>
+    /// <param name="timeoutMs">Timeout in milliseconds</param>
+    /// <returns>Command result</returns>
+    private static async Task<GeminiCommandResult> RunGeminiCommandMacOSAsync(string arguments, int timeoutMs)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "/bin/bash",
+            Arguments = $"-c \"gemini {arguments}\"",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = Environment.CurrentDirectory
+        };
+
+        try
+        {
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+
+            // Wait for exit with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill();
+                return new GeminiCommandResult
+                {
+                    IsSuccess = false,
+                    Output = "",
+                    Error = "Command timed out",
+                    ExitCode = -1
+                };
+            }
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+
+            return new GeminiCommandResult
+            {
+                IsSuccess = process.ExitCode == 0,
+                Output = output,
+                Error = error,
+                ExitCode = process.ExitCode
+            };
+        }
+        catch (Exception ex)
+        {
+            return new GeminiCommandResult
+            {
+                IsSuccess = false,
+                Output = "",
+                Error = ex.Message,
+                ExitCode = -1
+            };
+        }
+    }
+
+    /// <summary>
+    /// Run a Gemini command on Windows using PowerShell
+    /// </summary>
+    /// <param name="arguments">Command arguments</param>
+    /// <param name="timeoutMs">Timeout in milliseconds</param>
+    /// <returns>Command result</returns>
+    private static async Task<GeminiCommandResult> RunGeminiCommandWindowsAsync(string arguments, int timeoutMs)
     {
         // Use PowerShell to run Gemini commands since it's likely a PowerShell function
         var powershellCommand = $"gemini {arguments}";
@@ -300,6 +452,89 @@ public static class GeminiManager
                 Error = ex.Message,
                 ExitCode = -1
             };
+        }
+    }
+
+    /// <summary>
+    /// Get the appropriate shell command for the current platform
+    /// </summary>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <param name="geminiArguments">Gemini CLI arguments</param>
+    /// <returns>Shell command appropriate for the platform</returns>
+    private static string GetShellCommand(string workingDirectory, string geminiArguments)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            // macOS: Use shell commands (cd and gemini)
+            return $"cd '{workingDirectory}' && gemini {geminiArguments}";
+        }
+        else
+        {
+            // Windows: Use PowerShell commands
+            return $"Set-Location '{workingDirectory}'; gemini {geminiArguments}";
+        }
+    }
+
+    /// <summary>
+    /// Create ProcessStartInfo for macOS Terminal.app launch
+    /// </summary>
+    /// <param name="command">Command to execute in terminal</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <returns>ProcessStartInfo configured for macOS</returns>
+    private static ProcessStartInfo CreateMacOSProcessStartInfo(string command, string workingDirectory)
+    {
+        // Use AppleScript to launch Terminal.app with command
+        // Escape quotes in the command for AppleScript
+        var escapedCommand = command.Replace("\"", "\\\"").Replace("'", "\\'");
+        var script = $"tell application \"Terminal\" to do script \"{escapedCommand}\"";
+        
+        return new ProcessStartInfo
+        {
+            FileName = "osascript",
+            Arguments = $"-e \"{script}\"",
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+    }
+
+    /// <summary>
+    /// Check if a command is available on the system
+    /// </summary>
+    /// <param name="command">Command name to check</param>
+    /// <returns>True if command is available, false otherwise</returns>
+    private static async Task<bool> IsCommandAvailableAsync(string command)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                startInfo.FileName = "which";
+                startInfo.Arguments = command;
+            }
+            else
+            {
+                // Windows: Use where command
+                startInfo.FileName = "where";
+                startInfo.Arguments = command;
+            }
+
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            await process.WaitForExitAsync();
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
         }
     }
 

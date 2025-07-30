@@ -23,9 +23,42 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
 - Git (for worktree management)
 - **Windows**: Fully supported
-- **Mac/Linux**: Coming soon (contributions welcome!)
+- **macOS**: ✅ Fully supported
+- **Linux**: Coming soon (contributions welcome!)
 
 ## 🛠️ Installation
+
+### Prerequisites
+
+- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
+- Git (for worktree management)
+
+### macOS Installation
+
+```bash
+# Install .NET 9.0 via Homebrew
+brew install dotnet
+
+# Install Git (if not already installed)
+brew install git
+
+# Install Gemini CLI - follow the official instructions at:
+# https://ai.google.dev/gemini-api/docs/cli
+
+# Clone and install aiswarm
+git clone https://github.com/mrlarson2007/aiswarm.git
+cd aiswarm
+dotnet pack src/AgentLauncher --output .
+dotnet tool install --global --add-source . AiSwarm.AgentLauncher
+
+# Verify installation
+aiswarm --list
+```
+
+### Windows Installation
+
+### Windows Installation
 
 ### Option 1: Install as Global Tool (Recommended)
 
@@ -151,6 +184,37 @@ export AISWARM_PERSONAS_PATH="/path/to/personas:/another/path"
 
 ## 🔧 Configuration
 
+### macOS-Specific Configuration
+
+#### Terminal Requirements
+- **Default**: Uses built-in Terminal.app (always available)
+- **Alternative**: iTerm2, Alacritty, or other terminal apps work through Terminal.app integration
+- **Shell**: Works with default zsh or bash shells
+
+#### Troubleshooting macOS Issues
+
+**Gemini CLI not found:**
+```bash
+# Check if Gemini CLI is installed and in PATH
+which gemini
+
+# If not found, ensure it's installed and added to PATH
+echo 'export PATH="$PATH:/path/to/gemini"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Terminal.app permission issues:**
+- Go to System Preferences → Security & Privacy → Privacy → Accessibility
+- Add Terminal.app if prompted
+- Ensure "Full Disk Access" is enabled for Terminal.app if needed
+
+**AppleScript execution blocked:**
+```bash
+# Enable automation permissions for Terminal
+# Go to System Preferences → Security & Privacy → Privacy → Automation
+# Allow any app that needs to control Terminal.app
+```
+
 ### Command Line Options
 
 ```bash
@@ -175,7 +239,8 @@ The tool automatically:
 - Creates git worktrees in `{repo-name}-{worktree-name}` format
 - Validates worktree names (alphanumeric, hyphens, underscores)
 - Sets up proper working directories
-- Launches Gemini CLI in new PowerShell windows (Windows)
+- **Windows**: Launches Gemini CLI in new PowerShell windows
+- **macOS**: Launches Gemini CLI in new Terminal.app windows using AppleScript
 
 ## 🏗️ Architecture
 
@@ -217,10 +282,21 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### Platform Status
 
 - **Windows**: ✅ Fully supported and tested
-- **macOS**: 🔄 Coming soon - PowerShell integration needs adaptation
-- **Linux**: 🔄 Coming soon - PowerShell integration needs adaptation
+- **macOS**: ✅ Fully supported with Terminal.app integration  
+- **Linux**: 🔄 Coming soon - Similar shell integration needed
 
-Contributions for Mac and Linux support are welcome! The main work needed is adapting the `GeminiManager.cs` class for different terminal/shell environments.
+### macOS Testing Commands
+
+```bash
+# Basic functionality test
+aiswarm --list
+
+# macOS-specific dry run test
+aiswarm --dry-run --agent planner --worktree macos-test
+
+# Full integration test (requires Gemini CLI)
+aiswarm --agent implementer --worktree macos-impl
+```
 
 ### Building from Source
 
