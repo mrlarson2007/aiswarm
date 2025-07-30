@@ -63,6 +63,14 @@ public class Program
             IsRequired = false
         };
 
+        // Define the dry run option
+        var dryRunOption = new Option<bool>(
+            name: "--dry-run",
+            description: "Create context file but don't launch Gemini CLI")
+        {
+            IsRequired = false
+        };
+
         // Create the root command
         var rootCommand = new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
         
@@ -72,9 +80,10 @@ public class Program
         rootCommand.AddOption(directoryOption);
         rootCommand.AddOption(listOption);
         rootCommand.AddOption(listWorktreesOption);
+        rootCommand.AddOption(dryRunOption);
 
         // Set the handler for the root command
-        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees) =>
+        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees, dryRun) =>
         {
             if (list)
             {
@@ -95,8 +104,8 @@ public class Program
                 return;
             }
 
-            await LaunchAgent(agentType, model, worktree, directory);
-        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption);
+            await LaunchAgent(agentType, model, worktree, directory, dryRun);
+        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption, dryRunOption);
 
         return await rootCommand.InvokeAsync(args);
     }
@@ -195,7 +204,7 @@ public class Program
         }
     }
 
-    private static async Task LaunchAgent(string agentType, string? model, string? worktree, string? directory)
+    private static async Task LaunchAgent(string agentType, string? model, string? worktree, string? directory, bool dryRun = false)
     {
         Console.WriteLine($"Launching {agentType} agent...");
         Console.WriteLine($"Model: {model ?? "Gemini CLI default"}");
@@ -242,9 +251,26 @@ public class Program
             var contextFilePath = await ContextManager.CreateContextFile(agentType, workingDirectory);
             Console.WriteLine($"Context file created: {contextFilePath}");
             
-            // TODO: Phase 5 - Implement Gemini CLI integration
-            Console.WriteLine("Ready to launch Gemini CLI agent (integration coming in next phase)...");
-            Console.WriteLine($"Next: gemini -m {model ?? "[default]"} -i \"{contextFilePath}\"");
+            if (dryRun)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Dry run mode - Gemini CLI not launched.");
+                Console.WriteLine("To launch manually, run:");
+                Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
+                return;
+            }
+            
+            // Launch Gemini CLI
+            Console.WriteLine();
+            var success = await GeminiManager.LaunchInteractiveAsync(contextFilePath, model, workingDirectory);
+            
+            if (!success)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Failed to launch Gemini CLI session.");
+                Console.WriteLine("You can manually run:");
+                Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
+            }
             
         }
         catch (ArgumentException ex)
