@@ -55,6 +55,14 @@ public class Program
         };
         listOption.AddAlias("-l");
 
+        // Define the list worktrees option
+        var listWorktreesOption = new Option<bool>(
+            name: "--list-worktrees",
+            description: "List existing git worktrees")
+        {
+            IsRequired = false
+        };
+
         // Create the root command
         var rootCommand = new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
         
@@ -63,13 +71,20 @@ public class Program
         rootCommand.AddOption(worktreeOption);
         rootCommand.AddOption(directoryOption);
         rootCommand.AddOption(listOption);
+        rootCommand.AddOption(listWorktreesOption);
 
         // Set the handler for the root command
-        rootCommand.SetHandler(async (agentType, model, worktree, directory, list) =>
+        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees) =>
         {
             if (list)
             {
                 ListAgentTypes();
+                return;
+            }
+
+            if (listWorktrees)
+            {
+                await ListWorktrees();
                 return;
             }
 
@@ -81,7 +96,7 @@ public class Program
             }
 
             await LaunchAgent(agentType, model, worktree, directory);
-        }, agentOption, modelOption, worktreeOption, directoryOption, listOption);
+        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption);
 
         return await rootCommand.InvokeAsync(args);
     }
@@ -137,42 +152,113 @@ public class Program
         Console.WriteLine("  Future: Dynamic model discovery from Gemini CLI");
     }
 
+    private static async Task ListWorktrees()
+    {
+        Console.WriteLine("Git Worktrees:");
+        Console.WriteLine();
+
+        try
+        {
+            // Check if we're in a git repository
+            if (!await GitManager.IsGitRepositoryAsync())
+            {
+                Console.WriteLine("  Not in a git repository.");
+                Console.WriteLine("  Worktrees can only be listed from within a git repository.");
+                return;
+            }
+
+            // Get existing worktrees
+            var worktrees = await GitManager.GetExistingWorktreesAsync();
+            
+            if (worktrees.Count == 0)
+            {
+                Console.WriteLine("  No worktrees found.");
+                Console.WriteLine("  Use --worktree <name> to create a new worktree when launching an agent.");
+                return;
+            }
+
+            foreach (var kvp in worktrees.OrderBy(x => x.Key))
+            {
+                Console.WriteLine($"  {kvp.Key,-20} → {kvp.Value}");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("To create a new worktree:");
+            Console.WriteLine("  aiswarm --agent <type> --worktree <name>");
+            Console.WriteLine();
+            Console.WriteLine("To remove a worktree:");
+            Console.WriteLine("  git worktree remove <path>");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error listing worktrees: {ex.Message}");
+        }
+    }
+
     private static async Task LaunchAgent(string agentType, string? model, string? worktree, string? directory)
     {
         Console.WriteLine($"Launching {agentType} agent...");
         Console.WriteLine($"Model: {model ?? "Gemini CLI default"}");
         
-        // Determine worktree behavior
-        if (!string.IsNullOrEmpty(worktree))
-        {
-            Console.WriteLine($"Worktree: {worktree}");
-        }
-        else
-        {
-            Console.WriteLine("Workspace: Current branch (no worktree)");
-        }
-        
-        // Determine working directory
-        var workingDirectory = directory ?? Environment.CurrentDirectory;
-        Console.WriteLine($"Directory: {workingDirectory}");
-        
         try
         {
+            string workingDirectory;
+            
+            // Handle worktree creation if specified
+            if (!string.IsNullOrEmpty(worktree))
+            {
+                Console.WriteLine($"Creating worktree: {worktree}");
+                
+                // Validate worktree name
+                if (!GitManager.IsValidWorktreeName(worktree))
+                {
+                    Console.WriteLine($"Error: Invalid worktree name '{worktree}'. Use only letters, numbers, hyphens, and underscores.");
+                    return;
+                }
+                
+                // Check if we're in a git repository
+                if (!await GitManager.IsGitRepositoryAsync())
+                {
+                    Console.WriteLine("Error: Not in a git repository. Worktrees can only be created within git repositories.");
+                    Console.WriteLine("Either run from a git repository or omit the --worktree option to work in the current directory.");
+                    return;
+                }
+                
+                // Create the worktree
+                workingDirectory = await GitManager.CreateWorktreeAsync(worktree);
+                Console.WriteLine($"Worktree created at: {workingDirectory}");
+            }
+            else
+            {
+                // Use specified directory or current directory
+                workingDirectory = directory ?? Environment.CurrentDirectory;
+                Console.WriteLine("Workspace: Current branch (no worktree)");
+            }
+            
+            Console.WriteLine($"Working directory: {workingDirectory}");
+            
             // Create context file
             Console.WriteLine("Creating context file...");
             var contextFilePath = await ContextManager.CreateContextFile(agentType, workingDirectory);
             Console.WriteLine($"Context file created: {contextFilePath}");
             
-            // TODO: Phase 4 - Implement worktree creation
             // TODO: Phase 5 - Implement Gemini CLI integration
+            Console.WriteLine("Ready to launch Gemini CLI agent (integration coming in next phase)...");
+            Console.WriteLine($"Next: gemini -m {model ?? "[default]"} -i \"{contextFilePath}\"");
             
-            Console.WriteLine("Implementation coming in next phases...");
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
         }
-        
-        await Task.CompletedTask;
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error: {ex.Message}");
+            Console.WriteLine("Please check your git configuration and try again.");
+        }
     }
 }
