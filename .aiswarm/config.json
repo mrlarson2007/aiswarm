@@ -1,0 +1,4 @@
+{
+    "test_command": "\"pytest\"",
+    "mcp_jetbrains_server": "http://localhost:\"63342\""
+}
