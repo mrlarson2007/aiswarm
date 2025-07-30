@@ -8,7 +8,8 @@ public static class ContextManager
     {
         { "planner", "AgentLauncher.Resources.planner_prompt.md" },
         { "implementer", "AgentLauncher.Resources.implementer_prompt.md" },
-        { "reviewer", "AgentLauncher.Resources.reviewer_prompt.md" }
+        { "reviewer", "AgentLauncher.Resources.reviewer_prompt.md" },
+        { "tester", "AgentLauncher.Resources.tester_prompt.md" }
     };
 
     private const string DefaultPersonasDirectory = ".aiswarm/personas";

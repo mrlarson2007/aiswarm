@@ -11,7 +11,6 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - **Gemini CLI Integration**: Seamless integration with Google's Gemini CLI
 - **Cross-Platform**: Designed for future cross-platform support
 - **Self-Contained**: No external dependencies beyond .NET and Gemini CLI
-- **Self-Contained**: No external dependencies beyond .NET and Gemini CLI
 
 ## 📋 Prerequisites
 
