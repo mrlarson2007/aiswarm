@@ -93,14 +93,14 @@ public class Program
         
         foreach (var agentType in ContextManager.GetAvailableAgentTypes())
         {
-            var description = agentType switch
+            var (description, workspace) = agentType switch
             {
-                "planner" => "Plans and breaks down tasks (stays on main/master branch)",
-                "implementer" => "Implements code and features (creates worktree)",
-                "reviewer" => "Reviews and tests code (creates worktree)",
-                _ => "Custom agent type"
+                "planner" => ("Plans and breaks down tasks", "stays on main/master branch"),
+                "implementer" => ("Implements code and features", "creates worktree"),
+                "reviewer" => ("Reviews and tests code", "works in existing workspace"),
+                _ => ("Custom agent type", "creates worktree")
             };
-            Console.WriteLine($"  {agentType,-12} - {description}");
+            Console.WriteLine($"  {agentType,-12} - {description} ({workspace})");
         }
         
         Console.WriteLine();
