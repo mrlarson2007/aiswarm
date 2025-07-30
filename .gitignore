@@ -1,16 +1,31 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.venv/
-
-# .NET
+# .NET Build Outputs
 bin/
 obj/
 *.user
 *.suo
 *.userprefs
+
+# IDE and Editor Files
 .vs/
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# Package Files
 *.nupkg
 *.snupkg
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Temporary and Log Files
+*.log
+*.tmp
+temp/
+
+# Git Worktrees and Agent Context Files
+*_context.md
+*-worktree/
+*.worktree/
