@@ -94,7 +94,7 @@ public static class GitManager
                 else if (line.StartsWith("branch "))
                 {
                     currentBranch = line.Substring("branch ".Length).Trim();
-                    
+
                     // Extract worktree name from path
                     if (currentWorktreePath != null)
                     {
@@ -223,19 +223,19 @@ public static class GitManager
         };
 
         using var process = new Process { StartInfo = startInfo };
-        
+
         try
         {
             process.Start();
-            
+
             var outputTask = process.StandardOutput.ReadToEndAsync();
             var errorTask = process.StandardError.ReadToEndAsync();
-            
+
             await process.WaitForExitAsync();
-            
+
             var output = await outputTask;
             var error = await errorTask;
-            
+
             return new GitCommandResult
             {
                 IsSuccess = process.ExitCode == 0,
