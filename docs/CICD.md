@@ -90,7 +90,6 @@ The CI/CD pipeline consists of four main workflows that ensure code quality, sec
 **Security Scans:**
 - **CodeQL Analysis:** Advanced semantic code analysis for C#
 - **Dependency Scanning:** Vulnerability assessment of NuGet packages
-- **Secret Scanning:** Detection of accidentally committed secrets
 - **License Compliance:** Verification of license requirements
 
 **Security Gates:**
@@ -187,7 +186,6 @@ dotnet tool install --global --add-source . AiSwarm.AgentLauncher
 
 1. **CodeQL Findings:** Review and address code quality issues
 2. **Dependency Vulnerabilities:** Update packages to secure versions
-3. **Secret Detection:** Remove any exposed secrets immediately
 
 ## Monitoring
 
