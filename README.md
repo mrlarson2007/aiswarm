@@ -30,14 +30,14 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 
 ### Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later (designed for .NET 9.0 when available)
 - [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
 - Git (for worktree management)
 
 ### macOS Installation
 
 ```bash
-# Install .NET 9.0 via Homebrew
+# Install .NET 8.0+ via Homebrew (or .NET 9.0 when available)
 brew install dotnet
 
 # Install Git (if not already installed)
