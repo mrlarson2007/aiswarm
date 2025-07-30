@@ -9,7 +9,8 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - **Embedded Personas**: Built-in agent templates with comprehensive instructions
 - **Custom Personas**: Support for external persona files via environment variables
 - **Gemini CLI Integration**: Seamless integration with Google's Gemini CLI
-- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Cross-Platform**: Designed for future cross-platform support
+- **Self-Contained**: No external dependencies beyond .NET and Gemini CLI
 - **Self-Contained**: No external dependencies beyond .NET and Gemini CLI
 
 ## 📋 Prerequisites
@@ -17,6 +18,8 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
 - [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
 - Git (for worktree management)
+- **Windows**: Fully supported
+- **Mac/Linux**: Coming soon (contributions welcome!)
 
 ## 🛠️ Installation
 
@@ -153,6 +156,7 @@ Options:
 ### Git Worktree Management
 
 The tool automatically:
+
 - Creates git worktrees in `{repo-name}-{worktree-name}` format
 - Validates worktree names (alphanumeric, hyphens, underscores)
 - Sets up proper working directories
@@ -174,6 +178,14 @@ src/AgentLauncher/
 ```
 
 ## 🚀 Development
+
+### Platform Status
+
+- **Windows**: ✅ Fully supported and tested
+- **macOS**: 🔄 Coming soon - PowerShell integration needs adaptation
+- **Linux**: 🔄 Coming soon - PowerShell integration needs adaptation
+
+Contributions for Mac and Linux support are welcome! The main work needed is adapting the `GeminiManager.cs` class for different terminal/shell environments.
 
 ### Building from Source
 
