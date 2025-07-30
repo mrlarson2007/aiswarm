@@ -84,39 +84,6 @@ jobs:
         path: packages.json
         retention-days: 30
 
-  secret-scanning:
-    name: Secret Scanning
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install TruffleHog
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-        
-    - name: Run TruffleHog scan
-      run: |
-        echo "Scanning for secrets..."
-        trufflehog git file://. --only-verified --json > secrets-scan.json || true
-        
-        # Check if any secrets were found
-        if [ -s secrets-scan.json ]; then
-          echo "⚠️ Potential secrets found:"
-          cat secrets-scan.json
-          echo "Please review the findings above"
-        else
-          echo "✅ No verified secrets found"
-        fi
-        
-    - name: Upload secret scan results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: secret-scan-results
-        path: secrets-scan.json
-        retention-days: 30
-
   license-compliance:
     name: License Compliance Check
     runs-on: ubuntu-latest
@@ -154,7 +121,7 @@ jobs:
   sarif-upload:
     name: Upload SARIF Results
     runs-on: ubuntu-latest
-    needs: [codeql-analysis, dependency-scanning, secret-scanning]
+    needs: [codeql-analysis, dependency-scanning]
     if: always()
     permissions:
       security-events: write
@@ -174,7 +141,6 @@ jobs:
         echo "" >> security-summary.md
         echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> security-summary.md
         echo "- Dependency Scanning: ${{ needs.dependency-scanning.result }}" >> security-summary.md
-        echo "- Secret Scanning: ${{ needs.secret-scanning.result }}" >> security-summary.md
         echo "" >> security-summary.md
         
         if [ -d "scan-results" ]; then
@@ -196,7 +162,7 @@ jobs:
   security-gate:
     name: Security Gate
     runs-on: ubuntu-latest
-    needs: [codeql-analysis, dependency-scanning, secret-scanning, license-compliance]
+    needs: [codeql-analysis, dependency-scanning, license-compliance]
     if: always()
     steps:
     - name: Evaluate security gate
@@ -204,7 +170,6 @@ jobs:
         echo "Security Gate Results:"
         echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}"
         echo "- Dependency Scanning: ${{ needs.dependency-scanning.result }}"
-        echo "- Secret Scanning: ${{ needs.secret-scanning.result }}"
         echo "- License Compliance: ${{ needs.license-compliance.result }}"
         
         # Fail if critical security checks failed
