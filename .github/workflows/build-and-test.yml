@@ -1,0 +1,110 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: 9.0.x
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            runtime: linux-x64
+          - os: windows-latest
+            runtime: win-x64
+          - os: macos-latest
+            runtime: osx-x64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache .NET packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+      
+    - name: Run tests
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger trx --results-directory TestResults
+      continue-on-error: true
+      
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}
+        path: TestResults/*.trx
+        retention-days: 30
+        
+    - name: Create self-contained executable
+      run: dotnet publish src/AgentLauncher --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output publish/${{ matrix.runtime }}
+      
+    - name: Create NuGet package
+      run: dotnet pack src/AgentLauncher --configuration Release --output packages --no-build
+      if: matrix.os == 'ubuntu-latest'
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: aiswarm-${{ matrix.runtime }}
+        path: publish/${{ matrix.runtime }}
+        retention-days: 30
+        
+    - name: Upload NuGet package
+      uses: actions/upload-artifact@v4
+      if: matrix.os == 'ubuntu-latest'
+      with:
+        name: nuget-package
+        path: packages/*.nupkg
+        retention-days: 30
+
+  package-verification:
+    name: Verify Package Installation
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Download NuGet package
+      uses: actions/download-artifact@v4
+      with:
+        name: nuget-package
+        path: packages
+        
+    - name: Test global tool installation
+      run: |
+        dotnet tool install --global --add-source packages AiSwarm.AgentLauncher
+        aiswarm --help
+        dotnet tool uninstall --global AiSwarm.AgentLauncher

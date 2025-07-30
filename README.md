@@ -1,5 +1,10 @@
 # AI Swarm Agent Launcher
 
+[![Build and Test](https://github.com/mrlarson2007/aiswarm/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/build-and-test.yml)
+[![Code Quality](https://github.com/mrlarson2007/aiswarm/actions/workflows/code-quality.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/code-quality.yml)
+[![Security](https://github.com/mrlarson2007/aiswarm/actions/workflows/security.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/security.yml)
+[![Release](https://github.com/mrlarson2007/aiswarm/actions/workflows/release.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/release.yml)
+
 A powerful CLI tool for launching and coordinating AI agents with specialized personas using git worktrees for isolated workspaces.
 
 ## 🚀 Features
@@ -25,6 +30,17 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 ### Option 1: Install as Global Tool (Recommended)
 
 ```bash
+# Install from NuGet (when published)
+dotnet tool install --global AiSwarm.AgentLauncher
+
+# Or install from GitHub Releases
+# Download the latest release for your platform from:
+# https://github.com/mrlarson2007/aiswarm/releases
+```
+
+### Option 2: Build from Source
+
+```bash
 # Clone the repository
 git clone https://github.com/mrlarson2007/aiswarm.git
 cd aiswarm
@@ -37,7 +53,7 @@ dotnet tool install --global --add-source . AiSwarm.AgentLauncher
 aiswarm --list
 ```
 
-### Option 2: Run from Source
+### Option 3: Run from Source
 
 ```bash
 # Clone and run directly
@@ -177,6 +193,24 @@ src/AgentLauncher/
 ```
 
 ## 🚀 Development
+
+### CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **Build and Test**: Automatically builds and tests across Windows, Linux, and macOS
+- **Code Quality**: Enforces code formatting, linting, and static analysis
+- **Security**: Runs CodeQL analysis and dependency vulnerability scanning
+- **Release**: Automated release creation with cross-platform binaries
+
+### Release Process
+
+1. **Automated Releases**: Tag a commit with `v*.*.*` format to trigger automatic release
+2. **Manual Releases**: Use the Release workflow with manual version input
+3. **Artifacts**: Each release includes:
+   - Cross-platform self-contained executables
+   - NuGet package for global tool installation
+   - SHA256 checksums for verification
 
 ### Platform Status
 

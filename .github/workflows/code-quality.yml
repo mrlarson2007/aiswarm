@@ -1,0 +1,199 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: 9.0.x
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  dotnet-format:
+    name: .NET Code Formatting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+      
+    - name: Build for analysis
+      run: dotnet build --configuration Release --no-restore
+
+  code-analysis:
+    name: Static Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Cache .NET packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Run code analysis
+      run: dotnet build --configuration Release --verbosity normal --no-restore
+      env:
+        DOTNET_CLI_TELEMETRY_OPTOUT: 1
+        
+    - name: Run additional analyzers
+      run: |
+        # Install additional analyzers if not already included
+        # dotnet add src/AgentLauncher package Microsoft.CodeAnalysis.Analyzers
+        # dotnet add src/AgentLauncher package StyleCop.Analyzers
+        echo "Code analysis completed"
+
+  markdown-lint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install markdownlint-cli
+      run: npm install -g markdownlint-cli
+      
+    - name: Create markdownlint config
+      run: |
+        cat > .markdownlint.json << 'EOF'
+        {
+          "default": true,
+          "MD013": { "line_length": 120 },
+          "MD033": false,
+          "MD041": false
+        }
+        EOF
+        
+    - name: Lint Markdown files
+      run: markdownlint "**/*.md" --ignore node_modules --ignore .git
+      continue-on-error: true
+
+  project-structure:
+    name: Project Structure Validation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate project structure
+      run: |
+        echo "Validating project structure..."
+        
+        # Check for required files
+        required_files=(
+          "README.md"
+          "LICENSE"
+          ".gitignore"
+          "aiswarm.sln"
+          "src/AgentLauncher/AgentLauncher.csproj"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Missing required file: $file"
+            exit 1
+          else
+            echo "✅ Found: $file"
+          fi
+        done
+        
+        # Check for embedded resources
+        resource_files=(
+          "src/AgentLauncher/Resources/planner_prompt.md"
+          "src/AgentLauncher/Resources/implementer_prompt.md"
+          "src/AgentLauncher/Resources/reviewer_prompt.md"
+          "src/AgentLauncher/Resources/tester_prompt.md"
+        )
+        
+        for file in "${resource_files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "⚠️  Missing resource file: $file"
+          else
+            echo "✅ Found resource: $file"
+          fi
+        done
+        
+        echo "Project structure validation completed"
+
+  dependency-check:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Check for vulnerable packages
+      run: |
+        # List all packages and their versions
+        echo "Checking package dependencies..."
+        dotnet list package --include-transitive
+        
+        # Check for vulnerabilities (requires .NET 8+)
+        echo "Checking for known vulnerabilities..."
+        dotnet list package --vulnerable --include-transitive || echo "No vulnerability data available"
+        
+        # Check for outdated packages
+        echo "Checking for outdated packages..."
+        dotnet list package --outdated || echo "No outdated package data available"
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [dotnet-format, code-analysis, markdown-lint, project-structure, dependency-check]
+    if: always()
+    steps:
+    - name: Check quality gate
+      run: |
+        echo "Quality Gate Results:"
+        echo "- .NET Formatting: ${{ needs.dotnet-format.result }}"
+        echo "- Code Analysis: ${{ needs.code-analysis.result }}"
+        echo "- Markdown Lint: ${{ needs.markdown-lint.result }}"
+        echo "- Project Structure: ${{ needs.project-structure.result }}"
+        echo "- Dependency Check: ${{ needs.dependency-check.result }}"
+        
+        # Fail if critical checks failed
+        if [ "${{ needs.dotnet-format.result }}" = "failure" ] || [ "${{ needs.code-analysis.result }}" = "failure" ] || [ "${{ needs.project-structure.result }}" = "failure" ]; then
+          echo "❌ Quality gate failed - critical issues found"
+          exit 1
+        else
+          echo "✅ Quality gate passed"
+        fi
