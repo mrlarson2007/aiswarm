@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 
 namespace AgentLauncher;
 
@@ -38,15 +38,6 @@ public class Program
         };
         worktreeOption.AddAlias("-w");
 
-        // Define the no-worktree option
-        var noWorktreeOption = new Option<bool>(
-            name: "--no-worktree",
-            description: "Do not create a worktree, work in current branch")
-        {
-            IsRequired = false
-        };
-        noWorktreeOption.AddAlias("--current");
-
         // Define the directory option
         var directoryOption = new Option<string?>(
             name: "--directory",
@@ -71,12 +62,11 @@ public class Program
         rootCommand.AddOption(agentOption);
         rootCommand.AddOption(modelOption);
         rootCommand.AddOption(worktreeOption);
-        rootCommand.AddOption(noWorktreeOption);
         rootCommand.AddOption(directoryOption);
         rootCommand.AddOption(listOption);
 
         // Set the handler for the root command
-        rootCommand.SetHandler(async (agentType, model, worktree, noWorktree, directory, list) =>
+        rootCommand.SetHandler(async (agentType, model, worktree, directory, list) =>
         {
             if (list)
             {
@@ -91,8 +81,8 @@ public class Program
                 return;
             }
 
-            await LaunchAgent(agentType, model, worktree, noWorktree, directory);
-        }, agentOption, modelOption, worktreeOption, noWorktreeOption, directoryOption, listOption);
+            await LaunchAgent(agentType, model, worktree, directory);
+        }, agentOption, modelOption, worktreeOption, directoryOption, listOption);
 
         return await rootCommand.InvokeAsync(args);
     }
@@ -116,7 +106,6 @@ public class Program
         Console.WriteLine();
         Console.WriteLine("Workspace Options:");
         Console.WriteLine("  --worktree <name>   - Create a git worktree with specified name");
-        Console.WriteLine("  --no-worktree       - Work in current branch (no worktree)");
         Console.WriteLine("  (default)           - Work in current branch if no worktree specified");
         Console.WriteLine();
         Console.WriteLine("Models:");
@@ -125,23 +114,19 @@ public class Program
         Console.WriteLine("  Future: Dynamic model discovery from Gemini CLI");
     }
 
-    private static async Task LaunchAgent(string agentType, string model, string? worktree, bool noWorktree, string? directory)
+    private static async Task LaunchAgent(string agentType, string model, string? worktree, string? directory)
     {
         Console.WriteLine($"Launching {agentType} agent...");
         Console.WriteLine($"Model: {model}");
         
         // Determine worktree behavior
-        if (noWorktree)
-        {
-            Console.WriteLine("Workspace: Current branch (no worktree)");
-        }
-        else if (!string.IsNullOrEmpty(worktree))
+        if (!string.IsNullOrEmpty(worktree))
         {
             Console.WriteLine($"Worktree: {worktree}");
         }
         else
         {
-            Console.WriteLine("Worktree: Not specified (will work in current branch)");
+            Console.WriteLine("Workspace: Current branch (no worktree)");
         }
         
         // Determine working directory
