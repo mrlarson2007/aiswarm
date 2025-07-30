@@ -23,7 +23,8 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
 - Git (for worktree management)
 - **Windows**: Fully supported
-- **Mac/Linux**: Coming soon (contributions welcome!)
+- **Linux**: Fully supported  
+- **Mac**: Coming soon (contributions welcome!)
 
 ## 🛠️ Installation
 
@@ -149,6 +150,67 @@ $env:AISWARM_PERSONAS_PATH = "C:\path\to\personas;C:\another\path"
 export AISWARM_PERSONAS_PATH="/path/to/personas:/another/path"
 ```
 
+## 🐧 Linux Support
+
+### Terminal Requirements
+
+The tool requires a terminal emulator to launch Gemini CLI sessions. The following are supported (tried in order):
+
+- **gnome-terminal** (GNOME Terminal)
+- **konsole** (KDE Terminal)  
+- **xterm** (X Terminal Emulator)
+- **x-terminal-emulator** (Generic terminal launcher)
+
+Install at least one terminal emulator:
+
+```bash
+# Ubuntu/Debian
+sudo apt install gnome-terminal
+
+# Fedora/RHEL
+sudo dnf install gnome-terminal
+
+# Arch Linux
+sudo pacman -S gnome-terminal
+```
+
+### Linux Installation
+
+```bash
+# Install .NET 9.0 SDK
+wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+sudo apt update
+sudo apt install dotnet-sdk-9.0
+
+# Install Gemini CLI (follow Google's instructions)
+# https://ai.google.dev/gemini-api/docs/cli
+
+# Clone and install aiswarm
+git clone https://github.com/mrlarson2007/aiswarm.git
+cd aiswarm
+dotnet pack src/AgentLauncher --output .
+dotnet tool install --global --add-source . AiSwarm.AgentLauncher
+```
+
+### Troubleshooting Linux Issues
+
+**No terminal emulator found:**
+```bash
+# Install a supported terminal
+sudo apt install gnome-terminal  # or konsole, xterm
+
+# Or run commands manually when prompted
+cd /path/to/working/directory && gemini -i context_file.md
+```
+
+**Permission errors:**
+```bash
+# Ensure .NET tools are in PATH
+echo 'export PATH="$PATH:$HOME/.dotnet/tools"' >> ~/.bashrc
+source ~/.bashrc
+```
+
 ## 🔧 Configuration
 
 ### Command Line Options
@@ -217,10 +279,10 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### Platform Status
 
 - **Windows**: ✅ Fully supported and tested
-- **macOS**: 🔄 Coming soon - PowerShell integration needs adaptation
-- **Linux**: 🔄 Coming soon - PowerShell integration needs adaptation
+- **Linux**: ✅ Fully supported with bash and terminal emulators
+- **macOS**: 🔄 Coming soon - needs terminal/shell adaptation
 
-Contributions for Mac and Linux support are welcome! The main work needed is adapting the `GeminiManager.cs` class for different terminal/shell environments.
+Linux support includes automatic detection of terminal emulators (gnome-terminal, konsole, xterm, x-terminal-emulator) and cross-platform file path handling.
 
 ### Building from Source
 

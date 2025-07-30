@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace AgentLauncher;
 
@@ -129,6 +130,84 @@ public static class GeminiManager
     /// <returns>True if process completed successfully</returns>
     private static async Task<bool> LaunchGeminiInteractiveProcess(string arguments, string? workingDirectory)
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return await LaunchLinuxGeminiProcess(arguments, workingDirectory);
+        }
+        else
+        {
+            return await LaunchWindowsGeminiProcess(arguments, workingDirectory);
+        }
+    }
+
+    /// <summary>
+    /// Launch Gemini CLI in a Linux terminal emulator
+    /// </summary>
+    /// <param name="arguments">Gemini command arguments</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <returns>True if process started successfully</returns>
+    private static async Task<bool> LaunchLinuxGeminiProcess(string arguments, string? workingDirectory)
+    {
+        var workDir = workingDirectory ?? Environment.CurrentDirectory;
+        var geminiCommand = $"cd '{workDir}' && gemini {arguments}";
+
+        // Try different terminal emulators in order of preference
+        var terminals = new[]
+        {
+            new { Name = "gnome-terminal", Args = $"-- bash -c \"{geminiCommand}; exec bash\"" },
+            new { Name = "konsole", Args = $"--hold -e bash -c \"{geminiCommand}\"" },
+            new { Name = "xterm", Args = $"-hold -e bash -c \"{geminiCommand}\"" },
+            new { Name = "x-terminal-emulator", Args = $"-- bash -c \"{geminiCommand}; exec bash\"" }
+        };
+
+        foreach (var terminal in terminals)
+        {
+            if (await IsCommandAvailableAsync(terminal.Name))
+            {
+                try
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = terminal.Name,
+                        Arguments = terminal.Args,
+                        UseShellExecute = false,
+                        CreateNoWindow = false,
+                        WorkingDirectory = workDir
+                    };
+
+                    using var process = new Process { StartInfo = startInfo };
+                    process.Start();
+
+                    Console.WriteLine($"Gemini CLI session started in {terminal.Name} terminal.");
+                    Console.WriteLine("The session will run independently. You can close this launcher.");
+
+                    await Task.CompletedTask;
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to start {terminal.Name}: {ex.Message}");
+                    // Continue to try next terminal
+                }
+            }
+        }
+
+        Console.WriteLine("No supported terminal emulator found.");
+        Console.WriteLine("Please install one of: gnome-terminal, konsole, xterm");
+        Console.WriteLine("Or run the command manually:");
+        Console.WriteLine($"  {geminiCommand}");
+        
+        return false;
+    }
+
+    /// <summary>
+    /// Launch Gemini CLI using Windows PowerShell
+    /// </summary>
+    /// <param name="arguments">Gemini command arguments</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <returns>True if process started successfully</returns>
+    private static async Task<bool> LaunchWindowsGeminiProcess(string arguments, string? workingDirectory)
+    {
         // Use PowerShell to launch Gemini CLI since it's likely a PowerShell function/command
         var powershellCommand = $"gemini {arguments}";
 
@@ -187,12 +266,128 @@ public static class GeminiManager
     }
 
     /// <summary>
+    /// Check if a command is available on the system
+    /// </summary>
+    /// <param name="command">Command name to check</param>
+    /// <returns>True if command is available</returns>
+    private static async Task<bool> IsCommandAvailableAsync(string command)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "which",
+                Arguments = command,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+            await process.WaitForExitAsync();
+
+            return process.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Run a Gemini command and capture output (for testing/validation)
     /// </summary>
     /// <param name="arguments">Command arguments</param>
     /// <param name="timeoutMs">Timeout in milliseconds</param>
     /// <returns>Command result</returns>
     private static async Task<GeminiCommandResult> RunGeminiCommandAsync(string arguments, int timeoutMs = 10000)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return await RunLinuxGeminiCommandAsync(arguments, timeoutMs);
+        }
+        else
+        {
+            return await RunWindowsGeminiCommandAsync(arguments, timeoutMs);
+        }
+    }
+
+    /// <summary>
+    /// Run a Gemini command on Linux using bash
+    /// </summary>
+    /// <param name="arguments">Command arguments</param>
+    /// <param name="timeoutMs">Timeout in milliseconds</param>
+    /// <returns>Command result</returns>
+    private static async Task<GeminiCommandResult> RunLinuxGeminiCommandAsync(string arguments, int timeoutMs = 10000)
+    {
+        var geminiCommand = $"gemini {arguments}";
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "bash",
+            Arguments = $"-c \"{geminiCommand}\"",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = Environment.CurrentDirectory
+        };
+
+        try
+        {
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+
+            // Wait for exit with timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeoutMs));
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill();
+                return new GeminiCommandResult
+                {
+                    IsSuccess = false,
+                    Output = "",
+                    Error = "Command timed out",
+                    ExitCode = -1
+                };
+            }
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+
+            return new GeminiCommandResult
+            {
+                IsSuccess = process.ExitCode == 0,
+                Output = output,
+                Error = error,
+                ExitCode = process.ExitCode
+            };
+        }
+        catch (Exception ex)
+        {
+            return new GeminiCommandResult
+            {
+                IsSuccess = false,
+                Output = "",
+                Error = ex.Message,
+                ExitCode = -1
+            };
+        }
+    }
+
+    /// <summary>
+    /// Run a Gemini command on Windows using PowerShell
+    /// </summary>
+    /// <param name="arguments">Command arguments</param>
+    /// <param name="timeoutMs">Timeout in milliseconds</param>
+    /// <returns>Command result</returns>
+    private static async Task<GeminiCommandResult> RunWindowsGeminiCommandAsync(string arguments, int timeoutMs = 10000)
     {
         // Use PowerShell to run Gemini commands since it's likely a PowerShell function
         var powershellCommand = $"gemini {arguments}";
