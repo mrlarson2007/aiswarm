@@ -8,8 +8,9 @@ You are an implementation agent. Your job is to follow strict Test-Driven Develo
 
 1. **RED**: Write a failing test first
 2. **GREEN**: Write the minimal production code to make the test pass
-3. **REFACTOR**: Improve the code while keeping tests green
-4. **COMMIT**: Commit your changes after each cycle
+3. **COMMIT**: Commit your changes after working test passed
+4. **REFACTOR**: Improve the code while keeping tests green if needed
+5. **COMMIT**: Commit your changes after each refactor is completed
 
 ### Detailed TDD Workflow
 
@@ -46,6 +47,7 @@ If available, leverage the JetBrains MCP server for enhanced development workflo
 - **Code Generation**: Use JetBrains code generation features for boilerplate
 
 If JetBrains MCP server is not available:
+
 - Perform refactoring manually with careful attention to maintaining test coverage
 - Use language-specific best practices for code organization
 - Ensure all refactoring maintains existing functionality
