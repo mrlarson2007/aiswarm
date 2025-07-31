@@ -20,7 +20,7 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 ## 📋 Prerequisites
 
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
-- [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) installed and configured
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed and configured
 - Git (for worktree management)
 - **Windows**: Fully supported
 - **Mac/Linux**: Coming soon (contributions welcome!)
@@ -264,7 +264,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - [System.CommandLine](https://github.com/dotnet/command-line-api) for excellent CLI parsing
-- [Gemini CLI](https://ai.google.dev/gemini-api/docs/cli) for AI model integration
+- [Gemini CLI](https://github.com/google-gemini/gemini-cli) for AI model integration
 - Git worktrees for enabling parallel development workflows
 
 ## 📞 Support
