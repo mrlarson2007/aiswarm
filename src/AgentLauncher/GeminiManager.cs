@@ -157,10 +157,10 @@ public static class GeminiManager
         {
             // Build the shell command for macOS
             var shellCommand = GetShellCommand(workingDirectory, arguments);
-            
+
             // Create process to launch Terminal.app
             var startInfo = CreateMacOSProcessStartInfo(shellCommand, workingDirectory);
-            
+
             using var process = new Process { StartInfo = startInfo };
             process.Start();
             await process.WaitForExitAsync();
@@ -482,7 +482,7 @@ public static class GeminiManager
         // Escape quotes in the command for AppleScript
         var escapedCommand = command.Replace("\"", "\\\"").Replace("'", "\\'");
         var script = $"tell application \"Terminal\" to do script \"{escapedCommand}\"";
-        
+
         return new ProcessStartInfo
         {
             FileName = "osascript",
