@@ -132,14 +132,9 @@ public static class GeminiManager
     {
         var effectiveWorkingDirectory = workingDirectory ?? Environment.CurrentDirectory;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            return await LaunchMacOSTerminal(arguments, effectiveWorkingDirectory);
-        }
-        else
-        {
-            return await LaunchWindowsPowerShell(arguments, effectiveWorkingDirectory);
-        }
+        return await (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? LaunchMacOSTerminal(arguments, effectiveWorkingDirectory)
+            : LaunchWindowsPowerShell(arguments, effectiveWorkingDirectory));
     }
 
     /// <summary>
