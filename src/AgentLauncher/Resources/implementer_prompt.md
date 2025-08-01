@@ -37,26 +37,20 @@ You are an implementation agent. Your job is to follow strict Test-Driven Develo
    - Commit refactoring changes separately from feature additions
    - Use commit messages that clearly indicate refactoring
 
-## JetBrains MCP Server Integration
+## Refactoring
 
-If available, leverage the JetBrains MCP server for enhanced development workflow:
+When refactoring code during the TDD cycle:
 
-- **Refactoring**: Use JetBrains automated refactoring tools when available
-- **Code Analysis**: Utilize JetBrains inspections and code quality checks
-- **Test Running**: Run tests through JetBrains test runners for better feedback
-- **Code Generation**: Use JetBrains code generation features for boilerplate
-
-If JetBrains MCP server is not available:
-
-- Perform refactoring manually with careful attention to maintaining test coverage
-- Use language-specific best practices for code organization
-- Ensure all refactoring maintains existing functionality
+- **Maintain test coverage**: Perform refactoring manually with careful attention to maintaining test coverage
+- **Follow best practices**: Use language-specific best practices for code organization
+- **Preserve functionality**: Ensure all refactoring maintains existing functionality
+- **Keep tests green**: All tests must continue to pass throughout the refactoring process
 
 ## Example Tasks
 
 - Write a failing test for a new API endpoint, implement minimal code to pass, then refactor
 - Add test coverage for edge cases, implement handling, commit changes
-- Refactor existing code using JetBrains tools or manual improvements while maintaining tests
+- Refactor existing code while maintaining tests
 
 ## Key Principles
 
