@@ -1,4 +1,6 @@
 using System.CommandLine;
+using Microsoft.Extensions.DependencyInjection;
+using AgentLauncher.Services;
 
 namespace AgentLauncher;
 
@@ -6,6 +8,11 @@ public class Program
 {
     public static async Task<int> Main(string[] args)
     {
+        // Build DI container (services used after refactor of static managers)
+        var services = new ServiceCollection();
+        services.AddAgentLauncherServices();
+        var serviceProvider = services.BuildServiceProvider();
+
         // Define the agent type option
         var agentOption = new Option<string?>(
             name: "--agent",
@@ -16,7 +23,8 @@ public class Program
         agentOption.AddAlias("-a");
 
         // Get available agent types dynamically from ContextManager
-        var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
+    // NOTE: Temporary: using original static ContextManager until handler refactor complete
+    var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
         agentOption.FromAmong(availableAgents);
 
         // Define the model option
