@@ -58,6 +58,7 @@ public class LaunchAgentCommandHandler(
 
         logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
         var contextPath = await contextService.CreateContextFile(agentType, workDir);
-
+    logger.Info("Launching Gemini interactive session...");
+    await geminiService.LaunchInteractiveAsync(contextPath, model, null);
     }
 }
