@@ -23,7 +23,9 @@ public class ListAgentsCommandTests
         });
         _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(new[] { "custom", "planner" });
 
-        var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger);
+    var env = new TestEnvironmentService { CurrentDirectory = "/repo" };
+    env.SetVar("AISWARM_PERSONAS_PATH", null);
+    var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger, env);
 
         // Act
     handler.Run();
@@ -32,7 +34,8 @@ public class ListAgentsCommandTests
         _logger.Infos.Should().Contain(s => s.Contains("Available agent types"));
         _logger.Infos.Should().Contain(s => s.Contains("planner"));
         _logger.Infos.Should().Contain(s => s.Contains("custom"));
-        _logger.Infos.Should().Contain(s => s.Contains("External:"));
+    _logger.Infos.Should().Contain(s => s.Contains("External:"));
+    _logger.Infos.Should().Contain(s => s.Contains("/repo/.aiswarm/personas"));
     }
 
 }

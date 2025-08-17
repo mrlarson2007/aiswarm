@@ -11,11 +11,13 @@ public class ListAgentsCommandHandler : ICommandHandler
 {
     private readonly IContextService _contextService;
     private readonly IAppLogger _logger;
+    private readonly IEnvironmentService _env;
 
-    public ListAgentsCommandHandler(IContextService contextService, IAppLogger logger)
+    public ListAgentsCommandHandler(IContextService contextService, IAppLogger logger, IEnvironmentService env)
     {
         _contextService = contextService;
         _logger = logger;
+        _env = env;
     }
 
     public void Run()
@@ -30,8 +32,8 @@ public class ListAgentsCommandHandler : ICommandHandler
         };
 
         var sources = _contextService.GetAgentTypeSources();
-        var envPaths = Environment.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
-        var output = BuildOutput(sources, envPaths, Environment.CurrentDirectory, Describe);
+        var envPaths = _env.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
+        var output = BuildOutput(sources, envPaths, _env.CurrentDirectory, Describe);
         _logger.Info(output);
     }
 
