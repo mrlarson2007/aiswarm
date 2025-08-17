@@ -3,9 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace AgentLauncher;
 
-public static class GitManager
+public static partial class GitManager
 {
-    private static readonly Regex WorktreeNameRegex = new(@"^[a-zA-Z0-9_-]+$", RegexOptions.Compiled);
+    [GeneratedRegex("^[a-zA-Z0-9_-]+$")]
+    private static partial Regex WorktreeNameRegex();
 
     /// <summary>
     /// Check if the current directory is within a git repository
@@ -52,7 +53,7 @@ public static class GitManager
             return false;
 
         // Check for valid characters (alphanumeric, underscore, dash)
-        if (!WorktreeNameRegex.IsMatch(name))
+        if (!WorktreeNameRegex().IsMatch(name))
             return false;
 
         // Check length (reasonable limits)
@@ -89,11 +90,11 @@ public static class GitManager
             {
                 if (line.StartsWith("worktree "))
                 {
-                    currentWorktreePath = line.Substring("worktree ".Length).Trim();
+                    currentWorktreePath = line["worktree ".Length..].Trim();
                 }
                 else if (line.StartsWith("branch "))
                 {
-                    currentBranch = line.Substring("branch ".Length).Trim();
+                    currentBranch = line["branch ".Length..].Trim();
 
                     // Extract worktree name from path
                     if (currentWorktreePath != null)
@@ -137,14 +138,12 @@ public static class GitManager
             throw new InvalidOperationException("Not in a git repository");
 
         // Get repository root to create worktree alongside it
-        var repoRoot = await GetRepositoryRootAsync();
-        if (repoRoot == null)
-            throw new InvalidOperationException("Could not determine git repository root");
+        var repoRoot = await GetRepositoryRootAsync() ?? throw new InvalidOperationException("Could not determine git repository root");
 
         // Check if worktree already exists
         var existingWorktrees = await GetExistingWorktreesAsync();
-        if (existingWorktrees.ContainsKey(name))
-            throw new InvalidOperationException($"Worktree '{name}' already exists at: {existingWorktrees[name]}");
+        if (existingWorktrees.TryGetValue(name, out var existingPath))
+            throw new InvalidOperationException($"Worktree '{name}' already exists at: {existingPath}");
 
         // Create worktree path (sibling to main repo)
         var repoParent = Path.GetDirectoryName(repoRoot) ?? throw new InvalidOperationException("Could not determine repository parent directory");

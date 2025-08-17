@@ -4,24 +4,22 @@ using System.Text.RegularExpressions;
 namespace AgentLauncher.Services;
 
 /// <inheritdoc />
-public class GitService : IGitService
+public partial class GitService(IProcessLauncher process) : IGitService
 {
-    private static readonly Regex WorktreeNameRegex = new("^[a-zA-Z0-9_-]+$", RegexOptions.Compiled);
-    private readonly IProcessLauncher _process;
-
-    public GitService(IProcessLauncher process) => _process = process;
+    [GeneratedRegex("^[a-zA-Z0-9_-]+$")]
+    private static partial Regex WorktreeNameRegex();
 
     /// <inheritdoc />
     public async Task<bool> IsGitRepositoryAsync()
     {
-        var result = await _process.RunAsync("git", "rev-parse --git-dir", Environment.CurrentDirectory, 5000);
+        var result = await process.RunAsync("git", "rev-parse --git-dir", Environment.CurrentDirectory, 5000);
         return result.IsSuccess;
     }
 
     /// <inheritdoc />
     public async Task<string?> GetRepositoryRootAsync()
     {
-        var result = await _process.RunAsync("git", "rev-parse --show-toplevel", Environment.CurrentDirectory, 5000);
+        var result = await process.RunAsync("git", "rev-parse --show-toplevel", Environment.CurrentDirectory, 5000);
         return result.IsSuccess ? result.StandardOutput.Trim() : null;
     }
 
@@ -29,7 +27,7 @@ public class GitService : IGitService
     public bool IsValidWorktreeName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
-        if (!WorktreeNameRegex.IsMatch(name)) return false;
+        if (!WorktreeNameRegex().IsMatch(name)) return false;
         if (name.Length < 1 || name.Length > 50) return false;
         var reservedNames = new[] { "HEAD", "ORIG_HEAD", "FETCH_HEAD", "MERGE_HEAD", "refs", "objects", "hooks" };
         if (reservedNames.Contains(name, StringComparer.OrdinalIgnoreCase)) return false;
@@ -40,7 +38,7 @@ public class GitService : IGitService
     public async Task<Dictionary<string, string>> GetExistingWorktreesAsync()
     {
         var dict = new Dictionary<string, string>();
-        var result = await _process.RunAsync("git", "worktree list --porcelain", Environment.CurrentDirectory, 10000);
+        var result = await process.RunAsync("git", "worktree list --porcelain", Environment.CurrentDirectory, 10000);
         if (!result.IsSuccess) return dict;
         var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         string? currentWorktreePath = null;
@@ -48,7 +46,7 @@ public class GitService : IGitService
         {
             if (line.StartsWith("worktree "))
             {
-                currentWorktreePath = line.Substring("worktree ".Length).Trim();
+                currentWorktreePath = line["worktree ".Length..].Trim();
             }
             else if (line.StartsWith("branch "))
             {
@@ -71,7 +69,7 @@ public class GitService : IGitService
         var repoRoot = await GetRepositoryRootAsync() ?? throw new InvalidOperationException("Could not determine git repository root");
 
         var existing = await GetExistingWorktreesAsync();
-        if (existing.ContainsKey(name)) throw new InvalidOperationException($"Worktree '{name}' already exists at: {existing[name]}");
+        if (existing.TryGetValue(name, out var existingPath)) throw new InvalidOperationException($"Worktree '{name}' already exists at: {existingPath}");
 
         var repoParent = Path.GetDirectoryName(repoRoot) ?? throw new InvalidOperationException("Could not determine repository parent directory");
         var repoName = Path.GetFileName(repoRoot);
@@ -79,7 +77,7 @@ public class GitService : IGitService
         if (Directory.Exists(worktreePath)) throw new InvalidOperationException($"Directory already exists: {worktreePath}");
 
         var command = $"worktree add \"{worktreePath}\"" + (string.IsNullOrEmpty(baseBranch) ? "" : $" \"{baseBranch}\"");
-        var result = await _process.RunAsync("git", command, Environment.CurrentDirectory, 60000);
+        var result = await process.RunAsync("git", command, Environment.CurrentDirectory, 60000);
         if (!result.IsSuccess) throw new InvalidOperationException($"Failed to create worktree: {result.StandardError}");
         Console.WriteLine($"Created worktree '{name}' at: {worktreePath}");
         return worktreePath;
@@ -90,7 +88,7 @@ public class GitService : IGitService
     {
         var existing = await GetExistingWorktreesAsync();
         if (!existing.TryGetValue(name, out var path)) return false;
-        var result = await _process.RunAsync("git", $"worktree remove \"{path}\"", Environment.CurrentDirectory, 30000);
+        var result = await process.RunAsync("git", $"worktree remove \"{path}\"", Environment.CurrentDirectory, 30000);
         if (result.IsSuccess) Console.WriteLine($"Removed worktree '{name}' from: {path}");
         else Console.WriteLine($"Failed to remove worktree '{name}': {result.StandardError}");
         return result.IsSuccess;

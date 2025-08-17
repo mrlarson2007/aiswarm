@@ -71,7 +71,7 @@ public class ContextService : IContextService
         return sources;
     }
 
-    private Dictionary<string, string> GetAllPersonaFiles()
+    private static Dictionary<string, string> GetAllPersonaFiles()
     {
         var personaFiles = new Dictionary<string, string>();
         foreach (var directory in GetPersonaDirectories())
@@ -82,7 +82,7 @@ public class ContextService : IContextService
             {
                 var fileName = Path.GetFileNameWithoutExtension(file);
                 if (!fileName.EndsWith("_prompt")) continue;
-                var agentType = fileName.Substring(0, fileName.Length - "_prompt".Length);
+                var agentType = fileName[..^"_prompt".Length];
                 if (!personaFiles.ContainsKey(agentType.ToLowerInvariant()))
                 {
                     personaFiles[agentType.ToLowerInvariant()] = file;
@@ -92,10 +92,12 @@ public class ContextService : IContextService
         return personaFiles;
     }
 
-    private List<string> GetPersonaDirectories()
+    private static List<string> GetPersonaDirectories()
     {
-        var directories = new List<string>();
-        directories.Add(Path.Combine(Environment.CurrentDirectory, DefaultPersonasDirectory));
+        var directories = new List<string>
+        {
+            Path.Combine(Environment.CurrentDirectory, DefaultPersonasDirectory)
+        };
         var envPaths = Environment.GetEnvironmentVariable(PersonasEnvironmentVariable);
         if (!string.IsNullOrEmpty(envPaths))
         {

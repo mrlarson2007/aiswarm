@@ -7,7 +7,10 @@ namespace AgentLauncher.Commands;
 /// <summary>
 /// Handler responsible for displaying available agent types and their source origins.
 /// </summary>
-public class ListAgentsCommandHandler(IContextService contextService, IAppLogger logger, IEnvironmentService env) : ICommandHandler
+public class ListAgentsCommandHandler(
+    IContextService contextService,
+    IAppLogger logger,
+    IEnvironmentService env) : ICommandHandler
 {
 
     public void Run()

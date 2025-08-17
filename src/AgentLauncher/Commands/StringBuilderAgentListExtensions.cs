@@ -15,7 +15,7 @@ internal static class StringBuilderAgentListExtensions
             sb.AppendLine("  (none discovered)").AppendLine();
             return sb;
         }
-        var width = sources.Keys.Any() ? sources.Keys.Max(k => k.Length) + minPadding : 0;
+        var width = sources.Count > 0 ? sources.Keys.Max(k => k.Length) + minPadding : 0;
         foreach (var kvp in sources.OrderBy(k => k.Key))
         {
             sb.Append("  ")

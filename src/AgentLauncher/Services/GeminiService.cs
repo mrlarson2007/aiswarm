@@ -3,18 +3,15 @@ using AgentLauncher.Services.External;
 namespace AgentLauncher.Services;
 
 /// <inheritdoc />
-public class GeminiService : IGeminiService
+public class GeminiService(IProcessLauncher process) : IGeminiService
 {
-    private readonly IProcessLauncher _process;
-
-    public GeminiService(IProcessLauncher process) => _process = process;
 
     /// <inheritdoc />
     public async Task<bool> IsGeminiCliAvailableAsync()
     {
         try
         {
-            var result = await _process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
+            var result = await process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
             return result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput);
         }
         catch { return false; }
@@ -25,7 +22,7 @@ public class GeminiService : IGeminiService
     {
         try
         {
-            var result = await _process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
+            var result = await process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
                 var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -57,7 +54,7 @@ public class GeminiService : IGeminiService
             Console.WriteLine("=" + new string('=', 60));
             Console.WriteLine();
 
-            var started = _process.StartInteractive("pwsh.exe", $"-NoExit -Command \"& {EscapeSingleQuotes("Set-Location")} '{(workingDirectory ?? Environment.CurrentDirectory).Replace("'", "''")}' ; gemini {arguments}\"", workingDirectory ?? Environment.CurrentDirectory);
+            var started = process.StartInteractive("pwsh.exe", $"-NoExit -Command \"& {EscapeSingleQuotes("Set-Location")} '{(workingDirectory ?? Environment.CurrentDirectory).Replace("'", "''")}' ; gemini {arguments}\"", workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
                 Console.WriteLine();
@@ -79,7 +76,7 @@ public class GeminiService : IGeminiService
         }
     }
 
-    private string BuildGeminiArguments(string contextFilePath, string? model)
+    private static string BuildGeminiArguments(string contextFilePath, string? model)
     {
         var args = new List<string>();
         if (!string.IsNullOrEmpty(model)) args.Add($"-m \"{model}\"");

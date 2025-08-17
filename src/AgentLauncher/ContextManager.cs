@@ -36,7 +36,7 @@ public static class ContextManager
                     var fileName = Path.GetFileNameWithoutExtension(file);
                     if (fileName.EndsWith("_prompt"))
                     {
-                        var agentType = fileName.Substring(0, fileName.Length - "_prompt".Length);
+                        var agentType = fileName[..^"_prompt".Length];
                         // Use the first file found for each agent type (priority order)
                         if (!personaFiles.ContainsKey(agentType.ToLowerInvariant()))
                         {
@@ -97,13 +97,7 @@ public static class ContextManager
         }
 
         var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName);
-
-        if (stream == null)
-        {
-            throw new InvalidOperationException($"Resource not found: {resourceName}");
-        }
-
+        using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
