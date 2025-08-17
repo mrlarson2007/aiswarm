@@ -6,7 +6,7 @@ namespace AgentLauncher.Commands;
 /// <summary>
 /// Handler responsible for displaying available agent types and their source origins.
 /// </summary>
-public class ListAgentsCommandHandler
+public class ListAgentsCommandHandler : ICommandHandler
 {
     private readonly IContextService _contextService;
     private readonly IAppLogger _logger;
