@@ -12,7 +12,7 @@ public static class ContextManager
         { "tester", "AgentLauncher.Resources.tester_prompt.md" }
     };
 
-    private const string DefaultPersonasDirectory = ".aiswarm/personas";
+    private static string DefaultPersonasDirectory = Path.Combine(".aiswarm", "personas"); // '|' separated segments
     private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
 
     /// <summary>
@@ -97,7 +97,8 @@ public static class ContextManager
         }
 
         var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException($"Resource not found: {resourceName}");
+        using var stream = assembly.GetManifestResourceStream(resourceName) ??
+            throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }

@@ -308,9 +308,15 @@ public static class GeminiManager
     /// </summary>
     private record GeminiCommandResult
     {
-        public bool IsSuccess { get; init; }
+        public bool IsSuccess
+        {
+            get; init;
+        }
         public string Output { get; init; } = "";
         public string Error { get; init; } = "";
-        public int ExitCode { get; init; }
+        public int ExitCode
+        {
+            get; init;
+        }
     }
 }

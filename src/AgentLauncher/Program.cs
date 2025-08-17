@@ -138,7 +138,7 @@ public class Program
 
         Console.WriteLine();
         Console.WriteLine("Persona file locations (in priority order):");
-        Console.WriteLine($"  1. Local project: {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
+        Console.WriteLine($"  1. Local project: {Path.Combine(Environment.CurrentDirectory, ".aiswarm", "personas")}");
 
         var envPaths = Environment.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
         if (!string.IsNullOrEmpty(envPaths))
@@ -156,9 +156,10 @@ public class Program
         Console.WriteLine($"  3. Embedded: Built-in personas");
         Console.WriteLine();
         Console.WriteLine("To add custom personas:");
-        Console.WriteLine($"  - Create .md files with '_prompt' suffix in {Path.Combine(Environment.CurrentDirectory, ".aiswarm/personas")}");
+        Console.WriteLine($"  - Create .md files with '_prompt' suffix in {Path.Combine(Environment.CurrentDirectory, ".aiswarm", "personas")}");
         Console.WriteLine($"  - Or set AISWARM_PERSONAS_PATH environment variable to additional directories");
-        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type"); Console.WriteLine();
+        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type");
+        Console.WriteLine();
         Console.WriteLine("Workspace Options:");
         Console.WriteLine("  --worktree <name>   - Create a git worktree with specified name");
         Console.WriteLine("  (default)           - Work in current branch if no worktree specified");

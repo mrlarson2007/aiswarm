@@ -11,11 +11,5 @@ public class TestLogger : IAppLogger
 
     public void Info(string message) => Infos.Add(message);
     public void Warn(string message) => Warnings.Add(message);
-    public void Error(string message, Exception? ex = null)
-    {
-        if (ex != null)
-            Errors.Add($"{message} :: {ex.GetType().Name}: {ex.Message}");
-        else
-            Errors.Add(message);
-    }
+    public void Error(string message) => Errors.Add(message);
 }

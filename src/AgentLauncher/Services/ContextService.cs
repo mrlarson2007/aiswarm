@@ -13,7 +13,7 @@ public class ContextService : IContextService
         { "tester", "AgentLauncher.Resources.tester_prompt.md" }
     };
 
-    private const string DefaultPersonasDirectory = ".aiswarm/personas";
+    private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split
     private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
 
     /// <inheritdoc />
@@ -29,7 +29,8 @@ public class ContextService : IContextService
             throw new ArgumentException($"Unknown agent type: {agentType}", nameof(agentType));
 
         var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName) ?? throw new InvalidOperationException($"Resource not found: {resourceName}");
+        using var stream = assembly.GetManifestResourceStream(resourceName) ??
+            throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
@@ -49,15 +50,18 @@ public class ContextService : IContextService
     public IEnumerable<string> GetAvailableAgentTypes()
     {
         var agentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var key in AgentResources.Keys) agentTypes.Add(key);
-        foreach (var key in GetAllPersonaFiles().Keys) agentTypes.Add(key);
+        foreach (var key in AgentResources.Keys)
+            agentTypes.Add(key);
+        foreach (var key in GetAllPersonaFiles().Keys)
+            agentTypes.Add(key);
         return agentTypes.OrderBy(x => x);
     }
 
     /// <inheritdoc />
     public bool IsValidAgentType(string agentType)
     {
-        if (AgentResources.ContainsKey(agentType.ToLowerInvariant())) return true;
+        if (AgentResources.ContainsKey(agentType.ToLowerInvariant()))
+            return true;
         return GetAllPersonaFiles().ContainsKey(agentType.ToLowerInvariant());
     }
 
@@ -66,8 +70,11 @@ public class ContextService : IContextService
     {
         var sources = new Dictionary<string, string>();
         var personaFiles = GetAllPersonaFiles();
-        foreach (var kvp in personaFiles) sources[kvp.Key] = $"External: {kvp.Value}";
-        foreach (var kvp in AgentResources) if (!sources.ContainsKey(kvp.Key)) sources[kvp.Key] = "Embedded";
+        foreach (var kvp in personaFiles)
+            sources[kvp.Key] = $"External: {kvp.Value}";
+        foreach (var kvp in AgentResources)
+            if (!sources.ContainsKey(kvp.Key))
+                sources[kvp.Key] = "Embedded";
         return sources;
     }
 
@@ -76,12 +83,14 @@ public class ContextService : IContextService
         var personaFiles = new Dictionary<string, string>();
         foreach (var directory in GetPersonaDirectories())
         {
-            if (!Directory.Exists(directory)) continue;
+            if (!Directory.Exists(directory))
+                continue;
             var files = Directory.GetFiles(directory, "*_prompt.md", SearchOption.TopDirectoryOnly);
             foreach (var file in files)
             {
                 var fileName = Path.GetFileNameWithoutExtension(file);
-                if (!fileName.EndsWith("_prompt")) continue;
+                if (!fileName.EndsWith("_prompt"))
+                    continue;
                 var agentType = fileName[..^"_prompt".Length];
                 if (!personaFiles.ContainsKey(agentType.ToLowerInvariant()))
                 {
@@ -96,7 +105,7 @@ public class ContextService : IContextService
     {
         var directories = new List<string>
         {
-            Path.Combine(Environment.CurrentDirectory, DefaultPersonasDirectory)
+            Path.Combine(new[]{Environment.CurrentDirectory}.Concat(DefaultPersonasDirectory.Split('|')).ToArray())
         };
         var envPaths = Environment.GetEnvironmentVariable(PersonasEnvironmentVariable);
         if (!string.IsNullOrEmpty(envPaths))

@@ -37,7 +37,7 @@ internal static class StringBuilderAgentListExtensions
         string? personasEnvVar)
     {
         sb.AppendLine("Persona file locations (in priority order):")
-          .AppendLine($"  1. Local project: {Path.Combine(workingDirectory, ".aiswarm/personas")}");
+            .AppendLine($"  1. Local project: {Path.Combine(workingDirectory, ".aiswarm", "personas")}");
         if (!string.IsNullOrWhiteSpace(personasEnvVar))
         {
             var paths = personasEnvVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
@@ -56,7 +56,7 @@ internal static class StringBuilderAgentListExtensions
         this StringBuilder sb,
         string workingDirectory)
     {
-        var personasDir = Path.Combine(workingDirectory, ".aiswarm/personas");
+        var personasDir = Path.Combine(workingDirectory, ".aiswarm", "personas");
         sb.AppendLine("To add custom personas:")
           .AppendLine($"  - Create .md files with '_prompt' suffix in {personasDir}")
           .AppendLine("  - Or set AISWARM_PERSONAS_PATH environment variable to additional directories")
