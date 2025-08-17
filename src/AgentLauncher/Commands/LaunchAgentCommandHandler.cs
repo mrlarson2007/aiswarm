@@ -27,6 +27,10 @@ public class LaunchAgentCommandHandler(
             logger.Info($"Agent: {agentType}");
             logger.Info($"Model: {model ?? "Gemini CLI default"}");
             logger.Info("Workspace: Current branch");
+            if (!string.IsNullOrWhiteSpace(worktree))
+            {
+                logger.Info($"Worktree (planned): {worktree}");
+            }
             logger.Info($"Working directory: {workingDirectory}");
             var planned = Path.Combine(workingDirectory, agentType + "_context.md");
             logger.Info($"Planned context file: {planned}");
