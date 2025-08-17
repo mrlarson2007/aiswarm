@@ -2,7 +2,7 @@ using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
 using Moq;
 using System.Text;
-using FluentAssertions;
+using Shouldly;
 using AgentLauncher.Tests.TestDoubles;
 
 namespace AgentLauncher.Tests.Commands;
@@ -31,13 +31,13 @@ public class ListAgentsCommandTests
         handler.Run();
 
         // Assert via logger interactions
-        _logger.Infos.Should().Contain(s => s.Contains("Available agent types"));
-        _logger.Infos.Should().Contain(s => s.Contains("planner"));
-        _logger.Infos.Should().Contain(s => s.Contains("custom"));
-        _logger.Infos.Should().Contain(s => s.Contains("External:"));
+        _logger.Infos.ShouldContain(i => i.Contains("Available agent types"));
+        _logger.Infos.ShouldContain(i => i.Contains("planner"));
+        _logger.Infos.ShouldContain(i => i.Contains("custom"));
+        _logger.Infos.ShouldContain(i => i.Contains("External:"));
         var sep = System.IO.Path.DirectorySeparatorChar;
         var expectedSegment = $"/repo{sep}.aiswarm{sep}personas";
-        _logger.Infos.Should().Contain(s => s.Contains(expectedSegment));
+        _logger.Infos.ShouldContain(s => s.Contains(expectedSegment));
     }
 
 }
