@@ -10,8 +10,8 @@ public class LaunchAgentCommandHandler(
     IContextService contextService,
     IAppLogger logger,
     IEnvironmentService environment,
-    IGitService? gitService = null,
-    IGeminiService? geminiService = null
+    IGitService gitService,
+    IGeminiService geminiService
 )
 {
     public async Task RunAsync(
@@ -41,14 +41,9 @@ public class LaunchAgentCommandHandler(
             return;
         }
 
-    var workDir = directory ?? environment.CurrentDirectory;
+        var workDir = directory ?? environment.CurrentDirectory;
         if (!string.IsNullOrWhiteSpace(worktree))
         {
-            if (gitService is null)
-            {
-                logger.Error("Git service not available; cannot create worktree.");
-                return;
-            }
             try
             {
                 logger.Info($"Creating worktree '{worktree}'...");
@@ -64,10 +59,5 @@ public class LaunchAgentCommandHandler(
         logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
         var contextPath = await contextService.CreateContextFile(agentType, workDir);
 
-        if (geminiService is not null)
-        {
-            logger.Info("Launching Gemini interactive session...");
-            await geminiService.LaunchInteractiveAsync(contextPath, model, null);
-        }
     }
 }
