@@ -7,18 +7,8 @@ namespace AgentLauncher.Commands;
 /// <summary>
 /// Handler responsible for displaying available agent types and their source origins.
 /// </summary>
-public class ListAgentsCommandHandler : ICommandHandler
+public class ListAgentsCommandHandler(IContextService contextService, IAppLogger logger, IEnvironmentService env) : ICommandHandler
 {
-    private readonly IContextService _contextService;
-    private readonly IAppLogger _logger;
-    private readonly IEnvironmentService _env;
-
-    public ListAgentsCommandHandler(IContextService contextService, IAppLogger logger, IEnvironmentService env)
-    {
-        _contextService = contextService;
-        _logger = logger;
-        _env = env;
-    }
 
     public void Run()
     {
@@ -31,15 +21,15 @@ public class ListAgentsCommandHandler : ICommandHandler
             _ => "Custom agent type"
         };
 
-        var sources = _contextService.GetAgentTypeSources();
-        var envPaths = _env.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
+        var sources = contextService.GetAgentTypeSources();
+        var envPaths = env.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
         var output = new StringBuilder()
             .AppendAgentSources(sources, Describe)
-            .AppendPersonaLocations(_env.CurrentDirectory, envPaths)
-            .AppendPersonaHelp(_env.CurrentDirectory)
+            .AppendPersonaLocations(env.CurrentDirectory, envPaths)
+            .AppendPersonaHelp(env.CurrentDirectory)
             .AppendWorkspaceHelp()
             .AppendModelHelp()
             .ToString();
-        _logger.Info(output);
+        logger.Info(output);
     }
 }
