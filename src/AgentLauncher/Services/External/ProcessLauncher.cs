@@ -6,7 +6,12 @@ namespace AgentLauncher.Services.External;
 public class ProcessLauncher : IProcessLauncher
 {
     /// <inheritdoc />
-    public async Task<ProcessResult> RunAsync(string fileName, string arguments, string workingDirectory, int? timeoutMs = null, bool captureOutput = true)
+    public async Task<ProcessResult> RunAsync(
+        string fileName,
+        string arguments,
+        string workingDirectory,
+        int? timeoutMs = null,
+        bool captureOutput = true)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -34,7 +39,11 @@ public class ProcessLauncher : IProcessLauncher
                     var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()), Task.Delay(timeoutMs.Value));
                     if (completed is not Task t || t.IsCanceled)
                     {
-                        try { process.Kill(); } catch { }
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch { }
                         return new ProcessResult(false, "", "Process timed out", -1);
                     }
                 }
@@ -54,7 +63,11 @@ public class ProcessLauncher : IProcessLauncher
                     var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()), Task.Delay(timeoutMs.Value));
                     if (completed is not Task t || t.IsCanceled)
                     {
-                        try { process.Kill(); } catch { }
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch { }
                         return new ProcessResult(false, "", "Process timed out", -1);
                     }
                 }
@@ -72,7 +85,10 @@ public class ProcessLauncher : IProcessLauncher
     }
 
     /// <inheritdoc />
-    public bool StartInteractive(string fileName, string arguments, string workingDirectory)
+    public bool StartInteractive(
+        string fileName,
+        string arguments,
+        string workingDirectory)
     {
         var startInfo = new ProcessStartInfo
         {

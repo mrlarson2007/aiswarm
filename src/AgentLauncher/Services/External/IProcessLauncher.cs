@@ -19,13 +19,21 @@ public interface IProcessLauncher
     /// <param name="timeoutMs">Optional timeout (ms) after which the process is killed.</param>
     /// <param name="captureOutput">If true, captures stdout/stderr; otherwise inherits console.</param>
     /// <returns>Structured result including success flag and exit code.</returns>
-    Task<ProcessResult> RunAsync(string fileName, string arguments, string workingDirectory, int? timeoutMs = null, bool captureOutput = true);
+    Task<ProcessResult> RunAsync(
+        string fileName,
+        string arguments,
+        string workingDirectory,
+        int? timeoutMs = null,
+        bool captureOutput = true);
 
     /// <summary>
     /// Start a process intended for interactive user session (non-blocking, no captured output).
     /// </summary>
     /// <returns><c>true</c> if process start was successful.</returns>
-    bool StartInteractive(string fileName, string arguments, string workingDirectory);
+    bool StartInteractive(
+        string fileName,
+        string arguments,
+        string workingDirectory);
 }
 
 /// <summary>
@@ -35,4 +43,8 @@ public interface IProcessLauncher
 /// <param name="StandardOutput">Captured standard output (if requested).</param>
 /// <param name="StandardError">Captured standard error (if requested).</param>
 /// <param name="ExitCode">Raw process exit code.</param>
-public record ProcessResult(bool IsSuccess, string StandardOutput, string StandardError, int ExitCode);
+public record ProcessResult(
+    bool IsSuccess,
+    string StandardOutput,
+    string StandardError,
+    int ExitCode);

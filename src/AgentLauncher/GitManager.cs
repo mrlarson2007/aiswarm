@@ -128,7 +128,9 @@ public static partial class GitManager
     /// <param name="name">The name for the worktree</param>
     /// <param name="baseBranch">The base branch to create from (defaults to current branch)</param>
     /// <returns>The path to the created worktree</returns>
-    public static async Task<string> CreateWorktreeAsync(string name, string? baseBranch = null)
+    public static async Task<string> CreateWorktreeAsync(
+        string name,
+        string? baseBranch = null)
     {
         if (!IsValidWorktreeName(name))
             throw new ArgumentException($"Invalid worktree name: {name}", nameof(name));
@@ -177,7 +179,8 @@ public static partial class GitManager
     /// </summary>
     /// <param name="name">The name of the worktree to remove</param>
     /// <returns>True if removed successfully, false if not found</returns>
-    public static async Task<bool> RemoveWorktreeAsync(string name)
+    public static async Task<bool> RemoveWorktreeAsync(
+        string name)
     {
         var existingWorktrees = await GetExistingWorktreesAsync();
         if (!existingWorktrees.TryGetValue(name, out var worktreePath))
@@ -260,9 +263,15 @@ public static partial class GitManager
     /// </summary>
     private record GitCommandResult
     {
-        public bool IsSuccess { get; init; }
+        public bool IsSuccess
+        {
+            get; init;
+        }
         public string Output { get; init; } = "";
         public string Error { get; init; } = "";
-        public int ExitCode { get; init; }
+        public int ExitCode
+        {
+            get; init;
+        }
     }
 }

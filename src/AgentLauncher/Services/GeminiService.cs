@@ -3,7 +3,8 @@ using AgentLauncher.Services.External;
 namespace AgentLauncher.Services;
 
 /// <inheritdoc />
-public class GeminiService(IProcessLauncher process) : IGeminiService
+public class GeminiService(
+    IProcessLauncher process) : IGeminiService
 {
 
     /// <inheritdoc />
@@ -79,7 +80,8 @@ public class GeminiService(IProcessLauncher process) : IGeminiService
     private static string BuildGeminiArguments(string contextFilePath, string? model)
     {
         var args = new List<string>();
-        if (!string.IsNullOrEmpty(model)) args.Add($"-m \"{model}\"");
+        if (!string.IsNullOrEmpty(model))
+            args.Add($"-m \"{model}\"");
         args.Add($"-i \"{contextFilePath}\"");
         return string.Join(' ', args);
     }
