@@ -23,8 +23,8 @@ public class Program
         agentOption.AddAlias("-a");
 
         // Get available agent types dynamically from ContextManager
-    // NOTE: Temporary: using original static ContextManager until handler refactor complete
-    var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
+        // NOTE: Temporary: using original static ContextManager until handler refactor complete
+        var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
         agentOption.FromAmong(availableAgents);
 
         // Define the model option

@@ -28,7 +28,7 @@ public interface IGitService
     /// Retrieve existing worktrees keyed by their directory name.
     /// </summary>
     /// <returns>Dictionary of worktree name to absolute path.</returns>
-    Task<Dictionary<string,string>> GetExistingWorktreesAsync();
+    Task<Dictionary<string, string>> GetExistingWorktreesAsync();
 
     /// <summary>
     /// Create a new worktree from the current (or specified base) branch.

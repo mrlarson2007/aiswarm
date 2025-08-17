@@ -8,6 +8,7 @@ public static class ServiceRegistration
     {
         // External / infrastructure
         services.AddSingleton<External.IProcessLauncher, External.ProcessLauncher>();
+        services.AddSingleton<Logging.IAppLogger, Logging.ConsoleAppLogger>();
 
         // Core services (placeholders until refactor complete)
         services.AddSingleton<IContextService, ContextService>();

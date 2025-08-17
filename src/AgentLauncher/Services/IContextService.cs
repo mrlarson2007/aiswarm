@@ -38,5 +38,5 @@ public interface IContextService
     /// Get mapping of agent type to its source origin description (External path or Embedded).
     /// </summary>
     /// <returns>Dictionary keyed by agent type.</returns>
-    Dictionary<string,string> GetAgentTypeSources();
+    Dictionary<string, string> GetAgentTypeSources();
 }
