@@ -119,4 +119,31 @@ public class LaunchAgentCommandHandlerTests
         _git.Verify(g => g.CreateWorktreeAsync("feature_x", null), Times.Once);
         _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("feature_x"))), Times.Once);
     }
+
+    [Fact]
+    public async Task WhenWorktreeInvalid_ShouldLogErrorAndAbort()
+    {
+        // Arrange invalid name
+        _git.Setup(g => g.IsValidWorktreeName("bad?name")).Returns(false);
+        var handler = new LaunchAgentCommandHandler(
+            _context.Object,
+            _logger,
+            _env,
+            _git.Object
+        );
+
+        // Act
+        await handler.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "bad?name",
+            directory: null,
+            dryRun: false);
+
+        // Assert
+        _git.Verify(g => g.IsValidWorktreeName("bad?name"), Times.Once);
+        _git.Verify(g => g.CreateWorktreeAsync(It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
+        _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _logger.Errors.ShouldContain(e => e.Contains("Invalid worktree name"));
+    }
 }
