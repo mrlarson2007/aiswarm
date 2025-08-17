@@ -17,7 +17,7 @@ public class ListAgentsCommandHandler
         _logger = logger;
     }
 
-    public void Handle()
+    public void Run()
     {
         _logger.Info("Available agent types:\n");
         var sources = _contextService.GetAgentTypeSources();

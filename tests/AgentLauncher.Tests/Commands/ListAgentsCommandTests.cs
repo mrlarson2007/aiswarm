@@ -16,23 +16,23 @@ public class ListAgentsCommandTests
     public void WhenMultipleAgentTypesAvailableAndSourcesProvided_ShouldOutputHeaderAndEachAgent()
     {
         // Arrange
-        _contextService.Setup(s => s.GetAgentTypeSources()).Returns(new Dictionary<string,string>
+        _contextService.Setup(s => s.GetAgentTypeSources()).Returns(new Dictionary<string, string>
         {
             {"planner", "Embedded"},
             {"custom", "External: /tmp/custom_prompt.md"}
         });
-        _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(new []{"custom","planner"});
+        _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(new[] { "custom", "planner" });
 
-    var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger);
+        var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger);
 
-    // Act
-    handler.Handle();
+        // Act
+    handler.Run();
 
-    // Assert via logger interactions
-    _logger.Infos.Should().Contain(s => s.Contains("Available agent types"));
-    _logger.Infos.Should().Contain(s => s.Contains("planner"));
-    _logger.Infos.Should().Contain(s => s.Contains("custom"));
-    _logger.Infos.Should().Contain(s => s.Contains("External:"));
+        // Assert via logger interactions
+        _logger.Infos.Should().Contain(s => s.Contains("Available agent types"));
+        _logger.Infos.Should().Contain(s => s.Contains("planner"));
+        _logger.Infos.Should().Contain(s => s.Contains("custom"));
+        _logger.Infos.Should().Contain(s => s.Contains("External:"));
     }
 
 }
