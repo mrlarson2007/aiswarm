@@ -34,18 +34,7 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
         if (TryMatchExpectation(fileName, arguments, out var exp))
             return Task.FromResult(exp.Result);
 
-        if (fileName.Equals("git", StringComparison.OrdinalIgnoreCase))
-        {
-            if (arguments.StartsWith("rev-parse --git-dir"))
-                return Task.FromResult(new ProcessResult(true, ".git", string.Empty, 0));
-            if (arguments.StartsWith("rev-parse --show-toplevel"))
-                return Task.FromResult(new ProcessResult(true, "/repo", string.Empty, 0));
-            if (arguments.StartsWith("worktree list"))
-                return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
-            if (arguments.StartsWith("worktree add"))
-                return Task.FromResult(new ProcessResult(true, "Created", string.Empty, 0));
-        }
-        return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
+    return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
     }
 
     public bool StartInteractive(string fileName, string arguments, string workingDirectory)

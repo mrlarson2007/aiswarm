@@ -92,8 +92,12 @@ public class LaunchAgentCommandHandlerTests
     [Fact]
     public async Task WhenWorktreeSpecified_ShouldCreateWorktree_ThenContext_InNewDirectory()
     {
-        // Arrange context file stub (process launcher provides pass-through git success)
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
+    // Arrange expected git command sequence
+    _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new AgentLauncher.Services.External.ProcessResult(true, ".git", string.Empty, 0));
+    _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new AgentLauncher.Services.External.ProcessResult(true, "/repo", string.Empty, 0));
+    _process.Enqueue("git", a => a.StartsWith("worktree list"), new AgentLauncher.Services.External.ProcessResult(true, string.Empty, string.Empty, 0));
+    _process.Enqueue("git", a => a.StartsWith("worktree add"), new AgentLauncher.Services.External.ProcessResult(true, "Created", string.Empty, 0));
+    _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
 
         // Act (non-dry-run)
         await SystemUnderTest.RunAsync(

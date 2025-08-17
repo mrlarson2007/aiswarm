@@ -72,15 +72,20 @@ public partial class GitService(
     {
         if (!IsValidWorktreeName(name))
             throw new ArgumentException($"Invalid worktree name: {name}", nameof(name));
+
         if (!await IsGitRepositoryAsync())
             throw new InvalidOperationException("Not in a git repository");
-        var repoRoot = await GetRepositoryRootAsync() ?? throw new InvalidOperationException("Could not determine git repository root");
+
+        var repoRoot = await GetRepositoryRootAsync()
+            ?? throw new InvalidOperationException("Could not determine git repository root");
 
         var existing = await GetExistingWorktreesAsync();
         if (existing.TryGetValue(name, out var existingPath))
             throw new InvalidOperationException($"Worktree '{name}' already exists at: {existingPath}");
 
-        var repoParent = Path.GetDirectoryName(repoRoot) ?? throw new InvalidOperationException("Could not determine repository parent directory");
+        var repoParent = Path.GetDirectoryName(repoRoot) ??
+            throw new InvalidOperationException("Could not determine repository parent directory");
+
         var repoName = Path.GetFileName(repoRoot);
         var worktreePath = Path.Combine(repoParent, $"{repoName}-{name}");
         if (Directory.Exists(worktreePath))
@@ -90,6 +95,7 @@ public partial class GitService(
         var result = await process.RunAsync("git", command, Environment.CurrentDirectory, 60000);
         if (!result.IsSuccess)
             throw new InvalidOperationException($"Failed to create worktree: {result.StandardError}");
+
         Console.WriteLine($"Created worktree '{name}' at: {worktreePath}");
         return worktreePath;
     }
