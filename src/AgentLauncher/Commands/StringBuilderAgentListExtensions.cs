@@ -4,7 +4,8 @@ namespace AgentLauncher.Commands;
 
 internal static class StringBuilderAgentListExtensions
 {
-    public static StringBuilder AppendAgentSources(this StringBuilder sb,
+    public static StringBuilder AppendAgentSources(
+        this StringBuilder sb,
         IDictionary<string, string> sources,
         Func<string, string> describe,
         int minPadding = 2)
@@ -15,7 +16,7 @@ internal static class StringBuilderAgentListExtensions
             sb.AppendLine("  (none discovered)").AppendLine();
             return sb;
         }
-        var width = sources.Count > 0 ? sources.Keys.Max(k => k.Length) + minPadding : 0;
+        var width = sources.Any() ? sources.Keys.Max(k => k.Length) + minPadding : 0;
         foreach (var kvp in sources.OrderBy(k => k.Key))
         {
             sb.Append("  ")
@@ -30,7 +31,10 @@ internal static class StringBuilderAgentListExtensions
         return sb;
     }
 
-    public static StringBuilder AppendPersonaLocations(this StringBuilder sb, string workingDirectory, string? personasEnvVar)
+    public static StringBuilder AppendPersonaLocations(
+        this StringBuilder sb,
+        string workingDirectory,
+        string? personasEnvVar)
     {
         sb.AppendLine("Persona file locations (in priority order):")
           .AppendLine($"  1. Local project: {Path.Combine(workingDirectory, ".aiswarm/personas")}");
@@ -48,7 +52,9 @@ internal static class StringBuilderAgentListExtensions
         return sb;
     }
 
-    public static StringBuilder AppendPersonaHelp(this StringBuilder sb, string workingDirectory)
+    public static StringBuilder AppendPersonaHelp(
+        this StringBuilder sb,
+        string workingDirectory)
     {
         var personasDir = Path.Combine(workingDirectory, ".aiswarm/personas");
         sb.AppendLine("To add custom personas:")
@@ -59,7 +65,8 @@ internal static class StringBuilderAgentListExtensions
         return sb;
     }
 
-    public static StringBuilder AppendWorkspaceHelp(this StringBuilder sb)
+    public static StringBuilder AppendWorkspaceHelp(
+        this StringBuilder sb)
     {
         sb.AppendLine("Workspace Options:")
           .AppendLine("  --worktree <name>   - Create a git worktree with specified name")
@@ -68,7 +75,8 @@ internal static class StringBuilderAgentListExtensions
         return sb;
     }
 
-    public static StringBuilder AppendModelHelp(this StringBuilder sb)
+    public static StringBuilder AppendModelHelp(
+        this StringBuilder sb)
     {
         sb.AppendLine("Models:")
           .AppendLine("  Any Gemini model name can be used (e.g., gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash-exp)")

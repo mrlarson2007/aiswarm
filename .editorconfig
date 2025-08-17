@@ -1,0 +1,19 @@
+root = true
+
+[*.cs]
+# C# code style and formatting
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+trim_trailing_whitespace = true
+
+# Place each parameter on new line when wrapping
+csharp_new_line_before_open_brace = all
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = false
+
+# Enforce wrapping long parameter lists (manual edits may be required)
+# No direct Roslyn key for vertical param stacking; rely on code conventions + reviews
