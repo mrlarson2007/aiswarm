@@ -10,7 +10,7 @@ namespace AgentLauncher.Tests.Commands;
 public class LaunchAgentCommandHandlerTests
 {
     private readonly Mock<IContextService> _context = new();
-    private readonly Mock<IGitService> _git = new();
+    private readonly Mock<AgentLauncher.Services.External.IProcessLauncher> _process = new();
     private readonly Mock<IGeminiService> _gemini = new();
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
@@ -94,16 +94,23 @@ public class LaunchAgentCommandHandlerTests
     [Fact]
     public async Task WhenWorktreeSpecified_ShouldCreateWorktree_ThenContext_InNewDirectory()
     {
-        // Arrange: expect git validation & creation
-        _git.Setup(g => g.IsValidWorktreeName("feature_x")).Returns(true);
-        _git.Setup(g => g.CreateWorktreeAsync("feature_x", null)).ReturnsAsync("/repo/feature_x");
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>() )).ReturnsAsync("/repo/feature_x/planner_context.md");
+        // Arrange: simulate repository state and successful worktree creation
+        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("rev-parse --git-dir")), It.IsAny<string>(), 5000, true))
+            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, ".git", string.Empty, 0));
+        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("rev-parse --show-toplevel")), It.IsAny<string>(), 5000, true))
+            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("worktree list")), It.IsAny<string>(), 10000, true))
+            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, string.Empty, string.Empty, 0));
+        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("worktree add")), It.IsAny<string>(), 60000, true))
+            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, "Created", string.Empty, 0));
+        var git = new GitService(_process.Object);
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>() )).ReturnsAsync("/repo- feature_x/planner_context.md");
 
         var handler = new LaunchAgentCommandHandler(
             _context.Object,
             _logger,
             _env,
-            _git.Object
+            git
         );
 
         // Act (non-dry-run)
@@ -115,21 +122,19 @@ public class LaunchAgentCommandHandlerTests
             dryRun: false);
 
         // Assert (desired future behavior) - these will fail until handler updated
-        _git.Verify(g => g.IsValidWorktreeName("feature_x"), Times.Once);
-        _git.Verify(g => g.CreateWorktreeAsync("feature_x", null), Times.Once);
         _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("feature_x"))), Times.Once);
     }
 
     [Fact]
     public async Task WhenWorktreeInvalid_ShouldLogErrorAndAbort()
     {
-        // Arrange invalid name
-        _git.Setup(g => g.IsValidWorktreeName("bad?name")).Returns(false);
+        // Arrange invalid name (GitService will throw)
+        var git = new GitService(_process.Object);
         var handler = new LaunchAgentCommandHandler(
             _context.Object,
             _logger,
             _env,
-            _git.Object
+            git
         );
 
         // Act
@@ -141,8 +146,6 @@ public class LaunchAgentCommandHandlerTests
             dryRun: false);
 
         // Assert
-        _git.Verify(g => g.IsValidWorktreeName("bad?name"), Times.Once);
-        _git.Verify(g => g.CreateWorktreeAsync(It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _logger.Errors.ShouldContain(e => e.Contains("Invalid worktree name"));
     }

@@ -49,15 +49,16 @@ public class LaunchAgentCommandHandler(
                 logger.Error("Git service not available; cannot create worktree.");
                 return;
             }
-
-            if (!gitService.IsValidWorktreeName(worktree))
+            try
             {
-                logger.Error($"Invalid worktree name: {worktree}");
+                logger.Info($"Creating worktree '{worktree}'...");
+                workDir = await gitService.CreateWorktreeAsync(worktree);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message);
                 return;
             }
-
-            logger.Info($"Creating worktree '{worktree}'...");
-            workDir = await gitService.CreateWorktreeAsync(worktree);
         }
 
         logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
