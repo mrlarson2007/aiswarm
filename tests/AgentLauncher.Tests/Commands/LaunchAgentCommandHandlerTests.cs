@@ -4,6 +4,7 @@ using AgentLauncher.Services.Logging;
 using AgentLauncher.Tests.TestDoubles;
 using Shouldly;
 using Moq;
+using AgentLauncher.Services.External;
 
 namespace AgentLauncher.Tests.Commands;
 
@@ -92,12 +93,12 @@ public class LaunchAgentCommandHandlerTests
     [Fact]
     public async Task WhenWorktreeSpecified_ShouldCreateWorktree_ThenContext_InNewDirectory()
     {
-    // Arrange expected git command sequence
-    _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new AgentLauncher.Services.External.ProcessResult(true, ".git", string.Empty, 0));
-    _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new AgentLauncher.Services.External.ProcessResult(true, "/repo", string.Empty, 0));
-    _process.Enqueue("git", a => a.StartsWith("worktree list"), new AgentLauncher.Services.External.ProcessResult(true, string.Empty, string.Empty, 0));
-    _process.Enqueue("git", a => a.StartsWith("worktree add"), new AgentLauncher.Services.External.ProcessResult(true, "Created", string.Empty, 0));
-    _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
+        // Arrange expected git command sequence
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
 
         // Act (non-dry-run)
         await SystemUnderTest.RunAsync(
@@ -165,5 +166,75 @@ public class LaunchAgentCommandHandlerTests
 
         // Assert
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", "gemini-1.5-pro", null), Times.Once);
+    }
+
+    // New edge case tests
+    [Fact]
+    public async Task WhenWorktreeAddFails_ShouldLogErrorAndAbort()
+    {
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(false, string.Empty, "fatal: permission denied", 1));
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "feat_fail",
+            directory: null,
+            dryRun: false);
+
+        _logger.Errors.ShouldContain(e => e.Contains("Failed to create worktree"));
+        _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task WhenNotInGitRepo_ShouldLogErrorAndAbort()
+    {
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(false, string.Empty, "not a repo", 128));
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "feature_new",
+            directory: null,
+            dryRun: false);
+
+        _logger.Errors.ShouldContain(e => e.Contains("Not in a git repository") || e.Contains("not a git"));
+        _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task WhenDirectoryAndWorktreeProvided_WorktreePathShouldOverride()
+    {
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_override/planner_context.md");
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "feature_override",
+            directory: "/some/other/dir",
+            dryRun: false);
+
+        _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_override"))), Times.Once);
+    }
+
+    [Fact]
+    public async Task WhenDryRunWithInvalidWorktree_ShouldStillReportPlannedInvalidName()
+    {
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "bad?name",
+            directory: null,
+            dryRun: true);
+
+        _logger.Infos.ShouldContain(i => i.Contains("Worktree (planned): bad?name"));
+        _logger.Errors.ShouldBeEmpty();
     }
 }
