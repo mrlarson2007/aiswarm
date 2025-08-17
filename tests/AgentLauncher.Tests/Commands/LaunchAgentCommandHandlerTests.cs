@@ -10,7 +10,7 @@ namespace AgentLauncher.Tests.Commands;
 public class LaunchAgentCommandHandlerTests
 {
     private readonly Mock<IContextService> _context = new();
-    private readonly Mock<AgentLauncher.Services.External.IProcessLauncher> _process = new();
+    private readonly PassThroughProcessLauncher _process = new();
     private readonly Mock<IGeminiService> _gemini = new();
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
@@ -18,7 +18,7 @@ public class LaunchAgentCommandHandlerTests
 
     public LaunchAgentCommandHandlerTests()
     {
-        _git = new GitService(_process.Object);
+        _git = new GitService(_process);
     }
 
     private LaunchAgentCommandHandler SystemUnderTest => new(
@@ -92,16 +92,8 @@ public class LaunchAgentCommandHandlerTests
     [Fact]
     public async Task WhenWorktreeSpecified_ShouldCreateWorktree_ThenContext_InNewDirectory()
     {
-        // Arrange: simulate repository state and successful worktree creation
-        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("rev-parse --git-dir")), It.IsAny<string>(), 5000, true))
-            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, ".git", string.Empty, 0));
-        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("rev-parse --show-toplevel")), It.IsAny<string>(), 5000, true))
-            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, "/repo", string.Empty, 0));
-        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("worktree list")), It.IsAny<string>(), 10000, true))
-            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, string.Empty, string.Empty, 0));
-        _process.Setup(p => p.RunAsync("git", It.Is<string>(s => s.StartsWith("worktree add")), It.IsAny<string>(), 60000, true))
-            .ReturnsAsync(new AgentLauncher.Services.External.ProcessResult(true, "Created", string.Empty, 0));
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo- feature_x/planner_context.md");
+        // Arrange context file stub (process launcher provides pass-through git success)
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
 
         // Act (non-dry-run)
         await SystemUnderTest.RunAsync(
