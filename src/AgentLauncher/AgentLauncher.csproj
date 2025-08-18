@@ -26,6 +26,7 @@
     <EmbeddedResource Include="Resources\implementer_prompt.md" />
     <EmbeddedResource Include="Resources\reviewer_prompt.md" />
     <EmbeddedResource Include="Resources\tester_prompt.md" />
+    <EmbeddedResource Include="Resources\template_prompt.md" />
   </ItemGroup>
 
 </Project>
