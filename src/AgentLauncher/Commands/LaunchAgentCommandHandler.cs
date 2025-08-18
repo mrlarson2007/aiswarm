@@ -52,7 +52,7 @@ public class LaunchAgentCommandHandler(
             }
             catch (Exception ex)
             {
-                logger.Error(ex.Message);
+                logger.Error($"Failed to create worktree '{worktree}': {ex.Message}");
                 return false;
             }
         }
