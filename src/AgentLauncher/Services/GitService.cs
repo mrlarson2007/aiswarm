@@ -89,7 +89,7 @@ public partial class GitService(
 
         var repoName = Path.GetFileName(repoRoot);
         var worktreePath = Path.Combine(repoParent, $"{repoName}-{name}");
-    if (fileSystem.DirectoryExists(worktreePath))
+        if (fileSystem.DirectoryExists(worktreePath))
             throw new InvalidOperationException($"Directory already exists: {worktreePath}");
 
         var command = $"worktree add \"{worktreePath}\"" + (string.IsNullOrEmpty(baseBranch) ? "" : $" \"{baseBranch}\"");

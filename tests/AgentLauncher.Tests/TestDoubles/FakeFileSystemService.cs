@@ -15,7 +15,8 @@ public class FakeFileSystemService : IFileSystemService
     public void AddFile(string path)
     {
         var dir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(dir)) _directories.Add(Norm(dir));
+        if (!string.IsNullOrEmpty(dir))
+            _directories.Add(Norm(dir));
         _files.Add(Norm(path));
     }
 
