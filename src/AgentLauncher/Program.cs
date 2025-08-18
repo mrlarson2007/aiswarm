@@ -22,10 +22,13 @@ public class Program
         };
         agentOption.AddAlias("-a");
 
-        // Get available agent types dynamically from ContextManager
-        // NOTE: Temporary: using original static ContextManager until handler refactor complete
-        var availableAgents = ContextManager.GetAvailableAgentTypes().ToArray();
-        agentOption.FromAmong(availableAgents);
+        // Get available agent types dynamically via context service
+        var contextService = serviceProvider.GetRequiredService<IContextService>();
+        var availableAgents = contextService.GetAvailableAgentTypes().ToArray();
+        if (availableAgents.Length > 0)
+        {
+            agentOption.FromAmong(availableAgents);
+        }
 
         // Define the model option
         var modelOption = new Option<string?>(
@@ -95,13 +98,15 @@ public class Program
         {
             if (list)
             {
-                ListAgentTypes();
+                var listAgents = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListAgentsCommandHandler>();
+                listAgents.Run();
                 return;
             }
 
             if (listWorktrees)
             {
-                await ListWorktrees();
+                var listWorktreesHandler = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListWorktreesCommandHandler>();
+                await listWorktreesHandler.RunAsync();
                 return;
             }
 
@@ -112,188 +117,18 @@ public class Program
                 return;
             }
 
-            await LaunchAgent(agentType, model, worktree, directory, dryRun);
+            var launcher = serviceProvider.GetRequiredService<AgentLauncher.Commands.LaunchAgentCommandHandler>();
+            var ok = await launcher.RunAsync(agentType, model, worktree, directory, dryRun);
+            if (!ok)
+            {
+                Console.WriteLine("Launch failed.");
+            }
         }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption, dryRunOption);
 
         return await rootCommand.InvokeAsync(args);
     }
 
-    private static void ListAgentTypes()
-    {
-        Console.WriteLine("Available agent types:");
-        Console.WriteLine();
+    // ListAgentTypes and ListWorktrees moved into dedicated command handlers
 
-        var sources = ContextManager.GetAgentTypeSources();
-        foreach (var kvp in sources.OrderBy(x => x.Key))
-        {
-            var description = kvp.Key switch
-            {
-                "planner" => "Plans and breaks down tasks",
-                "implementer" => "Implements code and features using TDD",
-                "reviewer" => "Reviews and tests code",
-                _ => "Custom agent type"
-            };
-            Console.WriteLine($"  {kvp.Key,-12} - {description} ({kvp.Value})");
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Persona file locations (in priority order):");
-        Console.WriteLine($"  1. Local project: {Path.Combine(Environment.CurrentDirectory, ".aiswarm", "personas")}");
-
-        var envPaths = Environment.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");
-        if (!string.IsNullOrEmpty(envPaths))
-        {
-            var paths = envPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < paths.Length; i++)
-            {
-                Console.WriteLine($"  {i + 2}. Environment: {paths[i]}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"  2. Environment variable AISWARM_PERSONAS_PATH not set");
-        }
-        Console.WriteLine($"  3. Embedded: Built-in personas");
-        Console.WriteLine();
-        Console.WriteLine("To add custom personas:");
-        Console.WriteLine($"  - Create .md files with '_prompt' suffix in {Path.Combine(Environment.CurrentDirectory, ".aiswarm", "personas")}");
-        Console.WriteLine($"  - Or set AISWARM_PERSONAS_PATH environment variable to additional directories");
-        Console.WriteLine($"  - Example: custom_agent_prompt.md becomes 'custom_agent' type");
-        Console.WriteLine();
-        Console.WriteLine("Workspace Options:");
-        Console.WriteLine("  --worktree <name>   - Create a git worktree with specified name");
-        Console.WriteLine("  (default)           - Work in current branch if no worktree specified");
-        Console.WriteLine();
-        Console.WriteLine("Models:");
-        Console.WriteLine("  Any Gemini model name can be used (e.g., gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash-exp)");
-        Console.WriteLine("  Default: Uses Gemini CLI default if --model not specified");
-        Console.WriteLine("  Future: Dynamic model discovery from Gemini CLI");
-    }
-
-    private static async Task ListWorktrees()
-    {
-        Console.WriteLine("Git Worktrees:");
-        Console.WriteLine();
-
-        try
-        {
-            // Check if we're in a git repository
-            if (!await GitManager.IsGitRepositoryAsync())
-            {
-                Console.WriteLine("  Not in a git repository.");
-                Console.WriteLine("  Worktrees can only be listed from within a git repository.");
-                return;
-            }
-
-            // Get existing worktrees
-            var worktrees = await GitManager.GetExistingWorktreesAsync();
-
-            if (worktrees.Count == 0)
-            {
-                Console.WriteLine("  No worktrees found.");
-                Console.WriteLine("  Use --worktree <name> to create a new worktree when launching an agent.");
-                return;
-            }
-
-            foreach (var kvp in worktrees.OrderBy(x => x.Key))
-            {
-                Console.WriteLine($"  {kvp.Key,-20} → {kvp.Value}");
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("To create a new worktree:");
-            Console.WriteLine("  aiswarm --agent <type> --worktree <name>");
-            Console.WriteLine();
-            Console.WriteLine("To remove a worktree:");
-            Console.WriteLine("  git worktree remove <path>");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error listing worktrees: {ex.Message}");
-        }
-    }
-
-    private static async Task LaunchAgent(string agentType, string? model, string? worktree, string? directory, bool dryRun = false)
-    {
-        Console.WriteLine($"Launching {agentType} agent...");
-        Console.WriteLine($"Model: {model ?? "Gemini CLI default"}");
-
-        try
-        {
-            string workingDirectory;
-
-            // Handle worktree creation if specified
-            if (!string.IsNullOrEmpty(worktree))
-            {
-                Console.WriteLine($"Creating worktree: {worktree}");
-
-                // Validate worktree name
-                if (!GitManager.IsValidWorktreeName(worktree))
-                {
-                    Console.WriteLine($"Error: Invalid worktree name '{worktree}'. Use only letters, numbers, hyphens, and underscores.");
-                    return;
-                }
-
-                // Check if we're in a git repository
-                if (!await GitManager.IsGitRepositoryAsync())
-                {
-                    Console.WriteLine("Error: Not in a git repository. Worktrees can only be created within git repositories.");
-                    Console.WriteLine("Either run from a git repository or omit the --worktree option to work in the current directory.");
-                    return;
-                }
-
-                // Create the worktree
-                workingDirectory = await GitManager.CreateWorktreeAsync(worktree);
-                Console.WriteLine($"Worktree created at: {workingDirectory}");
-            }
-            else
-            {
-                // Use specified directory or current directory
-                workingDirectory = directory ?? Environment.CurrentDirectory;
-                Console.WriteLine("Workspace: Current branch (no worktree)");
-            }
-
-            Console.WriteLine($"Working directory: {workingDirectory}");
-
-            // Create context file
-            Console.WriteLine("Creating context file...");
-            var contextFilePath = await ContextManager.CreateContextFile(agentType, workingDirectory);
-            Console.WriteLine($"Context file created: {contextFilePath}");
-
-            if (dryRun)
-            {
-                Console.WriteLine();
-                Console.WriteLine("Dry run mode - Gemini CLI not launched.");
-                Console.WriteLine("To launch manually, run:");
-                Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
-                return;
-            }
-
-            // Launch Gemini CLI
-            Console.WriteLine();
-            var success = await GeminiManager.LaunchInteractiveAsync(contextFilePath, model, workingDirectory);
-
-            if (!success)
-            {
-                Console.WriteLine();
-                Console.WriteLine("Failed to launch Gemini CLI session.");
-                Console.WriteLine("You can manually run:");
-                Console.WriteLine($"  gemini{(model != null ? $" -m {model}" : "")} -i \"{contextFilePath}\"");
-            }
-
-        }
-        catch (ArgumentException ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Unexpected error: {ex.Message}");
-            Console.WriteLine("Please check your git configuration and try again.");
-        }
-    }
+    // LaunchAgent logic moved into LaunchAgentCommandHandler
 }

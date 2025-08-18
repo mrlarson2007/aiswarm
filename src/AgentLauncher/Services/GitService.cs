@@ -46,7 +46,7 @@ public partial class GitService(
         var dict = new Dictionary<string, string>();
         var result = await process.RunAsync("git", "worktree list --porcelain", Environment.CurrentDirectory, 10000);
         if (!result.IsSuccess)
-            return dict;
+            throw new InvalidOperationException($"Failed to list worktrees: {result.StandardError}");
         var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         string? currentWorktreePath = null;
         foreach (var line in lines)

@@ -14,7 +14,7 @@ public class ListAgentsCommandHandler(
     IEnvironmentService env)
 {
 
-    public bool RunAsync()
+    public bool Run()
     {
         static string Describe(string key) => key switch
         {

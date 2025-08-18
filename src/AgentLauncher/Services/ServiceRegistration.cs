@@ -18,8 +18,10 @@ public static class ServiceRegistration
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IGeminiService, GeminiService>();
 
-        // Command handlers
-        services.AddTransient<Commands.LaunchAgentCommandHandler>();
+    // Command handlers
+    services.AddTransient<Commands.LaunchAgentCommandHandler>();
+    services.AddTransient<Commands.ListAgentsCommandHandler>();
+    services.AddTransient<Commands.ListWorktreesCommandHandler>();
 
         return services;
     }
