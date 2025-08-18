@@ -324,4 +324,23 @@ public class LaunchAgentCommandHandlerTests
         _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
     }
+
+    [Fact]
+    public async Task WhenGeminiLaunchThrows_ShouldSurfaceError()
+    {
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+        _gemini.Setup(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .ThrowsAsync(new InvalidOperationException("Gemini CLI not installed"));
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(() => SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: null,
+            directory: null,
+            dryRun: false));
+
+        ex.Message.ShouldContain("Gemini CLI not installed");
+        _logger.Errors.ShouldBeEmpty(); // handler does not catch Gemini errors currently
+    }
 }
