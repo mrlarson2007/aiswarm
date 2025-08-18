@@ -238,4 +238,90 @@ public class LaunchAgentCommandHandlerTests
         _logger.Infos.ShouldContain(i => i.Contains("Worktree (planned): bad?name"));
         _logger.Errors.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task WhenWorktreeAlreadyExists_ShouldLogErrorAndAbort()
+    {
+        var porcelain = "worktree /repo/worktrees/feature_dup\nbranch refs/heads/feature_dup\n";
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, porcelain, string.Empty, 0));
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "feature_dup",
+            directory: null,
+            dryRun: false);
+
+        _logger.Errors.ShouldContain(e => e.Contains("already exists"));
+        _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task WhenWorktreeCreated_ShouldLaunchGeminiFromWorktree()
+    {
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
+        _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+        _context.Setup(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_launch"))))
+            .ReturnsAsync("/repo-feature_launch/planner_context.md");
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: "feature_launch",
+            directory: null,
+            dryRun: false);
+
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo-feature_launch/planner_context.md", "gemini-1.5-pro", null), Times.Once);
+    }
+
+    [Fact]
+    public async Task WhenDirectorySpecifiedWithoutWorktree_ShouldUseDirectoryForContext()
+    {
+        _context.Setup(c => c.CreateContextFile("planner", "/customdir"))
+            .ReturnsAsync("/customdir/planner_context.md");
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: null,
+            directory: "/customdir",
+            dryRun: false);
+
+        _context.Verify(c => c.CreateContextFile("planner", "/customdir"), Times.Once);
+    }
+
+    [Fact]
+    public async Task WhenDryRunWithModel_ShouldIncludeModelInManualCommand()
+    {
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-2.0-ultra",
+            worktree: null,
+            directory: null,
+            dryRun: true);
+
+        _logger.Infos.ShouldContain(i => i.Contains("-m gemini-2.0-ultra"));
+    }
+
+    [Fact]
+    public async Task WhenWorktreeWhitespace_ShouldIgnoreAndProceedWithoutWorktree()
+    {
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+
+        await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: null,
+            worktree: "  \t  ",
+            directory: null,
+            dryRun: false);
+
+        _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
+    }
 }
