@@ -58,7 +58,8 @@ public class GeminiService(
             Console.WriteLine("=" + new string('=', 60));
             Console.WriteLine();
 
-            var started = terminal.LaunchGemini(arguments, workingDirectory ?? Environment.CurrentDirectory);
+            var fullCommand = $"gemini {arguments}".Trim();
+            var started = terminal.LaunchTerminalInteractive(fullCommand, workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
                 Console.WriteLine();

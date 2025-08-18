@@ -27,9 +27,9 @@ public class GeminiServiceOsTests
     {
         public (string shell, string args) VersionTuple = ("/bin/sh", "-c 'gemini --version'");
         public List<(string Args, string Cwd)> Launches = new();
-        public bool LaunchGemini(string geminiArgs, string workingDirectory)
+        public bool LaunchTerminalInteractive(string command, string workingDirectory)
         {
-            Launches.Add((geminiArgs, workingDirectory));
+            Launches.Add((command, workingDirectory));
             return true;
         }
         public (string shell, string args) BuildVersionCheck() => VersionTuple;
