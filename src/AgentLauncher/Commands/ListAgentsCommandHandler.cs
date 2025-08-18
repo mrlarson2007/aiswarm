@@ -13,7 +13,7 @@ public class ListAgentsCommandHandler(
     IEnvironmentService env) : ICommandHandler
 {
 
-    public void Run()
+    public Task<bool> RunAsync()
     {
         static string Describe(string key) => key switch
         {
@@ -33,6 +33,7 @@ public class ListAgentsCommandHandler(
             .AppendWorkspaceHelp()
             .AppendModelHelp()
             .ToString();
-        logger.Info(output);
+    logger.Info(output);
+    return Task.FromResult(true);
     }
 }

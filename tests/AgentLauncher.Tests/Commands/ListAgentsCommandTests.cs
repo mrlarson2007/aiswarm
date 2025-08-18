@@ -13,7 +13,7 @@ public class ListAgentsCommandTests
     private readonly TestLogger _logger = new();
 
     [Fact]
-    public void WhenMultipleAgentTypesAvailableAndSourcesProvided_ShouldOutputHeaderAndEachAgent()
+    public async Task WhenMultipleAgentTypesAvailableAndSourcesProvided_ShouldOutputHeaderAndEachAgent()
     {
         // Arrange
         _contextService.Setup(s => s.GetAgentTypeSources()).Returns(new Dictionary<string, string>
@@ -27,8 +27,9 @@ public class ListAgentsCommandTests
         env.SetVar("AISWARM_PERSONAS_PATH", null);
         var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger, env);
 
-        // Act
-        handler.Run();
+    // Act
+    var result = await handler.RunAsync();
+    result.ShouldBeTrue();
 
         // Assert via logger interactions
         _logger.Infos.ShouldContain(i => i.Contains("Available agent types"));

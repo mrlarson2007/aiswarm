@@ -6,7 +6,7 @@ namespace AgentLauncher.Commands;
 public interface ICommandHandler
 {
     /// <summary>
-    /// Executes the command's main logic.
+    /// Executes the command's main logic and returns success flag.
     /// </summary>
-    void Run();
+    Task<bool> RunAsync();
 }
