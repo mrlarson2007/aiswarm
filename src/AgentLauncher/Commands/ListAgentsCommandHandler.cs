@@ -11,10 +11,10 @@ namespace AgentLauncher.Commands;
 public class ListAgentsCommandHandler(
     IContextService contextService,
     IAppLogger logger,
-    IEnvironmentService env) : ICommandHandler
+    IEnvironmentService env)
 {
 
-    public Task<bool> RunAsync()
+    public bool RunAsync()
     {
         static string Describe(string key) => key switch
         {
@@ -35,6 +35,6 @@ public class ListAgentsCommandHandler(
             .AppendModelHelp()
             .ToString();
         logger.Info(output);
-        return Task.FromResult(true);
+        return true;
     }
 }
