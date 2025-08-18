@@ -27,8 +27,8 @@ public class ListAgentsCommandTests
         env.SetVar("AISWARM_PERSONAS_PATH", null);
         var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger, env);
 
-    // Act
-    var result = handler.Run();
+        // Act
+        var result = handler.Run();
         result.ShouldBeTrue();
 
         // Assert via logger interactions

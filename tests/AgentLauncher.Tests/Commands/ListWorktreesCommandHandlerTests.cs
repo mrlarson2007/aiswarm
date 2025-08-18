@@ -35,7 +35,7 @@ public class ListWorktreesCommandHandlerTests
         var result = await SystemUnderTest.RunAsync();
         result.ShouldBeTrue();
         _logger.Infos.ShouldContain(i => i.Contains("No worktrees found"));
-    _logger.Infos.ShouldContain(i => i.Contains("Use --worktree <name> to create"));
+        _logger.Infos.ShouldContain(i => i.Contains("Use --worktree <name> to create"));
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class ListWorktreesCommandHandlerTests
         result.ShouldBeTrue();
         _logger.Infos.ShouldContain(i => i.Contains("feature_x"));
         _logger.Infos.ShouldContain(i => i.Contains("main"));
-    _logger.Infos.ShouldContain(i => i.Contains("To create a new worktree"));
-    _logger.Infos.ShouldContain(i => i.Contains("To remove a worktree"));
+        _logger.Infos.ShouldContain(i => i.Contains("To create a new worktree"));
+        _logger.Infos.ShouldContain(i => i.Contains("To remove a worktree"));
     }
 
     [Fact]

@@ -27,10 +27,10 @@ public static class ServiceRegistration
         });
         services.AddSingleton<IGeminiService, GeminiService>();
 
-    // Command handlers
-    services.AddTransient<Commands.LaunchAgentCommandHandler>();
-    services.AddTransient<Commands.ListAgentsCommandHandler>();
-    services.AddTransient<Commands.ListWorktreesCommandHandler>();
+        // Command handlers
+        services.AddTransient<Commands.LaunchAgentCommandHandler>();
+        services.AddTransient<Commands.ListAgentsCommandHandler>();
+        services.AddTransient<Commands.ListWorktreesCommandHandler>();
 
         return services;
     }
