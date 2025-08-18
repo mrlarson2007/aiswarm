@@ -20,10 +20,10 @@ public static class ServiceRegistration
         services.AddSingleton<Terminals.IInteractiveTerminalService>(sp =>
         {
             var os = sp.GetRequiredService<IOperatingSystemService>();
-            var proc = sp.GetRequiredService<External.IProcessLauncher>();
-            if (os.IsWindows()) return new Terminals.WindowsTerminalService(proc);
-            if (os.IsMacOS()) return new Terminals.MacTerminalService(proc);
-            return new Terminals.LinuxTerminalService(proc);
+            var proc = sp.GetRequiredService<IProcessLauncher>();
+            return os.IsWindows()
+                ? new Terminals.WindowsTerminalService(proc)
+                : new Terminals.UnixTerminalService(proc);
         });
         services.AddSingleton<IGeminiService, GeminiService>();
 

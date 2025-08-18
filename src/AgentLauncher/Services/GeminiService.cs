@@ -4,17 +4,17 @@ namespace AgentLauncher.Services;
 
 /// <inheritdoc />
 public class GeminiService(
-    IProcessLauncher process,
     Terminals.IInteractiveTerminalService terminal) : IGeminiService
 {
 
+    private const string GeminiProcessName = "gemini";
+    private const string VersionCommand = $"{GeminiProcessName} --version";
     /// <inheritdoc />
     public async Task<bool> IsGeminiCliAvailableAsync()
     {
         try
         {
-            var (shell, args) = terminal.BuildVersionCheck();
-            var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
+            var result = await terminal.RunAsync(VersionCommand, Environment.CurrentDirectory, 5000);
             return result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput);
         }
         catch { return false; }
@@ -25,8 +25,7 @@ public class GeminiService(
     {
         try
         {
-            var (shell, args) = terminal.BuildVersionCheck();
-            var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
+            var result = await terminal.RunAsync(VersionCommand, Environment.CurrentDirectory, 5000);
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
                 var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -50,7 +49,7 @@ public class GeminiService(
         {
             var arguments = BuildGeminiArguments(contextFilePath, model);
             Console.WriteLine("Launching Gemini CLI...");
-            Console.WriteLine($"Command: gemini {arguments}");
+            Console.WriteLine($"Command: {GeminiProcessName} {arguments}");
             Console.WriteLine($"Working Directory: {workingDirectory ?? Environment.CurrentDirectory}");
             Console.WriteLine();
             Console.WriteLine("=" + new string('=', 60));
@@ -58,7 +57,7 @@ public class GeminiService(
             Console.WriteLine("=" + new string('=', 60));
             Console.WriteLine();
 
-            var fullCommand = $"gemini {arguments}".Trim();
+            var fullCommand = $"{GeminiProcessName} {arguments}".Trim();
             var started = terminal.LaunchTerminalInteractive(fullCommand, workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
@@ -89,6 +88,4 @@ public class GeminiService(
         args.Add($"-i \"{contextFilePath}\"");
         return string.Join(' ', args);
     }
-
-    private static string EscapeSingleQuotes(string input) => input.Replace("'", "''");
 }

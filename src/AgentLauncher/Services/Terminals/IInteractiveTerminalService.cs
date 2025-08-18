@@ -1,7 +1,16 @@
+using AgentLauncher.Services.External;
+
 namespace AgentLauncher.Services.Terminals;
 
 public interface IInteractiveTerminalService
 {
-    bool LaunchTerminalInteractive(string command, string workingDirectory);
-    (string shell, string args) BuildVersionCheck();
+    Task<ProcessResult> RunAsync(
+        string command,
+        string workingDirectory,
+        int? timeoutMs = null,
+        bool captureOutput = true);
+
+    bool LaunchTerminalInteractive(
+        string command,
+        string workingDirectory);
 }
