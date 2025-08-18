@@ -14,9 +14,9 @@ public class InitCommandHandler(
     public async Task<bool> RunAsync()
     {
         var currentDir = environment.CurrentDirectory;
-        var aiswarmDir = Path.Combine(currentDir, ".aiswarm");
-        var personasDir = Path.Combine(aiswarmDir, "personas");
-        var templateFile = Path.Combine(personasDir, "template_prompt.md");
+        var aiswarmDir = Path.Join(currentDir, ".aiswarm");
+        var personasDir = Path.Join(aiswarmDir, "personas");
+        var templateFile = Path.Join(personasDir, "template_prompt.md");
 
         // Check if directory already exists
         if (fileSystem.DirectoryExists(personasDir))
