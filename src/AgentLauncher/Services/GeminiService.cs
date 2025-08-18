@@ -4,7 +4,8 @@ namespace AgentLauncher.Services;
 
 /// <inheritdoc />
 public class GeminiService(
-    IProcessLauncher process) : IGeminiService
+    IProcessLauncher process,
+    IOperatingSystemService os) : IGeminiService
 {
 
     /// <inheritdoc />
@@ -90,9 +91,9 @@ public class GeminiService(
 
     private static string EscapeSingleQuotes(string input) => input.Replace("'", "''");
 
-    private static bool IsWindows => OperatingSystem.IsWindows();
-    private static bool IsMac => OperatingSystem.IsMacOS();
-    private static bool IsLinux => OperatingSystem.IsLinux();
+    private bool IsWindows => os.IsWindows();
+    private bool IsMac => os.IsMacOS();
+    private bool IsLinux => os.IsLinux();
 
     private (string shell, string args) BuildVersionCheckCommand()
     {

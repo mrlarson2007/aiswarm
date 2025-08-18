@@ -16,7 +16,8 @@ public static class ServiceRegistration
         services.AddSingleton<IContextService, ContextService>();
         services.AddSingleton<IFileSystemService, FileSystemService>();
         services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<IGeminiService, GeminiService>();
+    services.AddSingleton<IOperatingSystemService, OperatingSystemService>();
+    services.AddSingleton<IGeminiService, GeminiService>();
 
     // Command handlers
     services.AddTransient<Commands.LaunchAgentCommandHandler>();
