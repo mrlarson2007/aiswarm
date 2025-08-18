@@ -19,7 +19,7 @@ public class UnixTerminalService(IProcessLauncher inner) : IInteractiveTerminalS
     private static string EscapeShellArgument(string argument)
     {
         // Escape single quotes by replacing each ' with '\''
-        return argument.Replace("'", "'\"'\"'");
+        return argument.Replace("'", "'\\''");
     }
 
 }
