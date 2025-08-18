@@ -31,6 +31,7 @@ public static class ServiceRegistration
         services.AddTransient<Commands.LaunchAgentCommandHandler>();
         services.AddTransient<Commands.ListAgentsCommandHandler>();
         services.AddTransient<Commands.ListWorktreesCommandHandler>();
+        services.AddTransient<Commands.InitCommandHandler>();
 
         return services;
     }
