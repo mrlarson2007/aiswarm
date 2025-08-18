@@ -41,6 +41,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: null,
             dryRun: true);
+        result.ShouldBeTrue();
 
         // Assert
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -59,6 +60,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: "/custom",
             dryRun: true);
+        result.ShouldBeTrue();
 
         // Assert
         _logger.Infos.ShouldContain(s => s.Contains("Dry run mode"));
@@ -83,6 +85,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_x",
             directory: null,
             dryRun: true);
+        result.ShouldBeTrue();
 
         // Assert
         _logger.Infos.ShouldContain(s => s.Contains("Dry run mode"));
@@ -108,6 +111,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_x",
             directory: null,
             dryRun: false);
+        result.ShouldBeTrue();
 
         // Assert (desired future behavior) - these will fail until handler updated
         _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("feature_x"))), Times.Once);
@@ -125,6 +129,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "bad?name",
             directory: null,
             dryRun: false);
+        result.ShouldBeFalse();
 
         // Assert
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -145,6 +150,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: null,
             dryRun: false);
+        result.ShouldBeTrue();
 
         // Assert
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
@@ -164,6 +170,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: null,
             dryRun: false);
+        result.ShouldBeTrue();
 
         // Assert
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", "gemini-1.5-pro", null), Times.Once);
@@ -184,6 +191,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feat_fail",
             directory: null,
             dryRun: false);
+        result.ShouldBeFalse();
 
         _logger.Errors.ShouldContain(e => e.Contains("Failed to create worktree"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -201,6 +209,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_new",
             directory: null,
             dryRun: false);
+        result.ShouldBeFalse();
 
         _logger.Errors.ShouldContain(e => e.Contains("Not in a git repository") || e.Contains("not a git"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -221,6 +230,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_override",
             directory: "/some/other/dir",
             dryRun: false);
+        result.ShouldBeTrue();
 
         _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_override"))), Times.Once);
     }
@@ -234,6 +244,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "bad?name",
             directory: null,
             dryRun: true);
+        result.ShouldBeTrue();
 
         _logger.Infos.ShouldContain(i => i.Contains("Worktree (planned): bad?name"));
         _logger.Errors.ShouldBeEmpty();
@@ -253,6 +264,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_dup",
             directory: null,
             dryRun: false);
+        result.ShouldBeFalse();
 
         _logger.Errors.ShouldContain(e => e.Contains("already exists"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -275,6 +287,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "feature_launch",
             directory: null,
             dryRun: false);
+        result.ShouldBeTrue();
 
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo-feature_launch/planner_context.md", "gemini-1.5-pro", null), Times.Once);
     }
@@ -291,6 +304,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: "/customdir",
             dryRun: false);
+        result.ShouldBeTrue();
 
         _context.Verify(c => c.CreateContextFile("planner", "/customdir"), Times.Once);
     }
@@ -304,6 +318,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: null,
             directory: null,
             dryRun: true);
+        result.ShouldBeTrue();
 
         _logger.Infos.ShouldContain(i => i.Contains("-m gemini-2.0-ultra"));
     }
@@ -320,6 +335,7 @@ public class LaunchAgentCommandHandlerTests
             worktree: "  \t  ",
             directory: null,
             dryRun: false);
+        result.ShouldBeTrue();
 
         _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
         _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
@@ -333,7 +349,7 @@ public class LaunchAgentCommandHandlerTests
         _gemini.Setup(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .ThrowsAsync(new InvalidOperationException("Gemini CLI not installed"));
 
-        var result = await SystemUnderTest.RunAsync(
+    var result = await SystemUnderTest.RunAsync(
             agentType: "planner",
             model: null,
             worktree: null,
