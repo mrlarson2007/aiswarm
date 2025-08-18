@@ -10,7 +10,8 @@ namespace AgentLauncher.Commands;
 public class InitCommandHandler(
     IAppLogger logger,
     IFileSystemService fileSystem,
-    IEnvironmentService environment)
+    IEnvironmentService environment
+)
 {
     public async Task<bool> RunAsync()
     {
