@@ -67,6 +67,9 @@ dotnet run --project src/AgentLauncher -- --list
 ### Basic Commands
 
 ```bash
+# Initialize .aiswarm directory with template persona
+aiswarm --init
+
 # List available agent types and options
 aiswarm --list
 
@@ -115,7 +118,14 @@ aiswarm --agent tester --worktree feature-tests
 
 ### Adding Custom Agents
 
-Create custom persona files in `.aiswarm/personas/` directory:
+Initialize your project with a template:
+
+```bash
+# Quick start: Initialize .aiswarm directory with template
+aiswarm --init
+```
+
+Or manually create custom persona files in `.aiswarm/personas/` directory:
 
 ```bash
 mkdir -p .aiswarm/personas
@@ -164,6 +174,7 @@ Options:
   --list               List available agents and exit
   --list-worktrees     List existing worktrees and exit
   --dry-run            Show what would be done without executing
+  --init               Initialize .aiswarm directory with template persona files
   --help               Show help information
   --version            Show version information
 ```
