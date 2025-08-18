@@ -12,6 +12,7 @@ public class LaunchAgentCommandHandlerTests
 {
     private readonly Mock<IContextService> _context = new();
     private readonly PassThroughProcessLauncher _process = new();
+    private readonly FakeFileSystemService _fs = new();
     private readonly Mock<IGeminiService> _gemini = new();
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
@@ -19,7 +20,7 @@ public class LaunchAgentCommandHandlerTests
 
     public LaunchAgentCommandHandlerTests()
     {
-        _git = new GitService(_process);
+    _git = new GitService(_process, _fs);
     }
 
     private LaunchAgentCommandHandler SystemUnderTest => new(

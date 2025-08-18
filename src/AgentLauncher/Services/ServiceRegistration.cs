@@ -12,8 +12,9 @@ public static class ServiceRegistration
         services.AddSingleton<IEnvironmentService, EnvironmentService>();
 
         // Core services (placeholders until refactor complete)
-        services.AddSingleton<IContextService, ContextService>();
-        services.AddSingleton<IGitService, GitService>();
+    services.AddSingleton<IContextService, ContextService>();
+    services.AddSingleton<IFileSystemService, FileSystemService>();
+    services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IGeminiService, GeminiService>();
 
         // Command handlers

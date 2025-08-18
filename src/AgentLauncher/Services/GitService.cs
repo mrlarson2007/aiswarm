@@ -5,7 +5,8 @@ namespace AgentLauncher.Services;
 
 /// <inheritdoc />
 public partial class GitService(
-    IProcessLauncher process) : IGitService
+    IProcessLauncher process,
+    IFileSystemService fileSystem) : IGitService
 {
     [GeneratedRegex("^[a-zA-Z0-9_-]+$")]
     private static partial Regex WorktreeNameRegex();
@@ -88,7 +89,7 @@ public partial class GitService(
 
         var repoName = Path.GetFileName(repoRoot);
         var worktreePath = Path.Combine(repoParent, $"{repoName}-{name}");
-        if (Directory.Exists(worktreePath))
+    if (fileSystem.DirectoryExists(worktreePath))
             throw new InvalidOperationException($"Directory already exists: {worktreePath}");
 
         var command = $"worktree add \"{worktreePath}\"" + (string.IsNullOrEmpty(baseBranch) ? "" : $" \"{baseBranch}\"");
