@@ -14,7 +14,7 @@ public class LaunchAgentCommandHandler(
     IGeminiService geminiService
 )
 {
-    public async Task RunAsync(
+    public async Task<bool> RunAsync(
         string agentType,
         string? model,
         string? worktree,
@@ -38,7 +38,7 @@ public class LaunchAgentCommandHandler(
             logger.Info($"Planned context file: {planned}");
             var manual = $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \"{planned}\"";
             logger.Info("Manual launch: " + manual);
-            return;
+            return true;
         }
 
         var workDir = directory ?? environment.CurrentDirectory;
@@ -52,14 +52,32 @@ public class LaunchAgentCommandHandler(
             catch (Exception ex)
             {
                 logger.Error(ex.Message);
-                return;
+                return false;
             }
         }
 
-        logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
-        var contextPath = await contextService.CreateContextFile(agentType, workDir);
+        string contextPath;
+        try
+        {
+            logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
+            contextPath = await contextService.CreateContextFile(agentType, workDir);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Failed to create context file: {ex.Message}");
+            return false;
+        }
 
-        logger.Info("Launching Gemini interactive session...");
-        await geminiService.LaunchInteractiveAsync(contextPath, model, null);
+        try
+        {
+            logger.Info("Launching Gemini interactive session...");
+            await geminiService.LaunchInteractiveAsync(contextPath, model, null);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Gemini launch failed: {ex.Message}");
+            return false;
+        }
+        return true;
     }
 }
