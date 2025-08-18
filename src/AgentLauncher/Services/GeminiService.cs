@@ -12,7 +12,8 @@ public class GeminiService(
     {
         try
         {
-            var result = await process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
+            var (shell, args) = BuildVersionCheckCommand();
+            var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
             return result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput);
         }
         catch { return false; }
@@ -23,7 +24,8 @@ public class GeminiService(
     {
         try
         {
-            var result = await process.RunAsync("pwsh.exe", "-Command \"gemini --version\"", Environment.CurrentDirectory, 5000);
+            var (shell, args) = BuildVersionCheckCommand();
+            var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
                 var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -55,7 +57,7 @@ public class GeminiService(
             Console.WriteLine("=" + new string('=', 60));
             Console.WriteLine();
 
-            var started = process.StartInteractive("pwsh.exe", $"-NoExit -Command \"& {EscapeSingleQuotes("Set-Location")} '{(workingDirectory ?? Environment.CurrentDirectory).Replace("'", "''")}' ; gemini {arguments}\"", workingDirectory ?? Environment.CurrentDirectory);
+            var started = StartInteractiveGemini(arguments, workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
                 Console.WriteLine();
@@ -87,4 +89,47 @@ public class GeminiService(
     }
 
     private static string EscapeSingleQuotes(string input) => input.Replace("'", "''");
+
+    private static bool IsWindows => OperatingSystem.IsWindows();
+    private static bool IsMac => OperatingSystem.IsMacOS();
+    private static bool IsLinux => OperatingSystem.IsLinux();
+
+    private (string shell, string args) BuildVersionCheckCommand()
+    {
+        if (IsWindows)
+            return ("pwsh.exe", "-Command \"gemini --version\"");
+        // Use sh -c for broad POSIX compatibility
+        return ("/bin/sh", "-c 'gemini --version'" );
+    }
+
+    private bool StartInteractiveGemini(string geminiArgs, string workDir)
+    {
+        // Windows: launch new PowerShell window staying open
+        if (IsWindows)
+        {
+            var cmd = $"-NoExit -Command \"& {EscapeSingleQuotes("Set-Location")} '{workDir.Replace("'", "''")}' ; gemini {geminiArgs}\"";
+            return process.StartInteractive("pwsh.exe", cmd, workDir);
+        }
+        // macOS: try default Terminal via 'osascript' to open a new window
+        if (IsMac)
+        {
+                // Attempt to open new macOS Terminal window using AppleScript
+                var escapedWd = workDir.Replace("\"", "\\\"");
+                var escapedCmd = $"cd '{workDir.Replace("'", "'\\''")}' ; gemini {geminiArgs}".Replace("\"", "\\\"");
+                var appleScript = $"osascript -e \"tell application 'Terminal' to do script \"\"{escapedCmd}\"\"\"";
+                var started = process.StartInteractive("/bin/sh", $"-c \"{appleScript}\"", workDir);
+                if (started) return true;
+                // Fallback to current shell
+                return process.StartInteractive("/bin/sh", $"-c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}'", workDir);
+        }
+        // Linux: attempt x-terminal-emulator, then gnome-terminal, fallback to current shell
+        var terminalCandidates = new[]{"x-terminal-emulator","gnome-terminal","konsole","xfce4-terminal","xterm"};
+        foreach (var term in terminalCandidates)
+        {
+            if (process.StartInteractive(term, $"-e sh -c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}; exec sh'", workDir))
+                return true;
+        }
+        // final fallback: current shell (blocks)
+        return process.StartInteractive("/bin/sh", $"-c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}'", workDir);
+    }
 }
