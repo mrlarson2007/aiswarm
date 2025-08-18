@@ -27,9 +27,9 @@ public class ListAgentsCommandTests
         env.SetVar("AISWARM_PERSONAS_PATH", null);
         var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger, env);
 
-    // Act
-    var result = await handler.RunAsync();
-    result.ShouldBeTrue();
+        // Act
+        var result = await handler.RunAsync();
+        result.ShouldBeTrue();
 
         // Assert via logger interactions
         _logger.Infos.ShouldContain(i => i.Contains("Available agent types"));

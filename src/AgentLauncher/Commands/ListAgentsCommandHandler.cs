@@ -33,7 +33,7 @@ public class ListAgentsCommandHandler(
             .AppendWorkspaceHelp()
             .AppendModelHelp()
             .ToString();
-    logger.Info(output);
-    return Task.FromResult(true);
+        logger.Info(output);
+        return Task.FromResult(true);
     }
 }
