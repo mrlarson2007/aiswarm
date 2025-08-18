@@ -70,7 +70,7 @@ public class GeminiService(
             }
             else
             {
-                logger.Error("Failed to start PowerShell window for Gemini CLI.");
+                logger.Error("Failed to start terminal session for Gemini CLI.");
             }
             await Task.CompletedTask;
             return started;
