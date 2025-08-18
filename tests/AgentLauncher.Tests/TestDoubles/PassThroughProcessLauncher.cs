@@ -69,7 +69,7 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
                 return true;
             }
         }
-        exp = null!;
+        exp = default!;
         return false;
     }
 }
