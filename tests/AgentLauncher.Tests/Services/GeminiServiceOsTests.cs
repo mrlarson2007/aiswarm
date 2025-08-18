@@ -23,24 +23,26 @@ public class GeminiServiceOsTests
         }
     }
 
-    private class FakeOsService : IOperatingSystemService
+    private class FakeTerminal : AgentLauncher.Services.Terminals.IInteractiveTerminalService
     {
-        public bool Windows { get; set; }
-        public bool Mac { get; set; }
-        public bool Linux { get; set; }
-        public bool IsWindows() => Windows;
-        public bool IsMacOS() => Mac;
-        public bool IsLinux() => Linux;
+        public (string shell, string args) VersionTuple = ("/bin/sh", "-c 'gemini --version'");
+        public List<(string Args, string Cwd)> Launches = new();
+        public bool LaunchGemini(string geminiArgs, string workingDirectory)
+        {
+            Launches.Add((geminiArgs, workingDirectory));
+            return true;
+        }
+        public (string shell, string args) BuildVersionCheck() => VersionTuple;
     }
 
-    private GeminiService Create(FakeProcessLauncher proc, FakeOsService os) => new(proc, os);
+    private GeminiService Create(FakeProcessLauncher proc, FakeTerminal term) => new(proc, term);
 
     [Fact]
     public async Task VersionCheck_Windows_UsesPwsh()
     {
         var proc = new FakeProcessLauncher();
-        var os = new FakeOsService { Windows = true };
-        var svc = Create(proc, os);
+    var term = new FakeTerminal { VersionTuple = ("pwsh.exe", "-Command \"gemini --version\"") };
+    var svc = Create(proc, term);
         (await svc.IsGeminiCliAvailableAsync()).ShouldBeTrue();
         proc.Runs.ShouldContain(r => r.File.EndsWith("pwsh.exe"));
     }
@@ -49,23 +51,23 @@ public class GeminiServiceOsTests
     public async Task VersionCheck_Linux_UsesSh()
     {
         var proc = new FakeProcessLauncher();
-        var os = new FakeOsService { Linux = true };
-        var svc = Create(proc, os);
+    var term = new FakeTerminal { VersionTuple = ("/bin/sh", "-c 'gemini --version'") };
+    var svc = Create(proc, term);
         await svc.GetGeminiVersionAsync();
         proc.Runs.ShouldContain(r => r.File == "/bin/sh");
     }
 
     [Fact]
-    public void Launch_Windows_UsesPwshInteractive()
+    public async Task Launch_Windows_UsesPwshInteractive()
     {
         var proc = new FakeProcessLauncher();
-        var os = new FakeOsService { Windows = true };
-        var svc = Create(proc, os);
+        var term = new AgentLauncher.Services.Terminals.WindowsTerminalService(proc);
+        var svc = new GeminiService(proc, term);
         var tmp = Path.GetTempFileName();
         try
         {
             File.WriteAllText(tmp, "test");
-            svc.LaunchInteractiveAsync(tmp, null, Path.GetDirectoryName(tmp)).GetAwaiter().GetResult();
+            await svc.LaunchInteractiveAsync(tmp, null, Path.GetDirectoryName(tmp));
             proc.Interactive.ShouldContain(i => i.File.EndsWith("pwsh.exe"));
         }
         finally { File.Delete(tmp); }

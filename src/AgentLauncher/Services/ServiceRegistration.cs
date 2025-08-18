@@ -16,8 +16,16 @@ public static class ServiceRegistration
         services.AddSingleton<IContextService, ContextService>();
         services.AddSingleton<IFileSystemService, FileSystemService>();
         services.AddSingleton<IGitService, GitService>();
-    services.AddSingleton<IOperatingSystemService, OperatingSystemService>();
-    services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<IOperatingSystemService, OperatingSystemService>();
+        services.AddSingleton<Terminals.IInteractiveTerminalService>(sp =>
+        {
+            var os = sp.GetRequiredService<IOperatingSystemService>();
+            var proc = sp.GetRequiredService<External.IProcessLauncher>();
+            if (os.IsWindows()) return new Terminals.WindowsTerminalService(proc);
+            if (os.IsMacOS()) return new Terminals.MacTerminalService(proc);
+            return new Terminals.LinuxTerminalService(proc);
+        });
+        services.AddSingleton<IGeminiService, GeminiService>();
 
     // Command handlers
     services.AddTransient<Commands.LaunchAgentCommandHandler>();

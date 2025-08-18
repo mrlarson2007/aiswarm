@@ -5,7 +5,7 @@ namespace AgentLauncher.Services;
 /// <inheritdoc />
 public class GeminiService(
     IProcessLauncher process,
-    IOperatingSystemService os) : IGeminiService
+    Terminals.IInteractiveTerminalService terminal) : IGeminiService
 {
 
     /// <inheritdoc />
@@ -13,7 +13,7 @@ public class GeminiService(
     {
         try
         {
-            var (shell, args) = BuildVersionCheckCommand();
+            var (shell, args) = terminal.BuildVersionCheck();
             var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
             return result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput);
         }
@@ -25,7 +25,7 @@ public class GeminiService(
     {
         try
         {
-            var (shell, args) = BuildVersionCheckCommand();
+            var (shell, args) = terminal.BuildVersionCheck();
             var result = await process.RunAsync(shell, args, Environment.CurrentDirectory, 5000);
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
@@ -58,7 +58,7 @@ public class GeminiService(
             Console.WriteLine("=" + new string('=', 60));
             Console.WriteLine();
 
-            var started = StartInteractiveGemini(arguments, workingDirectory ?? Environment.CurrentDirectory);
+            var started = terminal.LaunchGemini(arguments, workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
                 Console.WriteLine();
@@ -90,47 +90,4 @@ public class GeminiService(
     }
 
     private static string EscapeSingleQuotes(string input) => input.Replace("'", "''");
-
-    private bool IsWindows => os.IsWindows();
-    private bool IsMac => os.IsMacOS();
-    private bool IsLinux => os.IsLinux();
-
-    private (string shell, string args) BuildVersionCheckCommand()
-    {
-        if (IsWindows)
-            return ("pwsh.exe", "-Command \"gemini --version\"");
-        // Use sh -c for broad POSIX compatibility
-        return ("/bin/sh", "-c 'gemini --version'" );
-    }
-
-    private bool StartInteractiveGemini(string geminiArgs, string workDir)
-    {
-        // Windows: launch new PowerShell window staying open
-        if (IsWindows)
-        {
-            var cmd = $"-NoExit -Command \"& {EscapeSingleQuotes("Set-Location")} '{workDir.Replace("'", "''")}' ; gemini {geminiArgs}\"";
-            return process.StartInteractive("pwsh.exe", cmd, workDir);
-        }
-        // macOS: try default Terminal via 'osascript' to open a new window
-        if (IsMac)
-        {
-                // Attempt to open new macOS Terminal window using AppleScript
-                var escapedWd = workDir.Replace("\"", "\\\"");
-                var escapedCmd = $"cd '{workDir.Replace("'", "'\\''")}' ; gemini {geminiArgs}".Replace("\"", "\\\"");
-                var appleScript = $"osascript -e \"tell application 'Terminal' to do script \"\"{escapedCmd}\"\"\"";
-                var started = process.StartInteractive("/bin/sh", $"-c \"{appleScript}\"", workDir);
-                if (started) return true;
-                // Fallback to current shell
-                return process.StartInteractive("/bin/sh", $"-c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}'", workDir);
-        }
-        // Linux: attempt x-terminal-emulator, then gnome-terminal, fallback to current shell
-        var terminalCandidates = new[]{"x-terminal-emulator","gnome-terminal","konsole","xfce4-terminal","xterm"};
-        foreach (var term in terminalCandidates)
-        {
-            if (process.StartInteractive(term, $"-e sh -c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}; exec sh'", workDir))
-                return true;
-        }
-        // final fallback: current shell (blocks)
-        return process.StartInteractive("/bin/sh", $"-c 'cd {workDir.Replace("'", "'\\''")} ; gemini {geminiArgs}'", workDir);
-    }
 }
