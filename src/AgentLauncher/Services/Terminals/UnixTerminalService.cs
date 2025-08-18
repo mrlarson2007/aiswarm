@@ -9,7 +9,7 @@ public class UnixTerminalService(IProcessLauncher inner) : IInteractiveTerminalS
         string workingDirectory,
         int? timeoutMs = null,
         bool captureOutput = true) =>
-            await inner.RunAsync("bash", command, workingDirectory, timeoutMs, captureOutput);
+            await inner.RunAsync("bash", $"-c '{EscapeShellArgument(command)}'", workingDirectory, timeoutMs, captureOutput);
 
     public bool LaunchTerminalInteractive(
         string command,
