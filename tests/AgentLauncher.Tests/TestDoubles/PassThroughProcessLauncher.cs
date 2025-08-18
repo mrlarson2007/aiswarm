@@ -14,11 +14,11 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
     public readonly List<Invocation> Invocations = new();
 
     public record Invocation(string File, string Arguments, string WorkingDir);
-    public record Expectation(string File, Func<string,bool> ArgsMatch, ProcessResult Result, bool Consume = true);
+    public record Expectation(string File, Func<string, bool> ArgsMatch, ProcessResult Result, bool Consume = true);
 
     public void Enqueue(
         string file,
-        Func<string,bool> argsMatch,
+        Func<string, bool> argsMatch,
         ProcessResult result,
         bool consume = true) => _expectations.Enqueue(new Expectation(file, argsMatch, result, consume));
 
@@ -34,7 +34,7 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
         if (TryMatchExpectation(fileName, arguments, out var exp))
             return Task.FromResult(exp.Result);
 
-    return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
+        return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
     }
 
     public bool StartInteractive(string fileName, string arguments, string workingDirectory)
