@@ -20,7 +20,7 @@ public class LaunchAgentCommandHandlerTests
 
     public LaunchAgentCommandHandlerTests()
     {
-        _git = new GitService(_process, _fs);
+        _git = new GitService(_process, _fs, _logger);
     }
 
     private LaunchAgentCommandHandler SystemUnderTest => new(

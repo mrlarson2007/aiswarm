@@ -14,6 +14,12 @@ public class UnixTerminalService(IProcessLauncher inner) : IInteractiveTerminalS
     public bool LaunchTerminalInteractive(
         string command,
         string workingDirectory) =>
-            inner.StartInteractive("bash", $"-c '{command} && exec $SHELL'", workingDirectory);
+            inner.StartInteractive("bash", $"-c '{EscapeShellArgument(command)} && exec $SHELL'", workingDirectory);
+
+    private static string EscapeShellArgument(string argument)
+    {
+        // Escape single quotes by replacing each ' with '\''
+        return argument.Replace("'", "'\"'\"'");
+    }
 
 }

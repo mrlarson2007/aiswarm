@@ -1,4 +1,5 @@
 using AgentLauncher.Services.External;
+using AgentLauncher.Services.Logging;
 using System.Text.RegularExpressions;
 
 namespace AgentLauncher.Services;
@@ -6,7 +7,8 @@ namespace AgentLauncher.Services;
 /// <inheritdoc />
 public partial class GitService(
     IProcessLauncher process,
-    IFileSystemService fileSystem) : IGitService
+    IFileSystemService fileSystem,
+    IAppLogger logger) : IGitService
 {
     [GeneratedRegex("^[a-zA-Z0-9_-]+$")]
     private static partial Regex WorktreeNameRegex();
@@ -97,7 +99,7 @@ public partial class GitService(
         if (!result.IsSuccess)
             throw new InvalidOperationException($"Failed to create worktree: {result.StandardError}");
 
-        Console.WriteLine($"Created worktree '{name}' at: {worktreePath}");
+        logger.Info($"Created worktree '{name}' at: {worktreePath}");
         return worktreePath;
     }
 
@@ -109,9 +111,9 @@ public partial class GitService(
             return false;
         var result = await process.RunAsync("git", $"worktree remove \"{path}\"", Environment.CurrentDirectory, 30000);
         if (result.IsSuccess)
-            Console.WriteLine($"Removed worktree '{name}' from: {path}");
+            logger.Info($"Removed worktree '{name}' from: {path}");
         else
-            Console.WriteLine($"Failed to remove worktree '{name}': {result.StandardError}");
+            logger.Error($"Failed to remove worktree '{name}': {result.StandardError}");
         return result.IsSuccess;
     }
 }

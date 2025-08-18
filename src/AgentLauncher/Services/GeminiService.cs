@@ -1,10 +1,12 @@
 using AgentLauncher.Services.External;
+using AgentLauncher.Services.Logging;
 
 namespace AgentLauncher.Services;
 
 /// <inheritdoc />
 public class GeminiService(
-    Terminals.IInteractiveTerminalService terminal) : IGeminiService
+    Terminals.IInteractiveTerminalService terminal,
+    IAppLogger logger) : IGeminiService
 {
 
     private const string GeminiProcessName = "gemini";
@@ -42,40 +44,40 @@ public class GeminiService(
     {
         if (!File.Exists(contextFilePath))
         {
-            Console.WriteLine($"Error: Context file not found: {contextFilePath}");
+            logger.Error($"Error: Context file not found: {contextFilePath}");
             return false;
         }
         try
         {
             var arguments = BuildGeminiArguments(contextFilePath, model);
-            Console.WriteLine("Launching Gemini CLI...");
-            Console.WriteLine($"Command: {GeminiProcessName} {arguments}");
-            Console.WriteLine($"Working Directory: {workingDirectory ?? Environment.CurrentDirectory}");
-            Console.WriteLine();
-            Console.WriteLine("=" + new string('=', 60));
-            Console.WriteLine(" GEMINI CLI SESSION - Press Ctrl+C to exit");
-            Console.WriteLine("=" + new string('=', 60));
-            Console.WriteLine();
+            logger.Info("Launching Gemini CLI...");
+            logger.Info($"Command: {GeminiProcessName} {arguments}");
+            logger.Info($"Working Directory: {workingDirectory ?? Environment.CurrentDirectory}");
+            logger.Info(string.Empty);
+            logger.Info("=" + new string('=', 60));
+            logger.Info(" GEMINI CLI SESSION - Press Ctrl+C to exit");
+            logger.Info("=" + new string('=', 60));
+            logger.Info(string.Empty);
 
             var fullCommand = $"{GeminiProcessName} {arguments}".Trim();
             var started = terminal.LaunchTerminalInteractive(fullCommand, workingDirectory ?? Environment.CurrentDirectory);
             if (started)
             {
-                Console.WriteLine();
-                Console.WriteLine("=" + new string('=', 60));
-                Console.WriteLine(" GEMINI CLI SESSION STARTED");
-                Console.WriteLine("=" + new string('=', 60));
+                logger.Info(string.Empty);
+                logger.Info("=" + new string('=', 60));
+                logger.Info(" GEMINI CLI SESSION STARTED");
+                logger.Info("=" + new string('=', 60));
             }
             else
             {
-                Console.WriteLine("Failed to start PowerShell window for Gemini CLI.");
+                logger.Error("Failed to start PowerShell window for Gemini CLI.");
             }
             await Task.CompletedTask;
             return started;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error launching Gemini CLI: {ex.Message}");
+            logger.Error($"Error launching Gemini CLI: {ex.Message}");
             return false;
         }
     }

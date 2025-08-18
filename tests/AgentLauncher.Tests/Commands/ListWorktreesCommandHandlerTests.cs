@@ -15,7 +15,7 @@ public class ListWorktreesCommandHandlerTests
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
 
     private ListWorktreesCommandHandler SystemUnderTest => new ListWorktreesCommandHandler(
-        new GitService(_process, _fs),
+        new GitService(_process, _fs, _logger),
         _logger);
 
     [Fact]
