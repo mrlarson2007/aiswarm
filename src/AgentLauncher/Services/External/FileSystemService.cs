@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AgentLauncher.Services.External;
 
 /// <inheritdoc />
 public class FileSystemService : IFileSystemService

@@ -1,6 +1,7 @@
 using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
 using System.Text;
+using AgentLauncher.Services.External;
 
 namespace AgentLauncher.Commands;
 

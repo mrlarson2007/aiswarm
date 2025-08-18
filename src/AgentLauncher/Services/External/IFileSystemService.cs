@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AgentLauncher.Services.External;
 
 /// <summary>
 /// Minimal abstraction for file system operations to facilitate testing code

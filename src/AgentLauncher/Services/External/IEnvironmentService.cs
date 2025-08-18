@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AgentLauncher.Services.External;
 
 /// <summary>
 /// Abstraction over System.Environment to enable deterministic testing.

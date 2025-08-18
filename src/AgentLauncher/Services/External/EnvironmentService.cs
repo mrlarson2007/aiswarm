@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AgentLauncher.Services.External;
 
 internal sealed class EnvironmentService : IEnvironmentService
 {

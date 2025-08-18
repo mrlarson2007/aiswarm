@@ -1,4 +1,5 @@
 using AgentLauncher.Services;
+using AgentLauncher.Services.External;
 
 namespace AgentLauncher.Tests.TestDoubles;
 
