@@ -82,6 +82,14 @@ public class Program
             IsRequired = false
         };
 
+        // Define the init option
+        var initOption = new Option<bool>(
+            name: "--init",
+            description: "Initialize .aiswarm directory with template persona files")
+        {
+            IsRequired = false
+        };
+
         // Create the root command
         var rootCommand = new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
 
@@ -92,9 +100,10 @@ public class Program
         rootCommand.AddOption(listOption);
         rootCommand.AddOption(listWorktreesOption);
         rootCommand.AddOption(dryRunOption);
+        rootCommand.AddOption(initOption);
 
         // Set the handler for the root command
-        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees, dryRun) =>
+        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees, dryRun, init) =>
         {
             if (list)
             {
@@ -107,6 +116,17 @@ public class Program
             {
                 var listWorktreesHandler = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListWorktreesCommandHandler>();
                 await listWorktreesHandler.RunAsync();
+                return;
+            }
+
+            if (init)
+            {
+                var initHandler = serviceProvider.GetRequiredService<AgentLauncher.Commands.InitCommandHandler>();
+                var initOk = await initHandler.RunAsync();
+                if (!initOk)
+                {
+                    Console.WriteLine("Initialization failed.");
+                }
                 return;
             }
 
@@ -123,7 +143,7 @@ public class Program
             {
                 Console.WriteLine("Launch failed.");
             }
-        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption, dryRunOption);
+        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption, dryRunOption, initOption);
 
         return await rootCommand.InvokeAsync(args);
     }
