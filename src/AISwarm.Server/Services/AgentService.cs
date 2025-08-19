@@ -1,17 +1,62 @@
 using AISwarm.Shared.Contracts;
+using AISwarm.Shared.Models;
+using AISwarm.Server.Data;
+using AISwarm.Server.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.Services;
 
 /// <summary>
-/// Agent registration and management service
-/// Initial implementation for TDD RED phase - should fail tests
+/// Agent registration and management service with database persistence
 /// </summary>
 public class AgentService : IAgentService
 {
-    public Task<string> RegisterAgentAsync(RegisterAgentRequest request)
+    private readonly CoordinationDbContext _dbContext;
+
+    public AgentService(CoordinationDbContext dbContext)
     {
-        // GREEN phase: Minimal implementation to make test pass
+        _dbContext = dbContext;
+    }
+
+    public async Task<string> RegisterAgentAsync(RegisterAgentRequest request)
+    {
+        // Generate unique agent ID
         var agentId = $"agent-{Guid.NewGuid():N}";
-        return Task.FromResult(agentId);
+        
+        // Create agent entity
+        var agent = new Agent
+        {
+            Id = agentId,
+            PersonaId = request.PersonaId,
+            AssignedWorktree = request.AssignedWorktree,
+            Status = "active",
+            RegisteredAt = DateTime.UtcNow,
+            LastHeartbeat = DateTime.UtcNow
+        };
+
+        // Persist to database
+        _dbContext.Agents.Add(agent);
+        await _dbContext.SaveChangesAsync();
+
+        return agentId;
+    }
+
+    public async Task<AgentInfo?> GetAgentAsync(string agentId)
+    {
+        var agent = await _dbContext.Agents
+            .FirstOrDefaultAsync(a => a.Id == agentId);
+
+        if (agent == null)
+            return null;
+
+        return new AgentInfo
+        {
+            Id = agent.Id,
+            PersonaId = agent.PersonaId,
+            AssignedWorktree = agent.AssignedWorktree,
+            Status = agent.Status,
+            RegisteredAt = agent.RegisteredAt,
+            LastHeartbeat = agent.LastHeartbeat
+        };
     }
 }

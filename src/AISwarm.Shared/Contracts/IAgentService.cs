@@ -1,3 +1,5 @@
+using AISwarm.Shared.Models;
+
 namespace AISwarm.Shared.Contracts;
 
 /// <summary>
@@ -6,6 +8,7 @@ namespace AISwarm.Shared.Contracts;
 public interface IAgentService
 {
     Task<string> RegisterAgentAsync(RegisterAgentRequest request);
+    Task<AgentInfo?> GetAgentAsync(string agentId);
 }
 
 /// <summary>
