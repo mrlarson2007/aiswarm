@@ -9,6 +9,7 @@ public interface IAgentService
 {
     Task<string> RegisterAgentAsync(RegisterAgentRequest request);
     Task<AgentInfo?> GetAgentAsync(string agentId);
+    Task<bool> UpdateHeartbeatAsync(string agentId);
 }
 
 /// <summary>

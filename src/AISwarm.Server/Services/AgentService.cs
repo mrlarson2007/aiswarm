@@ -59,4 +59,22 @@ public class AgentService : IAgentService
             LastHeartbeat = agent.LastHeartbeat
         };
     }
+
+    public async Task<bool> UpdateHeartbeatAsync(string agentId)
+    {
+        // GREEN phase: Implement actual heartbeat update
+        var agent = await _dbContext.Agents
+            .FirstOrDefaultAsync(a => a.Id == agentId);
+
+        if (agent == null)
+            return false;
+
+        // Update the heartbeat timestamp
+        agent.LastHeartbeat = DateTime.UtcNow;
+        
+        // Save changes to database
+        await _dbContext.SaveChangesAsync();
+        
+        return true;
+    }
 }
