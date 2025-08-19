@@ -23,7 +23,7 @@ Based on Microsoft's MCP C# SDK documentation:
 
 ## Decision
 
-We will create a separate `AgentLauncher.CoordinationServer` project that implements a standalone MCP server for task coordination.
+We will create a separate `AISwarm.Server` project that implements a standalone MCP server for task coordination.
 
 ### Solution Structure
 ```
@@ -32,12 +32,12 @@ src/
 │   ├── Program.cs                    # CLI interface for launching agents
 │   ├── Services/                     # Agent-specific services
 │   └── Resources/                    # Persona definitions
-├── AgentLauncher.CoordinationServer/ # New MCP server project
+├── AISwarm.Server/                   # New MCP server project
 │   ├── Program.cs                    # MCP server host
 │   ├── Services/                     # Coordination services
 │   ├── Tools/                        # MCP tool implementations
 │   └── Data/                         # SQLite database access
-└── AgentLauncher.Shared/             # Shared contracts and models
+└── AISwarm.Shared/                   # Shared contracts and models
     ├── Models/                       # Shared data models
     └── Contracts/                    # Interface definitions
 ```
@@ -94,7 +94,7 @@ src/
 
 ```bash
 # 1. Start coordination server (manual or via tooling)
-dotnet run --project src/AgentLauncher.CoordinationServer
+dotnet run --project src/AISwarm.Server
 
 # 2. Launch agents that connect to running server
 dotnet agentlauncher --persona planner --feature user-auth

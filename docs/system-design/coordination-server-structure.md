@@ -1,13 +1,13 @@
-# AgentLauncher.CoordinationServer Project Structure
+# AISwarm.Server Project Structure
 
 ## Clean Architecture Layout
 
 Following clean architecture principles and MCP server patterns:
 
 ```
-src/AgentLauncher.CoordinationServer/
+src/AISwarm.Server/
 ├── Program.cs                              # MCP server host entry point
-├── AgentLauncher.CoordinationServer.csproj # Project file with MCP dependencies
+├── AISwarm.Server.csproj                   # Project file with MCP dependencies
 ├── Tools/                                  # MCP tool implementations
 │   ├── TaskManagementTools.cs             # Task CRUD operations
 │   ├── WorktreeManagementTools.cs         # Worktree lifecycle tools
@@ -70,7 +70,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
-using AgentLauncher.CoordinationServer.Configuration;
+using AISwarm.Server.Configuration;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -130,7 +130,7 @@ public static class ServiceCollectionExtensions
 ```csharp
 using ModelContextProtocol.Server;
 using System.ComponentModel;
-using AgentLauncher.CoordinationServer.Services;
+using AISwarm.Server.Services;
 
 [McpServerToolType]
 public static class TaskManagementTools
@@ -229,7 +229,7 @@ public class CoordinationServerSettings
 ## Testing Strategy
 
 ```
-tests/AgentLauncher.CoordinationServer.Tests/
+tests/AISwarm.Server.Tests/
 ├── Tools/                              # MCP tool tests
 │   ├── TaskManagementToolsTests.cs
 │   └── WorktreeManagementToolsTests.cs

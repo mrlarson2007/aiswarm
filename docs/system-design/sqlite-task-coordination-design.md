@@ -12,12 +12,12 @@ src/
 │   ├── Program.cs                    # CLI interface for launching agents
 │   ├── Services/                     # Agent-specific services (ContextManager, etc.)
 │   └── Resources/                    # Persona definitions
-├── AgentLauncher.CoordinationServer/ # New MCP server project
+├── AISwarm.Server/                   # New MCP coordination server
 │   ├── Program.cs                    # MCP server host with stdio transport
 │   ├── Services/                     # Task coordination, worktree management
 │   ├── Tools/                        # MCP tool implementations
 │   └── Data/                         # SQLite database access layer
-└── AgentLauncher.Shared/             # Shared contracts and models
+└── AISwarm.Shared/                   # Shared contracts and models
     ├── Models/                       # Task, Agent, Worktree models
     └── Contracts/                    # ITaskCoordinationService interfaces
 ```
@@ -27,7 +27,7 @@ src/
 ```mermaid
 graph TB
     subgraph "Coordination Infrastructure"
-        MCPS[MCP Coordination Server<br/>AgentLauncher.CoordinationServer]
+        MCPS[MCP Coordination Server<br/>AISwarm.Server]
         DB[SQLite Database<br/>.aiswarm/coordination.db]
         MCPS <--> DB
     end
