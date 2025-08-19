@@ -4,16 +4,17 @@ using AISwarm.Shared.Contracts;
 using AISwarm.Server.Services;
 using AISwarm.Server.Data;
 using Microsoft.EntityFrameworkCore;
+using AISwarm.Server.Tests.TestDoubles;
 
 namespace AISwarm.Server.Tests.Services;
 
 /// <summary>
 /// Tests for agent registration and management service
-/// Following TDD principles: RED-GREEN-REFACTOR-COMMIT
 /// </summary>
 public class AgentServiceTests : IDisposable
 {
     private readonly CoordinationDbContext _dbContext;
+    private readonly FakeTimeService _timeService;
     private readonly IAgentService _systemUnderTest;
 
     public AgentServiceTests()
@@ -23,23 +24,21 @@ public class AgentServiceTests : IDisposable
             .Options;
         
         _dbContext = new CoordinationDbContext(options);
-        _systemUnderTest = new AgentService(_dbContext);
+        _timeService = new FakeTimeService();
+        _systemUnderTest = new AgentService(_dbContext, _timeService);
     }
 
     [Fact]
     public async Task WhenRegisteringNewAgent_ShouldReturnAgentId()
     {
-        // Arrange
         var agentRequest = new RegisterAgentRequest
         {
             PersonaId = "planner",
             AssignedWorktree = null
         };
 
-        // Act
         var result = await _systemUnderTest.RegisterAgentAsync(agentRequest);
 
-        // Assert
         result.ShouldNotBeNullOrEmpty();
         result.ShouldStartWith("agent-");
     }
@@ -47,29 +46,26 @@ public class AgentServiceTests : IDisposable
     [Fact]
     public async Task WhenRegisteringAgent_ShouldPersistToDatabase()
     {
-        // Arrange
         var agentRequest = new RegisterAgentRequest
         {
             PersonaId = "implementer",
             AssignedWorktree = "user-auth-feature"
         };
 
-        // Act
         var agentId = await _systemUnderTest.RegisterAgentAsync(agentRequest);
 
-        // Assert - Agent should be retrievable from database
-        var retrievedAgent = await _systemUnderTest.GetAgentAsync(agentId);
-        retrievedAgent.ShouldNotBeNull();
-        retrievedAgent.Id.ShouldBe(agentId);
-        retrievedAgent.PersonaId.ShouldBe("implementer");
-        retrievedAgent.AssignedWorktree.ShouldBe("user-auth-feature");
-        retrievedAgent.Status.ShouldBe("active");
+        // Verify agent is persisted directly in database
+        var persistedAgent = await _dbContext.Agents.FindAsync(agentId);
+        persistedAgent.ShouldNotBeNull();
+        persistedAgent.Id.ShouldBe(agentId);
+        persistedAgent.PersonaId.ShouldBe("implementer");
+        persistedAgent.AssignedWorktree.ShouldBe("user-auth-feature");
+        persistedAgent.Status.ShouldBe("active");
     }
 
     [Fact]
     public async Task WhenUpdatingHeartbeat_ShouldUpdateLastHeartbeatTimestamp()
     {
-        // Arrange
         var agentRequest = new RegisterAgentRequest
         {
             PersonaId = "reviewer",
@@ -77,19 +73,18 @@ public class AgentServiceTests : IDisposable
         };
         
         var agentId = await _systemUnderTest.RegisterAgentAsync(agentRequest);
-        var originalAgent = await _systemUnderTest.GetAgentAsync(agentId);
+        var originalAgent = await _dbContext.Agents.FindAsync(agentId);
         var originalHeartbeat = originalAgent!.LastHeartbeat;
         
-        // Wait a bit to ensure timestamp difference
-        await Task.Delay(10);
+        // Advance time to simulate heartbeat interval
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
 
-        // Act
         var updateResult = await _systemUnderTest.UpdateHeartbeatAsync(agentId);
 
-        // Assert
         updateResult.ShouldBeTrue();
         
-        var updatedAgent = await _systemUnderTest.GetAgentAsync(agentId);
+        // Verify heartbeat updated directly in database
+        var updatedAgent = await _dbContext.Agents.FindAsync(agentId);
         updatedAgent.ShouldNotBeNull();
         updatedAgent.LastHeartbeat.ShouldBeGreaterThan(originalHeartbeat);
     }
@@ -97,13 +92,10 @@ public class AgentServiceTests : IDisposable
     [Fact]
     public async Task WhenUpdatingHeartbeatForNonExistentAgent_ShouldReturnFalse()
     {
-        // Arrange
         var nonExistentAgentId = "agent-nonexistent123";
 
-        // Act
         var result = await _systemUnderTest.UpdateHeartbeatAsync(nonExistentAgentId);
 
-        // Assert
         result.ShouldBeFalse();
     }
 

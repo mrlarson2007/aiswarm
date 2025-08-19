@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using AISwarm.Shared.Contracts;
+using AISwarm.Server.Services;
 
 namespace AISwarm.Server;
 
@@ -16,7 +18,10 @@ internal static class Program
             options.LogToStandardErrorThreshold = LogLevel.Trace;
         });
 
-        // Add MCP Server - implementation will come via TDD
+        // Register time service for deterministic time control
+        builder.Services.AddSingleton<ITimeService, SystemTimeService>();
+
+        // Configure MCP server for agent coordination
         builder.Services
             .AddMcpServer()
             .WithStdioServerTransport();

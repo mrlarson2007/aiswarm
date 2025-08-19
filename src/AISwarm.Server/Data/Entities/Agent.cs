@@ -18,9 +18,9 @@ public class Agent
     [Required]
     public string Status { get; set; } = "active";
     
-    public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
+    public DateTime RegisteredAt { get; set; }
     
-    public DateTime LastHeartbeat { get; set; } = DateTime.UtcNow;
+    public DateTime LastHeartbeat { get; set; }
     
     public string? Metadata { get; set; }
 }

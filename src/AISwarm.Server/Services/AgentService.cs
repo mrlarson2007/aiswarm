@@ -12,29 +12,28 @@ namespace AISwarm.Server.Services;
 public class AgentService : IAgentService
 {
     private readonly CoordinationDbContext _dbContext;
+    private readonly ITimeService _timeService;
 
-    public AgentService(CoordinationDbContext dbContext)
+    public AgentService(CoordinationDbContext dbContext, ITimeService timeService)
     {
         _dbContext = dbContext;
+        _timeService = timeService;
     }
 
     public async Task<string> RegisterAgentAsync(RegisterAgentRequest request)
     {
-        // Generate unique agent ID
         var agentId = $"agent-{Guid.NewGuid():N}";
         
-        // Create agent entity
         var agent = new Agent
         {
             Id = agentId,
             PersonaId = request.PersonaId,
             AssignedWorktree = request.AssignedWorktree,
             Status = "active",
-            RegisteredAt = DateTime.UtcNow,
-            LastHeartbeat = DateTime.UtcNow
+            RegisteredAt = _timeService.UtcNow,
+            LastHeartbeat = _timeService.UtcNow
         };
 
-        // Persist to database
         _dbContext.Agents.Add(agent);
         await _dbContext.SaveChangesAsync();
 
@@ -62,17 +61,15 @@ public class AgentService : IAgentService
 
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        // GREEN phase: Implement actual heartbeat update
         var agent = await _dbContext.Agents
             .FirstOrDefaultAsync(a => a.Id == agentId);
 
         if (agent == null)
             return false;
 
-        // Update the heartbeat timestamp
-        agent.LastHeartbeat = DateTime.UtcNow;
+        // Update timestamp to track agent liveness for coordination health monitoring
+        agent.LastHeartbeat = _timeService.UtcNow;
         
-        // Save changes to database
         await _dbContext.SaveChangesAsync();
         
         return true;
