@@ -15,6 +15,46 @@ After consultation with Gemini AI, we discovered the official `google-gemini/gem
 2. **Custom Tool Integration**: Supports custom tools with `@server-name tool-name` syntax
 3. **Configuration Management**: Uses `~/.gemini/settings.json` for MCP server configuration
 4. **Request/Response Model**: Standard MCP request/response pattern (no complex SSE needed)
+5. **Plugin Event Hooks**: Rich lifecycle hooks for advanced integration patterns
+6. **IDE Integration**: Native VS Code integration with workspace-aware events
+7. **Advanced Tools API**: Comprehensive tooling beyond basic MCP protocol
+
+### Integration Hook Details
+
+#### Plugin Event Hooks
+The gemini-cli provides three core lifecycle hooks for deep integration:
+
+1. **beforeRequest Hook**
+   - **Purpose**: Intercept and mutate any API request before sending to Gemini
+   - **Use Case**: Add coordination context, inject agent metadata, modify prompts
+   - **Documentation**: [Event Hooks - beforeRequest](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–beforerequest)
+
+2. **afterResponse Hook**
+   - **Purpose**: Inspect or transform raw API responses immediately after arrival
+   - **Use Case**: Extract coordination signals, log agent decisions, trigger workflows
+   - **Documentation**: [Event Hooks - afterResponse](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–afterresponse)
+
+3. **configChanged Hook**
+   - **Purpose**: React in real-time when configuration files are updated
+   - **Use Case**: Dynamic agent reconfiguration, hot-reload coordination settings
+   - **Documentation**: [Event Hooks - configChanged](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–configchanged)
+
+#### IDE Integration Capabilities
+Native VS Code extension provides workspace-aware coordination:
+
+- **Workspace Context Loading**: Access to recent files, selections, cursor position
+- **Native Diff-View Previews**: Built-in accept/reject commands for agent changes
+- **Custom VS Code Commands**: `gemini.cli.run`, `gemini.cli.acceptDiff`, etc.
+- **Documentation**: [IDE Integration](https://github.com/google-gemini/gemini-cli/blob/main/docs/ide-integration.md)
+
+#### Advanced MCP & Tools API
+Beyond basic MCP protocol, gemini-cli provides comprehensive tooling:
+
+- **MCP Protocol Extensions**: Enhanced context/asset sharing patterns
+- **Tools API**: Filesystem, shell, HTTP, Google Search, memory tools
+- **Documentation**: 
+  - [MCP Protocol](https://github.com/google-gemini/gemini-cli/blob/main/docs/mcp-protocol.md)
+  - [Tools API](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools-api.md)
 
 ### Previous Complexity vs. Simple Solution
 **What we almost built (unnecessarily complex):**
@@ -115,23 +155,39 @@ Each agent instance will have gemini-cli configured via `~/.gemini/settings.json
 
 ## Implementation Plan
 
-### Phase 1: MCP Tools Development (builds on existing AISwarm.Server)
-- Add MCP tool implementations to existing server
+### Phase 1: Core MCP Tools Development (builds on existing AISwarm.Server)
+- Add basic MCP tool implementations to existing server
 - Implement `wait_for_next_event` with connection holding
-- Add task management tools
-- Test tools individually
+- Add task management tools (`claim_task`, `report_completion`)
+- Test tools individually with manual gemini-cli invocation
 
-### Phase 2: AgentLauncher Integration
-- Modify AgentLauncher to use gemini-cli instead of custom approaches
-- Generate appropriate settings.json configurations
+### Phase 2: Advanced Integration Hooks
+- **Plugin Event Hooks Implementation**:
+  - `beforeRequest`: Inject agent context into all API calls
+  - `afterResponse`: Extract coordination signals from responses
+  - `configChanged`: Support dynamic agent reconfiguration
+- **VS Code Integration Setup**:
+  - Configure workspace-aware context loading
+  - Set up native diff-view previews for agent changes
+  - Implement custom commands for agent coordination
+- **Extended Tools API Integration**:
+  - Leverage built-in filesystem, shell, HTTP tools
+  - Integrate Google Search capabilities for research tasks
+  - Use memory tools for persistent agent context
+
+### Phase 3: AgentLauncher Integration
+- Modify AgentLauncher to configure gemini-cli instead of custom approaches
+- Generate appropriate settings.json configurations with hook setups
 - Add agent persona initialization prompts
-- Test single-agent coordination
+- Implement plugin and extension management
+- Test single-agent coordination with full hook integration
 
-### Phase 3: Multi-Agent Coordination
-- Test multiple agents coordinating through MCP tools
-- Implement task distribution and claiming logic
-- Add monitoring and health checks
-- End-to-end workflow testing
+### Phase 4: Multi-Agent Coordination with Advanced Features
+- Test multiple agents coordinating through enhanced MCP tools
+- Implement advanced task distribution using event hooks
+- Add workspace-aware collaboration via VS Code integration
+- Implement real-time coordination monitoring
+- End-to-end workflow testing with all integration points
 
 ## Alternatives Considered
 
@@ -148,7 +204,14 @@ Each agent instance will have gemini-cli configured via `~/.gemini/settings.json
 **Rejected**: Gemini CLI has the specific MCP features we need
 
 ## References
+
 - [google-gemini/gemini-cli Repository](https://github.com/google-gemini/gemini-cli)
+- [Gemini CLI Extension Hooks - beforeRequest](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–beforerequest)
+- [Gemini CLI Extension Hooks - afterResponse](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–afterresponse)
+- [Gemini CLI Extension Hooks - configChanged](https://github.com/google-gemini/gemini-cli/blob/main/docs/extension.md#event-hooks–configchanged)
+- [Gemini CLI IDE Integration](https://github.com/google-gemini/gemini-cli/blob/main/docs/ide-integration.md)
+- [Gemini CLI MCP Protocol](https://github.com/google-gemini/gemini-cli/blob/main/docs/mcp-protocol.md)
+- [Gemini CLI Tools API](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools-api.md)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - ADR-0003: Separate MCP Coordination Server Project
 - [MCP C# SDK Documentation](https://devblogs.microsoft.com/dotnet/build-a-model-context-protocol-mcp-server-in-csharp/)

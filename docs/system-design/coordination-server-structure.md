@@ -22,9 +22,271 @@ The AISwarm.Server is an MCP (Model Context Protocol) server that coordinates mu
 **Key Integration Points:**
 
 - **AgentLauncher**: Manages gemini-cli processes and configuration
-- **gemini-cli**: Official tool with native MCP client support
+- **gemini-cli**: Official tool with native MCP client support and advanced hooks
 - **AISwarm.Server**: Standard MCP server exposing coordination tools
 - **Configuration**: Via `~/.gemini/settings.json` per agent instance
+- **Plugin Event Hooks**: beforeRequest, afterResponse, configChanged for advanced coordination
+- **IDE Integration**: VS Code workspace-aware events and commands
+- **Extended Tools API**: Built-in filesystem, shell, HTTP, Google Search capabilities
+
+## Advanced Integration Patterns
+
+### Plugin Event Hooks Implementation
+
+The coordination system leverages gemini-cli's plugin event hooks for sophisticated agent coordination:
+
+#### beforeRequest Hook Integration
+```csharp
+// Services/RequestInterceptorService.cs
+public class RequestInterceptorService : IRequestInterceptorService
+{
+    private readonly IAgentContextService _agentContext;
+    private readonly ICoordinationStateService _coordinationState;
+
+    public async Task<RequestModification> InterceptRequestAsync(ApiRequest request)
+    {
+        // Inject agent coordination context into every request
+        var agentId = _agentContext.GetCurrentAgentId();
+        var coordinationState = await _coordinationState.GetAgentStateAsync(agentId);
+        
+        // Add coordination metadata to request
+        request.Metadata["agent_id"] = agentId;
+        request.Metadata["coordination_state"] = coordinationState.Status;
+        request.Metadata["current_task"] = coordinationState.CurrentTaskId;
+        
+        // Inject active task context if available
+        if (coordinationState.CurrentTaskId.HasValue)
+        {
+            var taskContext = await _coordinationState.GetTaskContextAsync(
+                coordinationState.CurrentTaskId.Value);
+            request.Context = $"{request.Context}\n\nCurrent Task: {taskContext}";
+        }
+        
+        return new RequestModification { ModifiedRequest = request };
+    }
+}
+```
+
+#### afterResponse Hook Integration
+```csharp
+// Services/ResponseAnalyzerService.cs
+public class ResponseAnalyzerService : IResponseAnalyzerService
+{
+    private readonly ICoordinationEventService _eventService;
+    private readonly ITaskProgressService _progressService;
+
+    public async Task AnalyzeResponseAsync(ApiResponse response)
+    {
+        // Extract coordination signals from Gemini responses
+        var coordinationSignals = ExtractCoordinationSignals(response.Text);
+        
+        foreach (var signal in coordinationSignals)
+        {
+            switch (signal.Type)
+            {
+                case "task_completed":
+                    await _progressService.MarkTaskCompletedAsync(signal.TaskId, signal.Result);
+                    break;
+                case "help_needed":
+                    await _eventService.BroadcastHelpRequestAsync(signal.AgentId, signal.Details);
+                    break;
+                case "progress_update":
+                    await _progressService.UpdateProgressAsync(signal.TaskId, signal.Progress);
+                    break;
+            }
+        }
+    }
+
+    private IEnumerable<CoordinationSignal> ExtractCoordinationSignals(string responseText)
+    {
+        // Parse response for coordination indicators
+        // Look for patterns like:
+        // "I need help with..." -> help_needed signal
+        // "Task completed: ..." -> task_completed signal
+        // "Progress: 75%" -> progress_update signal
+        
+        var signals = new List<CoordinationSignal>();
+        
+        // Pattern matching logic here
+        if (responseText.Contains("task completed", StringComparison.OrdinalIgnoreCase))
+        {
+            signals.Add(new CoordinationSignal 
+            { 
+                Type = "task_completed",
+                // Extract task details
+            });
+        }
+        
+        return signals;
+    }
+}
+```
+
+#### configChanged Hook Integration
+```csharp
+// Services/ConfigurationWatcherService.cs
+public class ConfigurationWatcherService : IConfigurationWatcherService
+{
+    private readonly IAgentReconfigurationService _reconfigService;
+    private readonly ILogger<ConfigurationWatcherService> _logger;
+
+    public async Task OnConfigurationChangedAsync(ConfigurationChangedEvent configEvent)
+    {
+        _logger.LogInformation("Configuration changed: {ConfigPath}", configEvent.ConfigPath);
+        
+        // Handle dynamic reconfiguration
+        switch (configEvent.Section)
+        {
+            case "coordination":
+                await _reconfigService.UpdateCoordinationSettingsAsync(configEvent.NewValues);
+                break;
+            case "agents":
+                await _reconfigService.UpdateAgentSettingsAsync(configEvent.NewValues);
+                break;
+            case "tasks":
+                await _reconfigService.UpdateTaskSettingsAsync(configEvent.NewValues);
+                break;
+        }
+        
+        // Broadcast configuration changes to other agents if needed
+        await _reconfigService.NotifyOtherAgentsAsync(configEvent);
+    }
+}
+```
+
+### VS Code Integration Patterns
+
+#### Workspace-Aware Agent Context
+```csharp
+// Services/WorkspaceContextService.cs
+public class WorkspaceContextService : IWorkspaceContextService
+{
+    public async Task<WorkspaceContext> GetWorkspaceContextAsync()
+    {
+        // Leverage VS Code integration for workspace awareness
+        return new WorkspaceContext
+        {
+            RecentFiles = await GetRecentFilesAsync(),
+            CurrentSelection = await GetCurrentSelectionAsync(),
+            CursorPosition = await GetCursorPositionAsync(),
+            OpenTabs = await GetOpenTabsAsync(),
+            GitBranch = await GetCurrentGitBranchAsync(),
+            WorkspaceRoot = await GetWorkspaceRootAsync()
+        };
+    }
+
+    public async Task<string> GetContextualPromptAsync(string basePrompt)
+    {
+        var context = await GetWorkspaceContextAsync();
+        
+        return $@"{basePrompt}
+
+WORKSPACE CONTEXT:
+- Current Branch: {context.GitBranch}
+- Recent Files: {string.Join(", ", context.RecentFiles)}
+- Current Selection: {context.CurrentSelection}
+- Open Tabs: {string.Join(", ", context.OpenTabs)}
+
+Consider this workspace context when making decisions and coordinating with other agents.";
+    }
+}
+```
+
+#### Native Diff-View Integration
+```csharp
+// Tools/DiffManagementTools.cs
+[McpServerToolType]
+public static class DiffManagementTools
+{
+    [McpServerTool]
+    [Description("Present changes to user via VS Code native diff view")]
+    public static async Task<string> ShowDiffPreview(
+        IDiffPreviewService diffService,
+        [Description("File path for the changes")] string filePath,
+        [Description("Original content")] string originalContent,
+        [Description("Proposed changes")] string modifiedContent,
+        [Description("Description of changes")] string changeDescription)
+    {
+        var diffPreview = new DiffPreview
+        {
+            FilePath = filePath,
+            OriginalContent = originalContent,
+            ModifiedContent = modifiedContent,
+            Description = changeDescription,
+            AgentId = await diffService.GetCurrentAgentIdAsync()
+        };
+        
+        var previewId = await diffService.ShowPreviewAsync(diffPreview);
+        
+        return $"Diff preview created with ID: {previewId}. User can accept/reject via VS Code commands.";
+    }
+
+    [McpServerTool]
+    [Description("Check status of diff previews")]
+    public static async Task<string> CheckDiffStatus(
+        IDiffPreviewService diffService,
+        [Description("Preview ID to check")] string previewId)
+    {
+        var status = await diffService.GetPreviewStatusAsync(previewId);
+        
+        return JsonSerializer.Serialize(new
+        {
+            PreviewId = previewId,
+            Status = status.Status, // Pending, Accepted, Rejected
+            UserFeedback = status.UserFeedback,
+            Timestamp = status.LastUpdated
+        });
+    }
+}
+```
+
+### Extended Tools API Integration
+
+#### Built-in Tool Orchestration
+```csharp
+// Services/ExtendedToolsOrchestrator.cs
+public class ExtendedToolsOrchestrator : IExtendedToolsOrchestrator
+{
+    public async Task<string> ExecuteResearchTaskAsync(string query)
+    {
+        // Orchestrate multiple built-in tools for comprehensive research
+        var results = new List<string>();
+        
+        // 1. Use Google Search tool
+        var searchResults = await ExecuteGeminiToolAsync("google_search", new { query });
+        results.Add($"Search Results: {searchResults}");
+        
+        // 2. Use filesystem tool to check local docs
+        var localDocs = await ExecuteGeminiToolAsync("filesystem_search", new 
+        { 
+            path = "./docs", 
+            pattern = query 
+        });
+        results.Add($"Local Documentation: {localDocs}");
+        
+        // 3. Use memory tool to check previous research
+        var previousResearch = await ExecuteGeminiToolAsync("memory_recall", new 
+        { 
+            topic = query,
+            max_results = 5 
+        });
+        results.Add($"Previous Research: {previousResearch}");
+        
+        // 4. Combine and summarize
+        var combinedResults = string.Join("\n\n", results);
+        return combinedResults;
+    }
+    
+    private async Task<string> ExecuteGeminiToolAsync(string toolName, object parameters)
+    {
+        // Integration with gemini-cli built-in tools
+        // This would call the appropriate tool via the Tools API
+        // Implementation depends on how gemini-cli exposes tool execution
+        
+        return await _geminiToolsClient.ExecuteToolAsync(toolName, parameters);
+    }
+}
+```
 
 ## Clean Architecture Layout
 
