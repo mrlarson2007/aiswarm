@@ -2,6 +2,8 @@ using AgentLauncher.Services.External;
 using Microsoft.Extensions.DependencyInjection;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Services;
+using AISwarm.DataLayer.Database;
+using Microsoft.EntityFrameworkCore;
 
 namespace AgentLauncher.Services;
 
@@ -30,6 +32,8 @@ public static class ServiceRegistration
         services.AddSingleton<IGeminiService, GeminiService>();
 
         // Data layer services
+        services.AddDbContext<CoordinationDbContext>(options =>
+            options.UseSqlite("Data Source=aiswarm.db"));
         services.AddSingleton<ITimeService, SystemTimeService>();
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
