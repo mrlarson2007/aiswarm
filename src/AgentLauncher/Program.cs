@@ -90,6 +90,14 @@ public class Program
             IsRequired = false
         };
 
+        // Define the monitor option
+        var monitorOption = new Option<bool>(
+            name: "--monitor",
+            description: "Register agent in database and monitor its lifecycle")
+        {
+            IsRequired = false
+        };
+
         // Create the root command
         var rootCommand = new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
 
@@ -101,10 +109,21 @@ public class Program
         rootCommand.AddOption(listWorktreesOption);
         rootCommand.AddOption(dryRunOption);
         rootCommand.AddOption(initOption);
+        rootCommand.AddOption(monitorOption);
 
         // Set the handler for the root command
-        rootCommand.SetHandler(async (agentType, model, worktree, directory, list, listWorktrees, dryRun, init) =>
+        rootCommand.SetHandler(async (context) =>
         {
+            var agentType = context.ParseResult.GetValueForOption(agentOption);
+            var model = context.ParseResult.GetValueForOption(modelOption);
+            var worktree = context.ParseResult.GetValueForOption(worktreeOption);
+            var directory = context.ParseResult.GetValueForOption(directoryOption);
+            var list = context.ParseResult.GetValueForOption(listOption);
+            var listWorktrees = context.ParseResult.GetValueForOption(listWorktreesOption);
+            var dryRun = context.ParseResult.GetValueForOption(dryRunOption);
+            var init = context.ParseResult.GetValueForOption(initOption);
+            var monitor = context.ParseResult.GetValueForOption(monitorOption);
+            
             if (list)
             {
                 var listAgents = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListAgentsCommandHandler>();
@@ -138,12 +157,12 @@ public class Program
             }
 
             var launcher = serviceProvider.GetRequiredService<AgentLauncher.Commands.LaunchAgentCommandHandler>();
-            var ok = await launcher.RunAsync(agentType, model, worktree, directory, dryRun);
+            var ok = await launcher.RunAsync(agentType, model, worktree, directory, dryRun, monitor);
             if (!ok)
             {
                 Console.WriteLine("Launch failed.");
             }
-        }, agentOption, modelOption, worktreeOption, directoryOption, listOption, listWorktreesOption, dryRunOption, initOption);
+        });
 
         return await rootCommand.InvokeAsync(args);
     }

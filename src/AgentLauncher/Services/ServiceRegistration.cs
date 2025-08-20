@@ -1,5 +1,7 @@
 using AgentLauncher.Services.External;
 using Microsoft.Extensions.DependencyInjection;
+using AISwarm.DataLayer.Contracts;
+using AISwarm.DataLayer.Services;
 
 namespace AgentLauncher.Services;
 
@@ -26,6 +28,11 @@ public static class ServiceRegistration
                 : new Terminals.UnixTerminalService(proc);
         });
         services.AddSingleton<IGeminiService, GeminiService>();
+
+        // Data layer services
+        services.AddSingleton<ITimeService, SystemTimeService>();
+        services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
+        services.AddSingleton<ILocalAgentService, LocalAgentService>();
 
         // Command handlers
         services.AddTransient<Commands.LaunchAgentCommandHandler>();

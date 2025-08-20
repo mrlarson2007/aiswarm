@@ -12,7 +12,8 @@ public class LaunchAgentCommandHandler(
     IAppLogger logger,
     IEnvironmentService environment,
     IGitService gitService,
-    IGeminiService geminiService
+    IGeminiService geminiService,
+    ILocalAgentService? localAgentService = null
 )
 {
     public async Task<bool> RunAsync(
@@ -20,7 +21,8 @@ public class LaunchAgentCommandHandler(
         string? model,
         string? worktree,
         string? directory,
-        bool dryRun
+        bool dryRun,
+        bool monitor = false
     )
     {
         if (dryRun)
@@ -35,6 +37,7 @@ public class LaunchAgentCommandHandler(
                 logger.Info($"Worktree (planned): {worktree}");
             }
             logger.Info($"Working directory: {workingDirectory}");
+            logger.Info($"Monitor: {monitor}");
             var planned = Path.Combine(workingDirectory, agentType + "_context.md");
             logger.Info($"Planned context file: {planned}");
             var manual = $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \"{planned}\"";
@@ -67,6 +70,31 @@ public class LaunchAgentCommandHandler(
         {
             logger.Error($"Failed to create context file: {ex.Message}");
             return false;
+        }
+
+        string? agentId = null;
+        if (monitor && localAgentService != null)
+        {
+            try
+            {
+                logger.Info("Registering agent in database for monitoring...");
+                var request = new AgentRegistrationRequest
+                {
+                    PersonaId = agentType, // Using agentType as PersonaId for now
+                    AgentType = agentType,
+                    WorkingDirectory = workDir,
+                    Model = model,
+                    WorktreeName = worktree
+                };
+                
+                agentId = await localAgentService.RegisterAgentAsync(request);
+                logger.Info($"Registered agent with ID: {agentId}");
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Failed to register agent for monitoring: {ex.Message}");
+                logger.Info("Continuing without monitoring...");
+            }
         }
 
         try

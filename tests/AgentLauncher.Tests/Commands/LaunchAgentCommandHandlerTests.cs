@@ -14,6 +14,7 @@ public class LaunchAgentCommandHandlerTests
     private readonly PassThroughProcessLauncher _process = new();
     private readonly FakeFileSystemService _fs = new();
     private readonly Mock<IGeminiService> _gemini = new();
+    private readonly Mock<ILocalAgentService> _localAgentService = new();
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
     private readonly GitService _git;
@@ -28,7 +29,8 @@ public class LaunchAgentCommandHandlerTests
         _logger,
         _env,
         _git,
-        _gemini.Object
+        _gemini.Object,
+        _localAgentService.Object
     );
 
     [Fact]
@@ -357,5 +359,32 @@ public class LaunchAgentCommandHandlerTests
                 dryRun: false);
         result.ShouldBeFalse();
         _logger.Errors.ShouldContain(e => e.Contains("Gemini launch failed"));
+    }
+
+    [Fact]
+    public async Task WhenMonitorEnabled_ShouldRegisterAgentInDatabase()
+    {
+        // Arrange
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
+            .ReturnsAsync("agent-123");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: null,
+            directory: "/repo",
+            dryRun: false,
+            monitor: true);
+        
+        // Assert
+        result.ShouldBeTrue();
+        _localAgentService.Verify(s => s.RegisterAgentAsync(It.Is<AgentRegistrationRequest>(r =>
+            r.AgentType == "planner" &&
+            r.WorkingDirectory == "/repo" &&
+            r.Model == "gemini-1.5-pro")), Times.Once);
+        _logger.Infos.ShouldContain(i => i.Contains("Registered agent") && i.Contains("agent-123"));
     }
 }
