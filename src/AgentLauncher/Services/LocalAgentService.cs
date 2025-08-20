@@ -14,12 +14,12 @@ namespace AgentLauncher.Services;
 public class LocalAgentService
 {
     private readonly ITimeService _timeService;
-    private readonly CoordinationDbContext _dbContext;
+    private readonly IDatabaseScopeService _scopeService;
 
-    public LocalAgentService(ITimeService timeService, CoordinationDbContext dbContext)
+    public LocalAgentService(ITimeService timeService, IDatabaseScopeService scopeService)
     {
         _timeService = timeService;
-        _dbContext = dbContext;
+        _scopeService = scopeService;
     }
 
     /// <summary>
@@ -27,6 +27,8 @@ public class LocalAgentService
     /// </summary>
     public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
+        using var scope = _scopeService.CreateWriteScope();
+        
         var agentId = Guid.NewGuid().ToString();
         var currentTime = _timeService.UtcNow;
         
@@ -43,8 +45,10 @@ public class LocalAgentService
             WorktreeName = request.WorktreeName
         };
 
-        _dbContext.Agents.Add(agent);
-        await _dbContext.SaveChangesAsync();
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        
         return agentId;
     }
 
@@ -53,7 +57,8 @@ public class LocalAgentService
     /// </summary>
     public async Task<Agent?> GetAgentAsync(string agentId)
     {
-        return await _dbContext.Agents.FindAsync(agentId);
+        using var scope = _scopeService.CreateReadScope();
+        return await scope.Agents.FindAsync(agentId);
     }
 
     /// <summary>
@@ -61,11 +66,14 @@ public class LocalAgentService
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        var agent = await _dbContext.Agents.FindAsync(agentId);
+        using var scope = _scopeService.CreateWriteScope();
+        
+        var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.UpdateHeartbeat(_timeService.UtcNow);
-            await _dbContext.SaveChangesAsync();
+            await scope.SaveChangesAsync();
+            scope.Complete();
             return true;
         }
         return false;
@@ -76,13 +84,16 @@ public class LocalAgentService
     /// </summary>
     public async Task MarkAgentRunningAsync(string agentId, string processId)
     {
-        var agent = await _dbContext.Agents.FindAsync(agentId);
+        using var scope = _scopeService.CreateWriteScope();
+        
+        var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.Status = AISwarm.DataLayer.Entities.AgentStatus.Running;
             agent.ProcessId = processId;
             agent.StartedAt = _timeService.UtcNow;
-            await _dbContext.SaveChangesAsync();
+            await scope.SaveChangesAsync();
+            scope.Complete();
         }
     }
 
@@ -91,11 +102,14 @@ public class LocalAgentService
     /// </summary>
     public async Task StopAgentAsync(string agentId)
     {
-        var agent = await _dbContext.Agents.FindAsync(agentId);
+        using var scope = _scopeService.CreateWriteScope();
+        
+        var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.Stop(_timeService.UtcNow);
-            await _dbContext.SaveChangesAsync();
+            await scope.SaveChangesAsync();
+            scope.Complete();
         }
     }
 }

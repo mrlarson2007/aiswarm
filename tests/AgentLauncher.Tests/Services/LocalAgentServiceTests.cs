@@ -2,6 +2,7 @@ using AgentLauncher.Services;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Entities;
+using AISwarm.DataLayer.Services;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using AgentStatus = AISwarm.DataLayer.Entities.AgentStatus;
@@ -13,6 +14,7 @@ public class LocalAgentServiceTests : IDisposable
     private readonly LocalAgentService _systemUnderTest;
     private readonly TestTimeService _timeService;
     private readonly CoordinationDbContext _dbContext;
+    private readonly IDatabaseScopeService _scopeService;
 
     public LocalAgentServiceTests()
     {
@@ -22,8 +24,9 @@ public class LocalAgentServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _dbContext = new CoordinationDbContext(options);
+        _scopeService = new DatabaseScopeService(_dbContext);
         
-        _systemUnderTest = new LocalAgentService(_timeService, _dbContext);
+        _systemUnderTest = new LocalAgentService(_timeService, _scopeService);
     }
 
     [Fact]
