@@ -69,4 +69,23 @@ public class AgentEntityTests
         agent.Status.ShouldBe(AgentStatus.Stopped);
         agent.StoppedAt.ShouldBe(stopTime);
     }
+
+    [Fact]
+    public void WhenKillingAgent_ShouldSetStatusAndKillTime()
+    {
+        // Arrange
+        var agent = new Agent
+        {
+            Id = "agent-456",
+            Status = AgentStatus.Running
+        };
+        var killTime = DateTime.UtcNow;
+
+        // Act
+        agent.Kill(killTime);
+
+        // Assert
+        agent.Status.ShouldBe(AgentStatus.Killed);
+        agent.StoppedAt.ShouldBe(killTime);
+    }
 }

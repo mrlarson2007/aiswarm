@@ -11,7 +11,7 @@ namespace AgentLauncher.Services;
 /// - Local health monitoring  
 /// - Process lifecycle management
 /// </summary>
-public class LocalAgentService
+public class LocalAgentService : ILocalAgentService
 {
     private readonly ITimeService _timeService;
     private readonly IDatabaseScopeService _scopeService;
@@ -108,6 +108,28 @@ public class LocalAgentService
         if (agent != null)
         {
             agent.Stop(_timeService.UtcNow);
+            await scope.SaveChangesAsync();
+            scope.Complete();
+        }
+    }
+
+    /// <summary>
+    /// Forcibly kill an agent and update status
+    /// </summary>
+    public async Task KillAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        
+        var agent = await scope.Agents.FindAsync(agentId);
+        if (agent != null)
+        {
+            agent.Kill(_timeService.UtcNow);
+            
+            // TODO: Update any pending tasks assigned to this agent once task infrastructure is implemented
+            // - Mark tasks as failed/cancelled due to agent termination
+            // - Potentially reassign tasks to other available agents
+            // - Update task status and add termination reason
+            
             await scope.SaveChangesAsync();
             scope.Complete();
         }

@@ -141,6 +141,31 @@ public class LocalAgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task WhenKillingAgent_ShouldUpdateStatusAndKillTime()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/test/path"
+        };
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+        await _systemUnderTest.MarkAgentRunningAsync(agentId, "54321");
+        
+        // Advance time
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(3));
+
+        // Act
+        await _systemUnderTest.KillAgentAsync(agentId);
+
+        // Assert
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.Status.ShouldBe(AgentStatus.Killed);
+        agent.StoppedAt.ShouldBe(_timeService.UtcNow);
+    }
+
+    [Fact]
     public async Task WhenCheckingHealthOfUnknownAgent_ShouldReturnNull()
     {
         // Arrange

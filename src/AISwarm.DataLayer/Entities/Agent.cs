@@ -35,6 +35,15 @@ public class Agent
         Status = AgentStatus.Stopped;
         StoppedAt = stopTime;
     }
+
+    /// <summary>
+    /// Mark the agent as forcibly killed
+    /// </summary>
+    public void Kill(DateTime killTime)
+    {
+        Status = AgentStatus.Killed;
+        StoppedAt = killTime;
+    }
 }
 
 /// <summary>
@@ -47,5 +56,6 @@ public enum AgentStatus
     Stopping,
     Stopped,
     Failed,
-    Unhealthy
+    Unhealthy,
+    Killed
 }
