@@ -6,4 +6,5 @@ public interface IAgentManagementService
     Task<bool> StopAgentAsync(string agentId);
     Task<AgentInstance?> GetAgentStatusAsync(string agentId);
     Task<IEnumerable<AgentInstance>> GetAllAgentsAsync();
+    Task<AgentHealthStatus> CheckAgentHealthAsync(string agentId, DateTime lastHeartbeat);
 }

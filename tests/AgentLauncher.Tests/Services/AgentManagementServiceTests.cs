@@ -76,4 +76,45 @@ public class AgentManagementServiceTests
         // Assert
         result.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task WhenCheckingAgentHealth_ShouldUseConfiguredHeartbeatTimeout()
+    {
+        // Arrange
+        var config = new AgentHealthConfiguration
+        {
+            HeartbeatTimeout = TimeSpan.FromMinutes(2)
+        };
+        var serviceWithConfig = new AgentManagementService(config);
+        
+        var agent = await serviceWithConfig.StartAgentAsync("planner", "/test/path");
+        
+        // Simulate agent not sending heartbeat for longer than timeout
+        var healthStatus = await serviceWithConfig.CheckAgentHealthAsync(agent.Id, 
+            lastHeartbeat: DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(3)));
+
+        // Assert
+        healthStatus.IsHealthy.ShouldBeFalse();
+        healthStatus.Reason.ShouldContain("heartbeat timeout");
+    }
+
+    [Fact]
+    public async Task WhenAgentExceedsHeartbeatTimeout_ShouldMarkAsUnhealthy()
+    {
+        // Arrange
+        var config = new AgentHealthConfiguration { HeartbeatTimeout = TimeSpan.FromMinutes(1) };
+        var serviceWithConfig = new AgentManagementService(config);
+        
+        var agent = await serviceWithConfig.StartAgentAsync("implementer", "/test/path");
+        
+        // Simulate stale heartbeat
+        var staleHeartbeat = DateTime.UtcNow.Subtract(TimeSpan.FromMinutes(2));
+        
+        // Act
+        var healthCheck = await serviceWithConfig.CheckAgentHealthAsync(agent.Id, staleHeartbeat);
+        
+        // Assert
+        healthCheck.IsHealthy.ShouldBeFalse();
+        healthCheck.TimeSinceLastHeartbeat.ShouldBeGreaterThan(config.HeartbeatTimeout);
+    }
 }
