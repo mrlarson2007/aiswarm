@@ -134,6 +134,140 @@ public class LocalAgentServiceTests
         // Assert
         agent.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task WhenRegisteringMultipleAgents_ShouldCreateUniqueIds()
+    {
+        // Arrange
+        var request1 = new AgentRegistrationRequest { PersonaId = "planner", AgentType = "planner", WorkingDirectory = "/path1" };
+        var request2 = new AgentRegistrationRequest { PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/path2" };
+
+        // Act
+        var agentId1 = await _systemUnderTest.RegisterAgentAsync(request1);
+        var agentId2 = await _systemUnderTest.RegisterAgentAsync(request2);
+
+        // Assert
+        agentId1.ShouldNotBe(agentId2);
+        agentId1.ShouldNotBeNullOrEmpty();
+        agentId2.ShouldNotBeNullOrEmpty();
+        
+        var agent1 = await _systemUnderTest.GetAgentAsync(agentId1);
+        var agent2 = await _systemUnderTest.GetAgentAsync(agentId2);
+        
+        agent1!.PersonaId.ShouldBe("planner");
+        agent2!.PersonaId.ShouldBe("implementer");
+    }
+
+    [Fact]
+    public async Task WhenRegisteringAgentWithAllOptionalFields_ShouldSetAllProperties()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "reviewer",
+            AgentType = "reviewer",
+            WorkingDirectory = "/test/review-path",
+            Model = "gemini-1.5-flash",
+            WorktreeName = "feature-branch"
+        };
+
+        // Act
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+
+        // Assert
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent.ShouldNotBeNull();
+        agent.Id.ShouldBe(agentId);
+        agent.PersonaId.ShouldBe("reviewer");
+        agent.AgentType.ShouldBe("reviewer");
+        agent.WorkingDirectory.ShouldBe("/test/review-path");
+        agent.Model.ShouldBe("gemini-1.5-flash");
+        agent.WorktreeName.ShouldBe("feature-branch");
+        agent.Status.ShouldBe(AgentStatus.Starting);
+        agent.RegisteredAt.ShouldBe(_timeService.UtcNow);
+        agent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+        agent.ProcessId.ShouldBeNull();
+        agent.StoppedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task WhenRegisteringAgentWithMinimalFields_ShouldSetRequiredPropertiesOnly()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/test/minimal-path"
+            // Model and WorktreeName are null
+        };
+
+        // Act
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+
+        // Assert
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent.ShouldNotBeNull();
+        agent.PersonaId.ShouldBe("tester");
+        agent.AgentType.ShouldBe("tester");
+        agent.WorkingDirectory.ShouldBe("/test/minimal-path");
+        agent.Model.ShouldBeNull();
+        agent.WorktreeName.ShouldBeNull();
+        agent.Status.ShouldBe(AgentStatus.Starting);
+    }
+
+    [Fact]
+    public async Task WhenAgentCompletesFullLifecycle_ShouldTrackAllTimestamps()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/lifecycle/test"
+        };
+        
+        var registrationTime = _timeService.UtcNow;
+
+        // Act & Assert - Registration
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.RegisteredAt.ShouldBe(registrationTime);
+        agent.LastHeartbeat.ShouldBe(registrationTime);
+        agent.Status.ShouldBe(AgentStatus.Starting);
+
+        // Act & Assert - Mark Running
+        _timeService.AdvanceTime(TimeSpan.FromSeconds(5));
+        var startTime = _timeService.UtcNow;
+        await _systemUnderTest.MarkAgentRunningAsync(agentId, "pid-12345");
+        
+        agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.Status.ShouldBe(AgentStatus.Running);
+        agent.ProcessId.ShouldBe("pid-12345");
+        agent.StartedAt.ShouldBe(startTime);
+
+        // Act & Assert - Heartbeat Update
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
+        var heartbeatTime = _timeService.UtcNow;
+        await _systemUnderTest.UpdateHeartbeatAsync(agentId);
+        
+        agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.LastHeartbeat.ShouldBe(heartbeatTime);
+
+        // Act & Assert - Stop Agent
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(10));
+        var stopTime = _timeService.UtcNow;
+        await _systemUnderTest.StopAgentAsync(agentId);
+        
+        agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.Status.ShouldBe(AgentStatus.Stopped);
+        agent.StoppedAt.ShouldBe(stopTime);
+        
+        // Verify all timestamps are different and in correct order
+        agent.RegisteredAt.ShouldBeLessThan(agent.StartedAt);
+        agent.StartedAt.ShouldBeLessThan(agent.LastHeartbeat);
+        agent.LastHeartbeat.ShouldBeLessThan(agent.StoppedAt!.Value);
+    }
 }
 
 /// <summary>
