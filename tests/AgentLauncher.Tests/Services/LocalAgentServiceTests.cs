@@ -5,6 +5,7 @@ using AISwarm.DataLayer.Entities;
 using AISwarm.DataLayer.Services;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+using Moq;
 using AgentStatus = AISwarm.DataLayer.Entities.AgentStatus;
 
 namespace AgentLauncher.Tests.Services;
@@ -163,6 +164,29 @@ public class LocalAgentServiceTests : IDisposable
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
         agent!.Status.ShouldBe(AgentStatus.Killed);
         agent.StoppedAt.ShouldBe(_timeService.UtcNow);
+    }
+
+    [Fact]
+    public async Task WhenKillingAgentWithProcessId_ShouldTerminateProcess()
+    {
+        // Arrange
+        var mockProcessService = new Mock<IProcessTerminationService>();
+        var serviceWithProcessKill = new LocalAgentService(_timeService, _scopeService, mockProcessService.Object);
+        
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/kill/test"
+        };
+        var agentId = await serviceWithProcessKill.RegisterAgentAsync(request);
+        await serviceWithProcessKill.MarkAgentRunningAsync(agentId, "98765");
+
+        // Act
+        await serviceWithProcessKill.KillAgentAsync(agentId);
+
+        // Assert
+        mockProcessService.Verify(p => p.KillProcessAsync("98765"), Times.Once);
     }
 
     [Fact]

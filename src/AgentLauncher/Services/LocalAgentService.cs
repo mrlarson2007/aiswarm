@@ -15,11 +15,13 @@ public class LocalAgentService : ILocalAgentService
 {
     private readonly ITimeService _timeService;
     private readonly IDatabaseScopeService _scopeService;
+    private readonly IProcessTerminationService? _processTerminationService;
 
-    public LocalAgentService(ITimeService timeService, IDatabaseScopeService scopeService)
+    public LocalAgentService(ITimeService timeService, IDatabaseScopeService scopeService, IProcessTerminationService? processTerminationService = null)
     {
         _timeService = timeService;
         _scopeService = scopeService;
+        _processTerminationService = processTerminationService;
     }
 
     /// <summary>
@@ -123,6 +125,12 @@ public class LocalAgentService : ILocalAgentService
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
+            // Attempt to kill the actual process if we have a process ID and termination service
+            if (!string.IsNullOrEmpty(agent.ProcessId) && _processTerminationService != null)
+            {
+                await _processTerminationService.KillProcessAsync(agent.ProcessId);
+            }
+            
             agent.Kill(_timeService.UtcNow);
             
             // TODO: Update any pending tasks assigned to this agent once task infrastructure is implemented

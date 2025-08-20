@@ -1,5 +1,6 @@
 using AgentLauncher.Services.External;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Services;
 using AISwarm.DataLayer.Database;
@@ -37,6 +38,11 @@ public static class ServiceRegistration
         services.AddSingleton<ITimeService, SystemTimeService>();
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
+        services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
+        
+        // Background monitoring services
+        services.AddSingleton<AgentMonitoringConfiguration>();
+        services.AddHostedService<AgentMonitoringService>();
 
         // Command handlers
         services.AddTransient<Commands.LaunchAgentCommandHandler>();

@@ -1,13 +1,14 @@
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace AgentLauncher.Services;
 
 /// <summary>
 /// Background service that monitors agent health and terminates unresponsive agents
 /// </summary>
-public class AgentMonitoringService
+public class AgentMonitoringService : BackgroundService
 {
     private readonly IDatabaseScopeService _scopeService;
     private readonly ILocalAgentService _localAgentService;
@@ -24,6 +25,29 @@ public class AgentMonitoringService
         _localAgentService = localAgentService;
         _timeService = timeService;
         _config = config;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await CheckForUnresponsiveAgentsAsync();
+                await Task.Delay(TimeSpan.FromMinutes(_config.CheckIntervalMinutes), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+                break;
+            }
+            catch (Exception)
+            {
+                // Log error but continue monitoring
+                // TODO: Add proper logging once logger infrastructure is available
+                await Task.Delay(TimeSpan.FromMinutes(_config.CheckIntervalMinutes), stoppingToken);
+            }
+        }
     }
 
     /// <summary>
