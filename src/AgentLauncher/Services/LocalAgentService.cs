@@ -1,6 +1,7 @@
 using AISwarm.DataLayer.Contracts;
+using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Entities;
-using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 
 namespace AgentLauncher.Services;
 
@@ -13,17 +14,18 @@ namespace AgentLauncher.Services;
 public class LocalAgentService
 {
     private readonly ITimeService _timeService;
-    private readonly ConcurrentDictionary<string, Agent> _agents = new();
+    private readonly CoordinationDbContext _dbContext;
 
-    public LocalAgentService(ITimeService timeService)
+    public LocalAgentService(ITimeService timeService, CoordinationDbContext dbContext)
     {
         _timeService = timeService;
+        _dbContext = dbContext;
     }
 
     /// <summary>
     /// Register a new agent with the launcher
     /// </summary>
-    public Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
+    public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
         var agentId = Guid.NewGuid().ToString();
         var currentTime = _timeService.UtcNow;
@@ -41,56 +43,60 @@ public class LocalAgentService
             WorktreeName = request.WorktreeName
         };
 
-        _agents[agentId] = agent;
-        return Task.FromResult(agentId);
+        _dbContext.Agents.Add(agent);
+        await _dbContext.SaveChangesAsync();
+        return agentId;
     }
 
     /// <summary>
     /// Get agent information by ID
     /// </summary>
-    public Task<Agent?> GetAgentAsync(string agentId)
+    public async Task<Agent?> GetAgentAsync(string agentId)
     {
-        _agents.TryGetValue(agentId, out var agent);
-        return Task.FromResult(agent);
+        return await _dbContext.Agents.FindAsync(agentId);
     }
 
     /// <summary>
     /// Update agent heartbeat
     /// </summary>
-    public Task<bool> UpdateHeartbeatAsync(string agentId)
+    public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        if (_agents.TryGetValue(agentId, out var agent))
+        var agent = await _dbContext.Agents.FindAsync(agentId);
+        if (agent != null)
         {
             agent.UpdateHeartbeat(_timeService.UtcNow);
-            return Task.FromResult(true);
+            await _dbContext.SaveChangesAsync();
+            return true;
         }
-        return Task.FromResult(false);
+        return false;
     }
 
     /// <summary>
     /// Mark agent as running with process ID
     /// </summary>
-    public Task MarkAgentRunningAsync(string agentId, string processId)
+    public async Task MarkAgentRunningAsync(string agentId, string processId)
     {
-        if (_agents.TryGetValue(agentId, out var agent))
+        var agent = await _dbContext.Agents.FindAsync(agentId);
+        if (agent != null)
         {
             agent.Status = AISwarm.DataLayer.Entities.AgentStatus.Running;
             agent.ProcessId = processId;
             agent.StartedAt = _timeService.UtcNow;
+            await _dbContext.SaveChangesAsync();
         }
-        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Stop agent and update status
     /// </summary>
-    public Task StopAgentAsync(string agentId)
+    public async Task StopAgentAsync(string agentId)
     {
-        if (_agents.TryGetValue(agentId, out var agent))
+        var agent = await _dbContext.Agents.FindAsync(agentId);
+        if (agent != null)
         {
             agent.Stop(_timeService.UtcNow);
+            await _dbContext.SaveChangesAsync();
         }
-        return Task.CompletedTask;
     }
 }
 

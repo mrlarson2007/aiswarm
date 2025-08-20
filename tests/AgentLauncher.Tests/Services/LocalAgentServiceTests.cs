@@ -1,20 +1,29 @@
 using AgentLauncher.Services;
 using AISwarm.DataLayer.Contracts;
+using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Entities;
+using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using AgentStatus = AISwarm.DataLayer.Entities.AgentStatus;
 
 namespace AgentLauncher.Tests.Services;
 
-public class LocalAgentServiceTests
+public class LocalAgentServiceTests : IDisposable
 {
     private readonly LocalAgentService _systemUnderTest;
     private readonly TestTimeService _timeService;
+    private readonly CoordinationDbContext _dbContext;
 
     public LocalAgentServiceTests()
     {
         _timeService = new TestTimeService();
-        _systemUnderTest = new LocalAgentService(_timeService);
+        
+        var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new CoordinationDbContext(options);
+        
+        _systemUnderTest = new LocalAgentService(_timeService, _dbContext);
     }
 
     [Fact]
@@ -33,17 +42,22 @@ public class LocalAgentServiceTests
         // Act
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 
-        // Assert
+        // Assert - Check database directly instead of using service API
         agentId.ShouldNotBeNullOrEmpty();
         
-        var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        agent.ShouldNotBeNull();
-        agent.PersonaId.ShouldBe("planner");
-        agent.AgentType.ShouldBe("planner");
-        agent.WorkingDirectory.ShouldBe("/test/path");
-        agent.Status.ShouldBe(AgentStatus.Starting);
-        agent.RegisteredAt.ShouldBe(_timeService.UtcNow);
-        agent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+        var agentInDb = await _dbContext.Agents.FindAsync(agentId);
+        agentInDb.ShouldNotBeNull();
+        agentInDb.Id.ShouldBe(agentId);
+        agentInDb.PersonaId.ShouldBe("planner");
+        agentInDb.AgentType.ShouldBe("planner");
+        agentInDb.WorkingDirectory.ShouldBe("/test/path");
+        agentInDb.Model.ShouldBe("gemini-1.5-pro");
+        agentInDb.WorktreeName.ShouldBe("main");
+        agentInDb.Status.ShouldBe(AgentStatus.Starting);
+        agentInDb.RegisteredAt.ShouldBe(_timeService.UtcNow);
+        agentInDb.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+        agentInDb.ProcessId.ShouldBeNull();
+        agentInDb.StoppedAt.ShouldBeNull();
     }
 
     [Fact]
@@ -64,11 +78,12 @@ public class LocalAgentServiceTests
         // Act
         var success = await _systemUnderTest.UpdateHeartbeatAsync(agentId);
 
-        // Assert
+        // Assert - Check database directly for heartbeat update
         success.ShouldBeTrue();
         
-        var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        agent!.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+        var agentInDb = await _dbContext.Agents.FindAsync(agentId);
+        agentInDb.ShouldNotBeNull();
+        agentInDb.LastHeartbeat.ShouldBe(_timeService.UtcNow);
     }
 
     [Fact]
@@ -146,16 +161,25 @@ public class LocalAgentServiceTests
         var agentId1 = await _systemUnderTest.RegisterAgentAsync(request1);
         var agentId2 = await _systemUnderTest.RegisterAgentAsync(request2);
 
-        // Assert
+        // Assert - Check database directly for both agents
         agentId1.ShouldNotBe(agentId2);
         agentId1.ShouldNotBeNullOrEmpty();
         agentId2.ShouldNotBeNullOrEmpty();
         
-        var agent1 = await _systemUnderTest.GetAgentAsync(agentId1);
-        var agent2 = await _systemUnderTest.GetAgentAsync(agentId2);
+        var agent1InDb = await _dbContext.Agents.FindAsync(agentId1);
+        var agent2InDb = await _dbContext.Agents.FindAsync(agentId2);
         
-        agent1!.PersonaId.ShouldBe("planner");
-        agent2!.PersonaId.ShouldBe("implementer");
+        agent1InDb.ShouldNotBeNull();
+        agent1InDb.PersonaId.ShouldBe("planner");
+        agent1InDb.WorkingDirectory.ShouldBe("/path1");
+        
+        agent2InDb.ShouldNotBeNull();
+        agent2InDb.PersonaId.ShouldBe("implementer");
+        agent2InDb.WorkingDirectory.ShouldBe("/path2");
+        
+        // Verify database contains exactly 2 agents
+        var totalAgents = await _dbContext.Agents.CountAsync();
+        totalAgents.ShouldBe(2);
     }
 
     [Fact]
@@ -267,6 +291,11 @@ public class LocalAgentServiceTests
         agent.RegisteredAt.ShouldBeLessThan(agent.StartedAt);
         agent.StartedAt.ShouldBeLessThan(agent.LastHeartbeat);
         agent.LastHeartbeat.ShouldBeLessThan(agent.StoppedAt!.Value);
+    }
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
     }
 }
 
