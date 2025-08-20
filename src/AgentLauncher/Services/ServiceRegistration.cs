@@ -26,6 +26,7 @@ public static class ServiceRegistration
                 : new Terminals.UnixTerminalService(proc);
         });
         services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<IAgentManagementService, AgentManagementService>();
 
         // Command handlers
         services.AddTransient<Commands.LaunchAgentCommandHandler>();
