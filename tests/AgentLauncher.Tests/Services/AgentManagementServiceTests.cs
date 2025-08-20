@@ -1,4 +1,5 @@
 using AgentLauncher.Services;
+using AISwarm.DataLayer.Contracts;
 using Shouldly;
 
 namespace AgentLauncher.Tests.Services;
@@ -9,7 +10,9 @@ public class AgentManagementServiceTests
 
     public AgentManagementServiceTests()
     {
-        _systemUnderTest = new AgentManagementService();
+        var configuration = new AgentHealthConfiguration();
+        var timeService = new SystemTimeService();
+        _systemUnderTest = new AgentManagementService(configuration, timeService);
     }
 
     [Fact]

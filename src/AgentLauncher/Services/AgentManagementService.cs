@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AISwarm.DataLayer.Contracts;
 
 namespace AgentLauncher.Services;
 
@@ -6,14 +7,20 @@ public class AgentManagementService : IAgentManagementService
 {
     private readonly ConcurrentDictionary<string, AgentInstance> _agents = new();
     private readonly AgentHealthConfiguration _healthConfig;
+    private readonly ITimeService _timeService;
 
-    public AgentManagementService() : this(new AgentHealthConfiguration())
+    public AgentManagementService() : this(new AgentHealthConfiguration(), new SystemTimeService())
     {
     }
 
-    public AgentManagementService(AgentHealthConfiguration healthConfig)
+    public AgentManagementService(AgentHealthConfiguration healthConfig) : this(healthConfig, new SystemTimeService())
+    {
+    }
+
+    public AgentManagementService(AgentHealthConfiguration healthConfig, ITimeService timeService)
     {
         _healthConfig = healthConfig;
+        _timeService = timeService;
     }
 
     public Task<AgentInstance> StartAgentAsync(string agentType, string workingDirectory, string? model = null, string? worktreeName = null)
@@ -24,7 +31,7 @@ public class AgentManagementService : IAgentManagementService
             AgentType = agentType,
             WorkingDirectory = workingDirectory,
             Status = AgentStatus.Running,
-            StartedAt = DateTime.UtcNow,
+            StartedAt = _timeService.UtcNow,
             Model = model,
             WorktreeName = worktreeName
         };
@@ -38,7 +45,7 @@ public class AgentManagementService : IAgentManagementService
         if (_agents.TryGetValue(agentId, out var agent))
         {
             agent.Status = AgentStatus.Stopped;
-            agent.StoppedAt = DateTime.UtcNow;
+            agent.StoppedAt = _timeService.UtcNow;
             return Task.FromResult(true);
         }
         return Task.FromResult(false);
@@ -63,11 +70,11 @@ public class AgentManagementService : IAgentManagementService
             {
                 IsHealthy = false,
                 Reason = "Agent not found",
-                CheckTime = DateTime.UtcNow
+                CheckTime = _timeService.UtcNow
             });
         }
 
-        var timeSinceHeartbeat = DateTime.UtcNow - lastHeartbeat;
+        var timeSinceHeartbeat = _timeService.UtcNow - lastHeartbeat;
         var isHealthy = timeSinceHeartbeat <= _healthConfig.HeartbeatTimeout;
 
         return Task.FromResult(new AgentHealthStatus
@@ -76,7 +83,7 @@ public class AgentManagementService : IAgentManagementService
             Reason = isHealthy ? "Healthy" : "heartbeat timeout exceeded",
             TimeSinceLastHeartbeat = timeSinceHeartbeat,
             LastHeartbeat = lastHeartbeat,
-            CheckTime = DateTime.UtcNow
+            CheckTime = _timeService.UtcNow
         });
     }
 }
