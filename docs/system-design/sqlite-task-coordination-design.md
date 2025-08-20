@@ -2,24 +2,69 @@
 
 ## Architecture Overview
 
-A sophisticated task coordination system using SQLite as the central database and **standalone MCP server** for agent communication, enabling complex workflow decomposition and persona-based task assignment. The system follows clean architecture principles with separate projects for agent launching and coordination concerns.
+A sophisticated task coordination system using SQLite as the central database and **standalone MCP server** for agent communication, enabling complex workflow decomposition and persona-based task assignment. The system integrates with the official `google-gemini/gemini-cli` tool for agent coordination via standard MCP patterns.
 
 ### Multi-Project Solution Structure
 
 ```text
 src/
-├── AgentLauncher/                    # Existing agent launcher (MCP client)
+├── AgentLauncher/                    # Manages gemini-cli processes and configuration
 │   ├── Program.cs                    # CLI interface for launching agents
-│   ├── Services/                     # Agent-specific services (ContextManager, etc.)
-│   └── Resources/                    # Persona definitions
-├── AISwarm.Server/                   # New MCP coordination server
+│   ├── Services/                     # Configuration generation, process management
+│   └── Resources/                    # Persona definitions and settings templates
+├── AISwarm.Server/                   # MCP coordination server
 │   ├── Program.cs                    # MCP server host with stdio transport
 │   ├── Services/                     # Task coordination, worktree management
-│   ├── Tools/                        # MCP tool implementations
+│   ├── Tools/                        # MCP tool implementations (@aiswarm commands)
 │   └── Data/                         # SQLite database access layer
 └── AISwarm.Shared/                   # Shared contracts and models
     ├── Models/                       # Task, Agent, Worktree models
-    └── Contracts/                    # ITaskCoordinationService interfaces
+    └── Contracts/                    # Service interface definitions
+```
+
+## Gemini CLI Integration
+
+### Configuration Management
+
+Each agent instance requires gemini-cli configuration via `~/.gemini/settings.json`:
+
+```json
+{
+  "servers": {
+    "aiswarm": {
+      "command": "dotnet",
+      "args": ["run", "--project", "path/to/AISwarm.Server"],
+      "env": {
+        "COORDINATION_DB_PATH": ".aiswarm/coordination.db"
+      }
+    }
+  }
+}
+```
+
+### Agent Coordination Workflow
+
+1. **Agent Initialization**: AgentLauncher configures gemini-cli and starts process
+2. **Registration**: Gemini calls `@aiswarm register_agent` to join coordination system  
+3. **Task Loop**: Gemini calls `@aiswarm wait_for_next_event` and reacts to events
+4. **Task Execution**: Gemini claims tasks via `@aiswarm claim_task` and reports progress
+5. **Cleanup**: Coordination server manages agent lifecycle and cleanup
+
+### MCP Tool Examples
+
+```bash
+# Agent registration and heartbeat
+@aiswarm register_agent persona="planner" worktree="main"
+@aiswarm update_heartbeat agent_id="agent-123"
+
+# Task coordination
+@aiswarm wait_for_next_event timeout=300
+@aiswarm claim_task task_id=456
+@aiswarm report_task_completion task_id=456 result="API implementation complete"
+
+# Worktree management (planner only)
+@aiswarm create_worktree name="user-auth" branch="feature/user-auth"
+@aiswarm spawn_agent persona="implementer" worktree="user-auth"
 ```
 
 ## High-Level Architecture
@@ -32,11 +77,21 @@ graph TB
         MCPS <--> DB
     end
     
-    subgraph "Agent Processes (MCP Clients)"
-        P1[Planner Agent<br/>Main Repo]
-        I1[Implementer Agent<br/>Worktree 1]
-        R1[Reviewer Agent<br/>Worktree 1]
-        I2[Implementer Agent<br/>Worktree 2]
+    subgraph "Agent Processes"
+        AL1[AgentLauncher<br/>Process Manager]
+        AL2[AgentLauncher<br/>Process Manager]
+        AL3[AgentLauncher<br/>Process Manager] 
+        AL4[AgentLauncher<br/>Process Manager]
+        
+        GC1[gemini-cli<br/>MCP Client]
+        GC2[gemini-cli<br/>MCP Client]
+        GC3[gemini-cli<br/>MCP Client]
+        GC4[gemini-cli<br/>MCP Client]
+        
+        AL1 --> GC1
+        AL2 --> GC2
+        AL3 --> GC3
+        AL4 --> GC4
     end
     
     subgraph "Git Worktrees"
@@ -45,24 +100,24 @@ graph TB
         MAIN[Main Repository]
     end
     
-    %% MCP Communication
-    P1 <-->|MCP Tools| MCPS
-    I1 <-->|MCP Tools| MCPS
-    R1 <-->|MCP Tools| MCPS
-    I2 <-->|MCP Tools| MCPS
+    %% MCP Communication via @aiswarm tools
+    GC1 <-->|@aiswarm tools| MCPS
+    GC2 <-->|@aiswarm tools| MCPS
+    GC3 <-->|@aiswarm tools| MCPS
+    GC4 <-->|@aiswarm tools| MCPS
     
     %% Worktree Assignment
-    P1 --> MAIN
-    I1 --> W1
-    R1 --> W1
-    I2 --> W2
+    GC1 --> MAIN
+    GC2 --> W1
+    GC3 --> W1
+    GC4 --> W2
     
-    %% Authority Flow
-    P1 -.->|creates| W1
-    P1 -.->|creates| W2
-    P1 -.->|spawns| I1
-    P1 -.->|spawns| R1
-    P1 -.->|spawns| I2
+    %% Authority Flow (via MCP tools)
+    GC1 -.->|@aiswarm create_worktree| W1
+    GC1 -.->|@aiswarm create_worktree| W2
+    GC1 -.->|@aiswarm spawn_agent| GC2
+    GC1 -.->|@aiswarm spawn_agent| GC3
+    GC1 -.->|@aiswarm spawn_agent| GC4
 ```
 
 **Key Architecture Benefits:**
@@ -703,4 +758,3 @@ public class CoordinationDatabase
 ```
 
 This design provides a robust foundation for sophisticated AI agent coordination while maintaining the clean architecture and TDD principles established in the codebase.
-

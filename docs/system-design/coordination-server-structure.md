@@ -1,5 +1,31 @@
 # AISwarm.Server Project Structure
 
+## Overview
+
+The AISwarm.Server is an MCP (Model Context Protocol) server that coordinates multiple AI agents using the official `google-gemini/gemini-cli` tool. This design leverages standard MCP patterns instead of complex custom implementations.
+
+## Architecture Integration
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   AgentLauncher │    │  gemini-cli     │    │ AISwarm.Server  │
+│                 │───▶│                 │◄──▶│                 │
+│ (Process Mgmt)  │    │ (MCP Client)    │    │ (MCP Server)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                ▲                       ▲
+                                │                       │
+                                ▼                       ▼
+                         Gemini LLM              Custom MCP Tools
+                        (via @aiswarm)          (@aiswarm commands)
+```
+
+**Key Integration Points:**
+
+- **AgentLauncher**: Manages gemini-cli processes and configuration
+- **gemini-cli**: Official tool with native MCP client support
+- **AISwarm.Server**: Standard MCP server exposing coordination tools
+- **Configuration**: Via `~/.gemini/settings.json` per agent instance
+
 ## Clean Architecture Layout
 
 Following clean architecture principles and MCP server patterns:
@@ -464,4 +490,3 @@ The `AGENT_INSTRUCTIONS.md` file provides agents with:
 2. **Agent Initialization**: Agents read instructions on startup
 3. **Ongoing Reference**: Available throughout agent lifecycle
 4. **Consistent Guidance**: Same coordination expectations across all agents
-
