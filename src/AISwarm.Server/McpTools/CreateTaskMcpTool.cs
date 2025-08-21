@@ -11,7 +11,9 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
     private readonly IDatabaseScopeService _scopeService;
     private readonly ITimeService _timeService;
 
-    public CreateTaskMcpTool(IDatabaseScopeService scopeService, ITimeService timeService)
+    public CreateTaskMcpTool(
+        IDatabaseScopeService scopeService,
+        ITimeService timeService)
     {
         _scopeService = scopeService;
         _timeService = timeService;
@@ -24,23 +26,29 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
     /// <param name="persona">Full persona markdown content for the agent</param>
     /// <param name="description">Description of what the agent should accomplish</param>
     /// <returns>Result indicating success with task ID or failure with error message</returns>
-    public async Task<CreateTaskResult> CreateTaskAsync(string agentId, string persona, string description)
+    public async Task<CreateTaskResult> CreateTaskAsync(
+        string agentId,
+        string persona,
+        string description)
     {
         using var scope = _scopeService.CreateWriteScope();
-        
+
         // Validate that the agent exists
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent == null)
         {
-            return CreateTaskResult.Failure($"Agent not found: {agentId}");
+            return CreateTaskResult
+                .Failure($"Agent not found: {agentId}");
         }
-        
+
         // Validate that the agent is running
         if (agent.Status != AgentStatus.Running)
         {
-            return CreateTaskResult.Failure($"Agent is not running: {agentId}. Current status: {agent.Status}");
+            return CreateTaskResult
+                .Failure($"Agent is not running: {agentId}. " +
+                    $"Current status: {agent.Status}");
         }
-        
+
         var taskId = Guid.NewGuid().ToString();
         var workItem = new WorkItem
         {
@@ -51,11 +59,11 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
             Description = description,
             CreatedAt = _timeService.UtcNow
         };
-        
+
         scope.Tasks.Add(workItem);
         await scope.SaveChangesAsync();
         scope.Complete();
-        
+
         return CreateTaskResult.SuccessWithTaskId(taskId);
     }
 }
