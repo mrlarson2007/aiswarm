@@ -37,6 +37,38 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 - **No Surprises**: Code behaves as its name suggests, no hidden side effects
 - **Composition Over Inheritance**: Favor object composition and interfaces over class inheritance
 
+## Code Formatting Standards
+
+- **Multi-line Constructor Parameters**: Always place each parameter on its own line for better readability
+  ```csharp
+  public SomeClass(
+      IDependency dependency,
+      IService service)
+  ```
+
+- **Multi-line Method Signatures**: Use vertical formatting for methods with multiple parameters
+  ```csharp
+  public async Task<Result> MethodAsync(
+      string parameter1,
+      string parameter2,
+      string parameter3)
+  ```
+
+- **Multi-line Return Statements**: Break long return statements with method chaining
+  ```csharp
+  return SomeResult
+      .Failure($"Error message: {details}");
+  ```
+
+- **Multi-line String Concatenation**: Format complex error messages clearly
+  ```csharp
+  return Result
+      .Failure($"First part: {value1}. " +
+          $"Second part: {value2}");
+  ```
+
+**Formatting Rule**: Apply consistent multi-line formatting for constructors, methods, and complex return statements to improve readability and maintainability.
+
 ## Code Review Focus Areas
 
 - **Design Patterns**: Look for SOLID principles, appropriate abstraction levels
