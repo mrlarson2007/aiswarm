@@ -1,12 +1,15 @@
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Entities;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
 
 namespace AISwarm.Server.McpTools;
 
 /// <summary>
 /// MCP tool implementation for creating tasks and assigning them to agents
 /// </summary>
-public class CreateTaskMcpTool : ICreateTaskMcpTool
+[McpServerToolType]
+public class CreateTaskMcpTool
 {
     private readonly IDatabaseScopeService _scopeService;
     private readonly ITimeService _timeService;
@@ -26,10 +29,12 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
     /// <param name="persona">Full persona markdown content for the agent</param>
     /// <param name="description">Description of what the agent should accomplish</param>
     /// <returns>Result indicating success with task ID or failure with error message</returns>
+    [McpServerTool(Name = "create_task")]
+    [Description("Creates a new task and assigns it to the specified agent")]
     public async Task<CreateTaskResult> CreateTaskAsync(
-        string agentId,
-        string persona,
-        string description)
+        [Description("ID of the agent to assign the task to")] string agentId,
+        [Description("Full persona markdown content for the agent")] string persona,
+        [Description("Description of what the agent should accomplish")] string description)
     {
         using var scope = _scopeService.CreateWriteScope();
 

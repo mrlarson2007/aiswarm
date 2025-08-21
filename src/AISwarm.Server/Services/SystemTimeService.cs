@@ -1,4 +1,4 @@
-using AISwarm.Shared.Contracts;
+using AISwarm.DataLayer.Contracts;
 
 namespace AISwarm.Server.Services;
 

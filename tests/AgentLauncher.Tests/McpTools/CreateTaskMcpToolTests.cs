@@ -24,7 +24,7 @@ public class CreateTaskMcpToolTests
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
         // Add MCP tools
-        services.AddSingleton<ICreateTaskMcpTool, CreateTaskMcpTool>();
+        services.AddSingleton<CreateTaskMcpTool>();
 
         _serviceProvider = services.BuildServiceProvider();
         _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
@@ -42,7 +42,7 @@ public class CreateTaskMcpToolTests
         // Create a running agent first
         await CreateRunningAgentAsync(agentId);
 
-        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
 
         // Act
         var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
@@ -74,7 +74,7 @@ public class CreateTaskMcpToolTests
         var persona = "You are a code reviewer.";
         var description = "Review code";
 
-        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
 
         // Act
         var result = await createTaskTool.CreateTaskAsync(nonExistentAgentId, persona, description);
@@ -98,7 +98,7 @@ public class CreateTaskMcpToolTests
         // Create a stopped agent first
         await CreateStoppedAgentAsync(agentId);
 
-        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
 
         // Act
         var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
