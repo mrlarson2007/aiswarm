@@ -42,6 +42,7 @@ public class ReadScope : IReadScope
 {
     public CoordinationDbContext Context { get; }
     public DbSet<Agent> Agents => Context.Agents;
+    public DbSet<WorkItem> Tasks => Context.Tasks;
 
     public ReadScope(CoordinationDbContext context)
     {
@@ -63,6 +64,7 @@ public class WriteScope : IWriteScope
     
     public CoordinationDbContext Context { get; }
     public DbSet<Agent> Agents => Context.Agents;
+    public DbSet<WorkItem> Tasks => Context.Tasks;
 
     public WriteScope(CoordinationDbContext context)
     {

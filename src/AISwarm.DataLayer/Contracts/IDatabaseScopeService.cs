@@ -34,6 +34,11 @@ public interface IReadScope : IDisposable
     /// Agents DbSet for direct access
     /// </summary>
     DbSet<Agent> Agents { get; }
+    
+    /// <summary>
+    /// Tasks DbSet for direct access
+    /// </summary>
+    DbSet<WorkItem> Tasks { get; }
 }
 
 /// <summary>
@@ -50,6 +55,11 @@ public interface IWriteScope : IDisposable
     /// Agents DbSet for direct access
     /// </summary>
     DbSet<Agent> Agents { get; }
+    
+    /// <summary>
+    /// Tasks DbSet for direct access
+    /// </summary>
+    DbSet<WorkItem> Tasks { get; }
     
     /// <summary>
     /// Save changes to the database

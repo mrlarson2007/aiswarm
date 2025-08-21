@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AgentLauncher\AgentLauncher.csproj" />
+    <ProjectReference Include="..\..\src\AISwarm.Server\AISwarm.Server.csproj" />
   </ItemGroup>
 
 </Project>
