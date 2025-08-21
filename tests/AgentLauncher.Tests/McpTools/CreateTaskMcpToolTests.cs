@@ -45,9 +45,12 @@ public class CreateTaskMcpToolTests
         var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
         
         // Act
-        await createTaskTool.ExecuteAsync(agentId, persona, description);
+        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
         
         // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldNotBeNull();
+        
         using var scope = _scopeService.CreateReadScope();
         var tasks = scope.Tasks.Where(t => t.AgentId == agentId).ToList();
         
@@ -58,24 +61,6 @@ public class CreateTaskMcpToolTests
         task.Description.ShouldBe(description);
         task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
         task.CreatedAt.ShouldBe(expectedCreatedAt);
-    }
-
-    [Fact]
-    public async Task WhenCreatingTaskForNonExistentAgent_ShouldThrowException()
-    {
-        // Arrange
-        var nonExistentAgentId = "non-existent-agent";
-        var persona = "You are a code reviewer.";
-        var description = "Review code";
-        
-        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
-        
-        // Act & Assert
-        var exception = await Should.ThrowAsync<InvalidOperationException>(
-            () => createTaskTool.ExecuteAsync(nonExistentAgentId, persona, description));
-        
-        exception.Message.ShouldContain("Agent not found");
-        exception.Message.ShouldContain(nonExistentAgentId);
     }
 
     [Fact]
@@ -94,6 +79,7 @@ public class CreateTaskMcpToolTests
         // Assert
         result.Success.ShouldBeFalse();
         result.TaskId.ShouldBeNull();
+        result.ErrorMessage.ShouldNotBeNull();
         result.ErrorMessage.ShouldContain("Agent not found");
         result.ErrorMessage.ShouldContain(nonExistentAgentId);
     }
