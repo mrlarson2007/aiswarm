@@ -37,6 +37,10 @@ public class CreateTaskMcpToolTests
         var agentId = "agent-123";
         var persona = "You are a code reviewer. Review code for quality and security.";
         var description = "Review the authentication module for security vulnerabilities";
+        var expectedCreatedAt = new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
+        
+        // Create a running agent first
+        await CreateRunningAgentAsync(agentId);
         
         var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
         
@@ -53,7 +57,42 @@ public class CreateTaskMcpToolTests
         task.Persona.ShouldBe(persona);
         task.Description.ShouldBe(description);
         task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
-        task.CreatedAt.ShouldNotBe(default);
+        task.CreatedAt.ShouldBe(expectedCreatedAt);
+    }
+
+    [Fact]
+    public async Task WhenCreatingTaskForNonExistentAgent_ShouldThrowException()
+    {
+        // Arrange
+        var nonExistentAgentId = "non-existent-agent";
+        var persona = "You are a code reviewer.";
+        var description = "Review code";
+        
+        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => createTaskTool.ExecuteAsync(nonExistentAgentId, persona, description));
+        
+        exception.Message.ShouldContain("Agent not found");
+        exception.Message.ShouldContain(nonExistentAgentId);
+    }
+
+    private async Task CreateRunningAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var agent = new AISwarm.DataLayer.Entities.Agent
+        {
+            Id = agentId,
+            PersonaId = "test-persona",
+            AgentType = "test",
+            WorkingDirectory = "/test",
+            Status = AISwarm.DataLayer.Entities.AgentStatus.Running,
+            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
     }
 
     private class TestTimeService : ITimeService

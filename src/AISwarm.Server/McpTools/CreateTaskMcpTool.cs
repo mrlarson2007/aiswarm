@@ -27,6 +27,13 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
     {
         using var scope = _scopeService.CreateWriteScope();
         
+        // Validate that the agent exists
+        var agent = await scope.Agents.FindAsync(agentId);
+        if (agent == null)
+        {
+            throw new InvalidOperationException($"Agent not found: {agentId}");
+        }
+        
         var workItem = new WorkItem
         {
             Id = Guid.NewGuid().ToString(),
