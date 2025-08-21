@@ -87,6 +87,30 @@ public class CreateTaskMcpToolTests
         result.ErrorMessage.ShouldContain(nonExistentAgentId);
     }
 
+    [Fact]
+    public async Task WhenCreatingTaskForStoppedAgent_ShouldReturnFailureResult()
+    {
+        // Arrange
+        var agentId = "stopped-agent-123";
+        var persona = "You are a code reviewer.";
+        var description = "Review code";
+
+        // Create a stopped agent first
+        await CreateStoppedAgentAsync(agentId);
+
+        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+
+        // Act
+        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.TaskId.ShouldBeNull();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Agent is not running");
+        result.ErrorMessage.ShouldContain(agentId);
+    }
+
 
     private async Task CreateRunningAgentAsync(string agentId)
     {
@@ -98,6 +122,23 @@ public class CreateTaskMcpToolTests
             AgentType = "test",
             WorkingDirectory = "/test",
             Status = AISwarm.DataLayer.Entities.AgentStatus.Running,
+            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateStoppedAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var agent = new AISwarm.DataLayer.Entities.Agent
+        {
+            Id = agentId,
+            PersonaId = "test-persona",
+            AgentType = "test",
+            WorkingDirectory = "/test",
+            Status = AISwarm.DataLayer.Entities.AgentStatus.Stopped,
             LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
         };
         scope.Agents.Add(agent);

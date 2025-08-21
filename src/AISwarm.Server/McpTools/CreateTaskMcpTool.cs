@@ -35,6 +35,12 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
             return CreateTaskResult.Failure($"Agent not found: {agentId}");
         }
         
+        // Validate that the agent is running
+        if (agent.Status != AgentStatus.Running)
+        {
+            return CreateTaskResult.Failure($"Agent is not running: {agentId}. Current status: {agent.Status}");
+        }
+        
         var taskId = Guid.NewGuid().ToString();
         var workItem = new WorkItem
         {
