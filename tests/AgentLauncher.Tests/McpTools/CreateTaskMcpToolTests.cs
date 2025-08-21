@@ -78,6 +78,54 @@ public class CreateTaskMcpToolTests
         exception.Message.ShouldContain(nonExistentAgentId);
     }
 
+    [Fact]
+    public async Task WhenCreatingTaskForNonExistentAgent_ShouldReturnFailureResult()
+    {
+        // Arrange
+        var nonExistentAgentId = "non-existent-agent";
+        var persona = "You are a code reviewer.";
+        var description = "Review code";
+        
+        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        
+        // Act
+        var result = await createTaskTool.CreateTaskAsync(nonExistentAgentId, persona, description);
+        
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.TaskId.ShouldBeNull();
+        result.ErrorMessage.ShouldContain("Agent not found");
+        result.ErrorMessage.ShouldContain(nonExistentAgentId);
+    }
+
+    [Fact]
+    public async Task WhenCreatingTaskSuccessfully_ShouldReturnSuccessWithTaskId()
+    {
+        // Arrange
+        var agentId = "agent-456";
+        var persona = "You are a code reviewer.";
+        var description = "Review code";
+        
+        await CreateRunningAgentAsync(agentId);
+        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        
+        // Act
+        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
+        
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldNotBeNull();
+        result.TaskId.ShouldNotBeEmpty();
+        result.ErrorMessage.ShouldBeNull();
+        
+        // Verify task was actually created in database
+        using var scope = _scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(result.TaskId);
+        task.ShouldNotBeNull();
+        task.AgentId.ShouldBe(agentId);
+        task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
+    }
+
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();

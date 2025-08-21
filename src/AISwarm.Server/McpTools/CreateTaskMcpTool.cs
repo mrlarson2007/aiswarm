@@ -18,7 +18,7 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
     }
 
     /// <summary>
-    /// Creates a new task and assigns it to the specified agent
+    /// Creates a new task and assigns it to the specified agent (legacy method - throws exceptions)
     /// </summary>
     /// <param name="agentId">ID of the agent to assign the task to</param>
     /// <param name="persona">Full persona markdown content for the agent</param>
@@ -47,5 +47,41 @@ public class CreateTaskMcpTool : ICreateTaskMcpTool
         scope.Tasks.Add(workItem);
         await scope.SaveChangesAsync();
         scope.Complete();
+    }
+
+    /// <summary>
+    /// Creates a new task and assigns it to the specified agent (returns result instead of throwing)
+    /// </summary>
+    /// <param name="agentId">ID of the agent to assign the task to</param>
+    /// <param name="persona">Full persona markdown content for the agent</param>
+    /// <param name="description">Description of what the agent should accomplish</param>
+    /// <returns>Result indicating success with task ID or failure with error message</returns>
+    public async Task<CreateTaskResult> CreateTaskAsync(string agentId, string persona, string description)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        
+        // Validate that the agent exists
+        var agent = await scope.Agents.FindAsync(agentId);
+        if (agent == null)
+        {
+            return CreateTaskResult.Failure($"Agent not found: {agentId}");
+        }
+        
+        var taskId = Guid.NewGuid().ToString();
+        var workItem = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            CreatedAt = _timeService.UtcNow
+        };
+        
+        scope.Tasks.Add(workItem);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        
+        return CreateTaskResult.SuccessWithTaskId(taskId);
     }
 }
