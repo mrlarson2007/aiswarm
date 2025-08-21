@@ -42,7 +42,7 @@ public class CoordinationDbContext : DbContext
             entity.Property(e => e.AgentId).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Persona).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.Description).IsRequired();
             entity.Property(e => e.Result);
         });
     }

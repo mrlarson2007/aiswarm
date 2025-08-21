@@ -1,6 +1,7 @@
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Services;
+using AISwarm.Server.McpTools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -22,6 +23,9 @@ public class CreateTaskMcpToolTests
         services.AddSingleton<ITimeService, TestTimeService>();
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         
+        // Add MCP tools
+        services.AddSingleton<ICreateTaskMcpTool, CreateTaskMcpTool>();
+        
         _serviceProvider = services.BuildServiceProvider();
         _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
     }
@@ -34,12 +38,10 @@ public class CreateTaskMcpToolTests
         var persona = "You are a code reviewer. Review code for quality and security.";
         var description = "Review the authentication module for security vulnerabilities";
         
-        // TODO: Get reference to MCP tool once implemented
-        // var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
+        var createTaskTool = _serviceProvider.GetRequiredService<ICreateTaskMcpTool>();
         
         // Act
-        // TODO: Call the MCP tool
-        // await createTaskTool.ExecuteAsync(agentId, persona, description);
+        await createTaskTool.ExecuteAsync(agentId, persona, description);
         
         // Assert
         using var scope = _scopeService.CreateReadScope();
