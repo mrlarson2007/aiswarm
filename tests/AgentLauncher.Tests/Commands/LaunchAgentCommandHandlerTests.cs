@@ -425,6 +425,37 @@ public class LaunchAgentCommandHandlerTests
     }
 
     [Fact]
+    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendAgentIdToContextFile()
+    {
+        // Arrange
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
+            .ReturnsAsync("agent-789");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: null,
+            directory: "/repo",
+            dryRun: false,
+            monitor: true);
+        
+        // Assert
+        result.ShouldBeTrue();
+        
+        // Verify agent information was appended to context file
+        var contextContent = _fs.GetFileContent("/repo/planner_context.md");
+        contextContent.ShouldNotBeNull();
+        contextContent.ShouldContain("You are Agent ID: agent-789");
+        contextContent.ShouldContain("Available MCP Tools");
+        contextContent.ShouldContain("get_next_task");
+        contextContent.ShouldContain("create_task");
+        contextContent.ShouldContain("Task Management Workflow");
+    }
+
+    [Fact]
     public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
     {
         // Arrange
