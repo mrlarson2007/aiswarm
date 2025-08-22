@@ -377,4 +377,121 @@ public class GetNextTaskMcpToolTests
         claimedTask.ShouldNotBeNull();
         claimedTask.AgentId.ShouldBe(otherAgentId);
     }
+
+    [Fact]
+    public async Task WhenMultipleUnassignedTasksWithDifferentPriorities_ShouldReturnHighestPriorityFirst()
+    {
+        // Arrange
+        var agentId = "agent-priority-test";
+        var lowPriorityPersona = "You are a reviewer. Review code for quality.";
+        var lowPriorityDescription = "Review documentation for typos";
+        var highPriorityPersona = "You are a security reviewer. Review for security issues.";
+        var highPriorityDescription = "Critical security review needed immediately";
+        
+        // Create a running agent
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create low priority task first (older timestamp)
+        var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, 1);
+        
+        await Task.Delay(10); // Ensure different timestamps
+        
+        // Create high priority task second (newer timestamp but higher priority)
+        var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, 10);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert - Should get the high priority task despite being newer
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(highPriorityTaskId);
+        result.Persona.ShouldBe(highPriorityPersona);
+        result.Description.ShouldBe(highPriorityDescription);
+        
+        // Verify the task is now assigned to the requesting agent
+        using var scope = _scopeService.CreateReadScope();
+        var claimedTask = await scope.Tasks.FindAsync(highPriorityTaskId);
+        claimedTask.ShouldNotBeNull();
+        claimedTask.AgentId.ShouldBe(agentId);
+        
+        // Verify low priority task is still unassigned
+        var lowPriorityTask = await scope.Tasks.FindAsync(lowPriorityTaskId);
+        lowPriorityTask.ShouldNotBeNull();
+        lowPriorityTask.AgentId.ShouldBe(string.Empty);
+    }
+
+    private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description, int priority)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new AISwarm.DataLayer.Entities.WorkItem
+        {
+            Id = taskId,
+            AgentId = string.Empty, // Unassigned task
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            Priority = priority,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+    [Fact]
+    public async Task WhenMultipleAssignedTasksWithDifferentPriorities_ShouldReturnHighestPriorityFirst()
+    {
+        // Arrange
+        var agentId = "agent-assigned-priority";
+        var lowPriorityPersona = "You are a reviewer. Review code for quality.";
+        var lowPriorityDescription = "Review documentation for typos";
+        var highPriorityPersona = "You are a security reviewer. Review for security issues.";
+        var highPriorityDescription = "Critical security review needed immediately";
+        
+        // Create a running agent
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create low priority assigned task first (older timestamp)
+        var lowPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, 1);
+        
+        await Task.Delay(10); // Ensure different timestamps
+        
+        // Create high priority assigned task second (newer timestamp but higher priority)
+        var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, 10);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert - Should get the high priority task despite being newer
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(highPriorityTaskId);
+        result.Persona.ShouldBe(highPriorityPersona);
+        result.Description.ShouldBe(highPriorityDescription);
+    }
+
+    private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, int priority)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new AISwarm.DataLayer.Entities.WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            Priority = priority,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
 }

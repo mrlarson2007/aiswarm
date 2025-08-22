@@ -28,13 +28,15 @@ public class CreateTaskMcpTool
     /// <param name="agentId">ID of the agent to assign the task to</param>
     /// <param name="persona">Full persona markdown content for the agent</param>
     /// <param name="description">Description of what the agent should accomplish</param>
+    /// <param name="priority">Priority of the task (higher numbers = higher priority, default = 0)</param>
     /// <returns>Result indicating success with task ID or failure with error message</returns>
     [McpServerTool(Name = "create_task")]
     [Description("Creates a new task and assigns it to the specified agent")]
     public async Task<CreateTaskResult> CreateTaskAsync(
         [Description("ID of the agent to assign the task to")] string agentId,
         [Description("Full persona markdown content for the agent")] string persona,
-        [Description("Description of what the agent should accomplish")] string description)
+        [Description("Description of what the agent should accomplish")] string description,
+        [Description("Priority of the task (higher numbers = higher priority, default = 0)")] int priority = 0)
     {
         using var scope = _scopeService.CreateWriteScope();
 
@@ -62,6 +64,7 @@ public class CreateTaskMcpTool
             Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
+            Priority = priority,
             CreatedAt = _timeService.UtcNow
         };
 

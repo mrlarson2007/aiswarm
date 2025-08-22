@@ -31,6 +31,11 @@ public class WorkItem
     public string Description { get; set; } = string.Empty;
     
     /// <summary>
+    /// Priority of the task (higher numbers = higher priority, default = 0)
+    /// </summary>
+    public int Priority { get; set; } = 0;
+    
+    /// <summary>
     /// When the work item was created
     /// </summary>
     public DateTime CreatedAt { get; set; }

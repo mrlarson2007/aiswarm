@@ -43,6 +43,7 @@ public class CoordinationDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.Persona).IsRequired();
             entity.Property(e => e.Description).IsRequired();
+            entity.Property(e => e.Priority).HasDefaultValue(0);
             entity.Property(e => e.Result);
         });
     }
