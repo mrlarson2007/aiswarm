@@ -241,4 +241,57 @@ public class GetNextTaskMcpToolTests
         scope.Complete();
         return taskId;
     }
+
+    [Fact]
+    public async Task WhenUnassignedTaskExists_ShouldClaimTaskAndReturnIt()
+    {
+        // Arrange
+        var agentId = "agent-claimer";
+        var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+        var expectedDescription = "Plan the authentication feature implementation";
+        
+        // Create a running agent
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create an unassigned task (AgentId is null/empty)
+        var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(unassignedTaskId);
+        result.Persona.ShouldBe(expectedPersona);
+        result.Description.ShouldBe(expectedDescription);
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("call this tool again");
+        
+        // Verify the task is now assigned to the requesting agent
+        using var scope = _scopeService.CreateReadScope();
+        var claimedTask = await scope.Tasks.FindAsync(unassignedTaskId);
+        claimedTask.ShouldNotBeNull();
+        claimedTask.AgentId.ShouldBe(agentId);
+    }
+
+    private async Task<string> CreateUnassignedTaskAsync(string persona, string description)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new AISwarm.DataLayer.Entities.WorkItem
+        {
+            Id = taskId,
+            AgentId = string.Empty, // Unassigned task
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
 }

@@ -79,6 +79,19 @@ public class GetNextTaskMcpTool
                         pendingTask.Persona,
                         pendingTask.Description);
                 }
+
+                // No assigned tasks found, look for unassigned tasks to claim
+                var unassignedTask = await scope.Tasks
+                    .Where(t => (t.AgentId == null || t.AgentId == string.Empty) && t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .OrderBy(t => t.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (unassignedTask != null)
+                {
+                    // Claim the unassigned task by setting the AgentId
+                    // Need to use a write scope for this operation
+                    return await ClaimUnassignedTaskAsync(unassignedTask.Id, agentId);
+                }
             }
 
             // Wait for the polling interval before checking again
@@ -87,5 +100,41 @@ public class GetNextTaskMcpTool
 
         // Timeout reached, no tasks available
         return GetNextTaskResult.NoTasksAvailable();
+    }
+
+    /// <summary>
+    /// Claims an unassigned task by setting the AgentId to the requesting agent
+    /// </summary>
+    /// <param name="taskId">ID of the task to claim</param>
+    /// <param name="agentId">ID of the agent claiming the task</param>
+    /// <returns>Result with claimed task information or failure if task no longer available</returns>
+    private async Task<GetNextTaskResult> ClaimUnassignedTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        
+        // Re-fetch the task to ensure it's still unassigned (race condition protection)
+        var task = await scope.Tasks.FindAsync(taskId);
+        
+        if (task == null)
+        {
+            return GetNextTaskResult.NoTasksAvailable();
+        }
+        
+        // Verify task is still unassigned and pending
+        if (!string.IsNullOrEmpty(task.AgentId) || task.Status != AISwarm.DataLayer.Entities.TaskStatus.Pending)
+        {
+            return GetNextTaskResult.NoTasksAvailable();
+        }
+        
+        // Claim the task
+        task.AgentId = agentId;
+        
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        
+        return GetNextTaskResult.SuccessWithTask(
+            task.Id,
+            task.Persona,
+            task.Description);
     }
 }
