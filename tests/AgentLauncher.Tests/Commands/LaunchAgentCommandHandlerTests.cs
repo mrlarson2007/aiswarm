@@ -2,6 +2,7 @@ using AgentLauncher.Commands;
 using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
 using AgentLauncher.Tests.TestDoubles;
+using AgentLauncher.Models;
 using Shouldly;
 using Moq;
 using AgentLauncher.Services.External;
@@ -386,5 +387,76 @@ public class LaunchAgentCommandHandlerTests
             r.WorkingDirectory == "/repo" &&
             r.Model == "gemini-1.5-pro")), Times.Once);
         _logger.Infos.ShouldContain(i => i.Contains("Registered agent") && i.Contains("agent-123"));
+    }
+
+    [Fact]
+    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldConfigureGeminiWithAgentIdAndMcpServer()
+    {
+        // Arrange
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
+            .ReturnsAsync("agent-456");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: null,
+            directory: "/repo",
+            dryRun: false,
+            monitor: true);
+        
+        // Assert
+        result.ShouldBeTrue();
+        
+        // Should call LaunchInteractiveWithSettingsAsync instead of LaunchInteractiveAsync
+        _gemini.Verify(g => g.LaunchInteractiveWithSettingsAsync(
+            "/repo/planner_context.md", 
+            "gemini-1.5-pro", 
+            It.Is<AgentSettings>(s => 
+                s.AgentId == "agent-456" && 
+                s.McpServerUrl != null),
+            null), 
+            Times.Once);
+        
+        _logger.Infos.ShouldContain(i => i.Contains("Configuring Gemini with agent settings"));
+    }
+
+    [Fact]
+    public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
+    {
+        // Arrange
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: null,
+            directory: "/repo",
+            dryRun: false,
+            monitor: false);
+        
+        // Assert
+        result.ShouldBeTrue();
+        
+        // Should call traditional LaunchInteractiveAsync (no settings)
+        _gemini.Verify(g => g.LaunchInteractiveAsync(
+            "/repo/planner_context.md", 
+            "gemini-1.5-pro", 
+            null), 
+            Times.Once);
+        
+        // Should not call settings-based method
+        _gemini.Verify(g => g.LaunchInteractiveWithSettingsAsync(
+            It.IsAny<string>(), 
+            It.IsAny<string?>(), 
+            It.IsAny<AgentSettings>(),
+            It.IsAny<string?>()), 
+            Times.Never);
+        
+        _logger.Infos.ShouldNotContain(i => i.Contains("Configuring Gemini with agent settings"));
     }
 }

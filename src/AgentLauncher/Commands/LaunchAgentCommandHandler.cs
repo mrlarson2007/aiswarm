@@ -1,6 +1,7 @@
 using AgentLauncher.Services;
 using AgentLauncher.Services.External;
 using AgentLauncher.Services.Logging;
+using AgentLauncher.Models;
 
 namespace AgentLauncher.Commands;
 
@@ -100,7 +101,22 @@ public class LaunchAgentCommandHandler(
         try
         {
             logger.Info("Launching Gemini interactive session...");
-            await geminiService.LaunchInteractiveAsync(contextPath, model, null);
+            
+            if (monitor && agentId != null)
+            {
+                // Configure Gemini with agent settings for MCP communication
+                logger.Info("Configuring Gemini with agent settings");
+                var agentSettings = new AgentSettings
+                {
+                    AgentId = agentId,
+                    McpServerUrl = "http://localhost:8080" // TODO: Make configurable
+                };
+                await geminiService.LaunchInteractiveWithSettingsAsync(contextPath, model, agentSettings, null);
+            }
+            else
+            {
+                await geminiService.LaunchInteractiveAsync(contextPath, model, null);
+            }
         }
         catch (Exception ex)
         {

@@ -1,5 +1,6 @@
 using AgentLauncher.Services.External;
 using AgentLauncher.Services.Logging;
+using AgentLauncher.Models;
 
 namespace AgentLauncher.Services;
 
@@ -80,6 +81,13 @@ public class GeminiService(
             logger.Error($"Error launching Gemini CLI: {ex.Message}");
             return false;
         }
+    }
+
+    /// <inheritdoc />
+    public Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model, AgentSettings agentSettings, string? workingDirectory = null)
+    {
+        // TODO: Implement MCP server configuration and agent settings
+        throw new NotImplementedException("LaunchInteractiveWithSettingsAsync not yet implemented");
     }
 
     private static string BuildGeminiArguments(string contextFilePath, string? model)
