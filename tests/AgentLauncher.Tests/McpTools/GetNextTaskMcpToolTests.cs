@@ -103,6 +103,44 @@ public class GetNextTaskMcpToolTests
         result.Message.ShouldContain("get the next task");
     }
 
+    [Fact]
+    public async Task WhenAgentHasNoTasksAndPollingTimeoutExpires_ShouldReturnNoTasksAfterWaiting()
+    {
+        // Arrange
+        var agentId = "agent-polling-timeout";
+        
+        // Create a running agent with no tasks
+        await CreateRunningAgentAsync(agentId);
+
+        // Configure very short polling timeout and interval for fast test
+        var configuration = new AISwarm.Server.McpTools.GetNextTaskConfiguration
+        {
+            TimeToWaitForTask = TimeSpan.FromMilliseconds(50),  // Very short timeout
+            PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
+        };
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var startTime = DateTime.UtcNow;
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId, configuration);
+        var elapsed = DateTime.UtcNow - startTime;
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBeNull();
+        result.Persona.ShouldBeNull();
+        result.Description.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("No tasks available");
+        result.Message.ShouldContain("call this tool again");
+        
+        // Should have waited at least the configured timeout duration
+        elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(40));
+        // But not too much longer (allowing for test execution overhead)
+        elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(200));
+    }
+
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
