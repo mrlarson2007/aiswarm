@@ -15,6 +15,7 @@ public class GetNextTaskMcpToolTests
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
 
     public GetNextTaskMcpToolTests()
     {
@@ -23,7 +24,8 @@ public class GetNextTaskMcpToolTests
         // Add database services
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
-        services.AddSingleton<ITimeService, FakeTimeService>();
+        _timeService = new FakeTimeService();
+        services.AddSingleton<ITimeService>(_timeService);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
         // Add MCP tools
@@ -165,8 +167,8 @@ public class GetNextTaskMcpToolTests
         // Act - Start polling in background and add task after delay
         var pollingTask = getNextTaskTool.GetNextTaskAsync(agentId, configuration);
         
-        // Wait a bit then add a task using a SEPARATE database scope (simulating external process)
-        await Task.Delay(200);
+        // Advance time to simulate task arriving during polling
+        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(200));
         var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
         
         var startTime = DateTime.UtcNow;
@@ -310,10 +312,11 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
         
         // Create an unassigned task first (older timestamp)
-        await Task.Delay(10); // Ensure different timestamps
         var unassignedTaskId = await CreateUnassignedTaskAsync(unassignedPersona, unassignedDescription);
         
-        await Task.Delay(10); // Ensure different timestamps
+        // Advance time to ensure different timestamps
+        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
+        
         // Create an assigned task second (newer timestamp)
         var assignedTaskId = await CreatePendingTaskAsync(agentId, assignedPersona, assignedDescription);
 
@@ -395,7 +398,8 @@ public class GetNextTaskMcpToolTests
         // Create low priority task first (older timestamp)
         var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
         
-        await Task.Delay(10); // Ensure different timestamps
+        // Advance time to ensure different timestamps
+        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
         
         // Create high priority task second (newer timestamp but higher priority)
         var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, TaskPriority.Critical);
@@ -459,7 +463,8 @@ public class GetNextTaskMcpToolTests
         // Create low priority assigned task first (older timestamp)
         var lowPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
         
-        await Task.Delay(10); // Ensure different timestamps
+        // Advance time to ensure different timestamps
+        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
         
         // Create high priority assigned task second (newer timestamp but higher priority)
         var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, TaskPriority.High);
@@ -512,7 +517,8 @@ public class GetNextTaskMcpToolTests
         // Create high priority unassigned task first
         var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, TaskPriority.Critical);
         
-        await Task.Delay(10); // Ensure different timestamps
+        // Advance time to ensure different timestamps
+        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
         
         // Create low priority assigned task second
         var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, TaskPriority.Low);
