@@ -12,6 +12,13 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 
 **Critical**: Never write production code without a failing test first. Refactoring must never change behavior.
 
+**One Test at a Time Discipline**: 
+- Write only ONE test method per RED-GREEN-REFACTOR cycle
+- Start with edge cases and error conditions first (invalid input, missing data, etc.)
+- Then write tests for main happy path logic
+- Each test should verify one specific behavior or scenario
+- Never write multiple test methods before implementing the production code
+
 **ALWAYS**: When prompted to work on any code changes, first repeat these TDD instructions to confirm understanding of the workflow before proceeding.
 
 ## Test Architecture Patterns
