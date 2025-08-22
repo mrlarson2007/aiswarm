@@ -141,6 +141,50 @@ public class GetNextTaskMcpToolTests
         elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(200));
     }
 
+    [Fact]
+    public async Task WhenTaskArrivesWhilePolling_ShouldReturnTaskImmediately()
+    {
+        // Arrange
+        var agentId = "agent-polling-success";
+        var expectedPersona = "You are a code reviewer. Review code for quality and security.";
+        var expectedDescription = "Review the authentication module for security vulnerabilities";
+        
+        // Create a running agent with no initial tasks
+        await CreateRunningAgentAsync(agentId);
+
+        // Configure longer polling timeout so we can simulate task arriving
+        var configuration = new AISwarm.Server.McpTools.GetNextTaskConfiguration
+        {
+            TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
+            PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
+        };
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act - Start polling in background and add task after delay
+        var pollingTask = getNextTaskTool.GetNextTaskAsync(agentId, configuration);
+        
+        // Wait a bit then add a task using a SEPARATE database scope (simulating external process)
+        await Task.Delay(200);
+        var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
+        
+        var startTime = DateTime.UtcNow;
+        var result = await pollingTask;
+        var elapsed = DateTime.UtcNow - startTime;
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(taskId);
+        result.Persona.ShouldBe(expectedPersona);
+        result.Description.ShouldBe(expectedDescription);
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("call this tool again");
+        result.Message.ShouldContain("get the next task");
+        
+        // Should have returned quickly once task was available, not waited full timeout
+        elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
+    }
+
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
@@ -161,6 +205,27 @@ public class GetNextTaskMcpToolTests
     private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
     {
         using var scope = _scopeService.CreateWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new AISwarm.DataLayer.Entities.WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+    private async Task<string> CreatePendingTaskUsingNewScopeAsync(string agentId, string persona, string description)
+    {
+        // Create a completely new scope service to simulate external process
+        var newScopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
+        using var scope = newScopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new AISwarm.DataLayer.Entities.WorkItem
         {

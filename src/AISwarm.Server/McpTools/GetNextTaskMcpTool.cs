@@ -45,14 +45,15 @@ public class GetNextTaskMcpTool
         string agentId, 
         GetNextTaskConfiguration configuration)
     {
-        using var scope = _scopeService.CreateReadScope();
-
-        // Validate that the agent exists
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent == null)
+        // First validate that the agent exists
+        using (var scope = _scopeService.CreateReadScope())
         {
-            return GetNextTaskResult
-                .Failure($"Agent not found: {agentId}");
+            var agent = await scope.Agents.FindAsync(agentId);
+            if (agent == null)
+            {
+                return GetNextTaskResult
+                    .Failure($"Agent not found: {agentId}");
+            }
         }
 
         var startTime = DateTime.UtcNow;
@@ -61,19 +62,23 @@ public class GetNextTaskMcpTool
         // Poll for tasks until timeout
         while (DateTime.UtcNow < endTime)
         {
-            // Look for the next pending task for this agent
-            var pendingTask = await scope.Tasks
-                .Where(t => t.AgentId == agentId && t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
-                .OrderBy(t => t.CreatedAt)
-                .FirstOrDefaultAsync();
-
-            // If task found, return it immediately
-            if (pendingTask != null)
+            // Create a fresh scope for each poll to see new tasks
+            using (var scope = _scopeService.CreateReadScope())
             {
-                return GetNextTaskResult.SuccessWithTask(
-                    pendingTask.Id,
-                    pendingTask.Persona,
-                    pendingTask.Description);
+                // Look for the next pending task for this agent
+                var pendingTask = await scope.Tasks
+                    .Where(t => t.AgentId == agentId && t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .OrderBy(t => t.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                // If task found, return it immediately
+                if (pendingTask != null)
+                {
+                    return GetNextTaskResult.SuccessWithTask(
+                        pendingTask.Id,
+                        pendingTask.Persona,
+                        pendingTask.Description);
+                }
             }
 
             // Wait for the polling interval before checking again
