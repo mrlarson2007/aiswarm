@@ -1,28 +1,49 @@
 using AgentLauncher.Commands;
 using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
+using AgentLauncher.Services.Terminals;
 using AgentLauncher.Tests.TestDoubles;
 using AgentLauncher.Models;
 using Shouldly;
 using Moq;
 using AgentLauncher.Services.External;
+using AISwarm.DataLayer.Database;
+using AISwarm.DataLayer.Services;
+using Microsoft.EntityFrameworkCore;
+using AISwarm.DataLayer.Entities;
 
 namespace AgentLauncher.Tests.Commands;
 
-public class LaunchAgentCommandHandlerTests
+public class LaunchAgentCommandHandlerTests : IDisposable
 {
     private readonly Mock<IContextService> _context = new();
     private readonly PassThroughProcessLauncher _process = new();
     private readonly FakeFileSystemService _fs = new();
-    private readonly Mock<IGeminiService> _gemini = new();
-    private readonly Mock<ILocalAgentService> _localAgentService = new();
+    private readonly IGeminiService _gemini;
+    private readonly ILocalAgentService _localAgentService;
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
     private readonly GitService _git;
+    private readonly CoordinationDbContext _dbContext;
+    private readonly FakeTimeService _timeService = new();
 
     public LaunchAgentCommandHandlerTests()
     {
+        // Set up database with in-memory provider for testing
+        var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new CoordinationDbContext(options);
+        var scopeService = new DatabaseScopeService(_dbContext);
+        
         _git = new GitService(_process, _fs, _logger);
+        
+        // Create a real GeminiService using PassThroughProcessLauncher via terminal service
+        var terminalService = new WindowsTerminalService(_process);
+        _gemini = new GeminiService(terminalService, _logger, _fs);
+        
+        // Create real LocalAgentService with test doubles for dependencies
+        _localAgentService = new LocalAgentService(_timeService, scopeService);
     }
 
     private LaunchAgentCommandHandler SystemUnderTest => new(
@@ -30,10 +51,15 @@ public class LaunchAgentCommandHandlerTests
         _logger,
         _env,
         _git,
-        _gemini.Object,
+        _gemini,
         _fs,
-        _localAgentService.Object
+        _localAgentService
     );
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
+    }
 
     [Fact]
     public async Task WhenDryRun_ShouldNotCreateContextOrLaunch()
@@ -50,7 +76,9 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _logger.Infos.ShouldContain(s => s.Contains("Dry run mode"));
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
+        
+        // Should not have launched any Gemini processes
+        _process.Invocations.ShouldNotContain(i => i.File.Contains("pwsh") && i.Arguments.Contains("gemini"));
     }
 
     [Fact]
@@ -106,7 +134,9 @@ public class LaunchAgentCommandHandlerTests
         _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
         _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
         _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_x/planner_context.md");
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo-feature_x/planner_context.md")
+            .Callback(() => _fs.AddFile("/repo-feature_x/planner_context.md"));
 
         // Act (non-dry-run)
         var result = await SystemUnderTest.RunAsync(
@@ -146,6 +176,9 @@ public class LaunchAgentCommandHandlerTests
         // Arrange context creation
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -156,8 +189,13 @@ public class LaunchAgentCommandHandlerTests
                 dryRun: false);
         result.ShouldBeTrue();
 
-        // Assert
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, "/repo", null), Times.Once);
+        // Assert - Check that Gemini was launched with correct arguments
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-i \"/repo/planner_context.md\"") &&
+            !i.Arguments.Contains("-m ") // No model specified
+        );
     }
 
     [Fact]
@@ -166,6 +204,9 @@ public class LaunchAgentCommandHandlerTests
         // Arrange context creation
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -176,8 +217,13 @@ public class LaunchAgentCommandHandlerTests
                 dryRun: false);
         result.ShouldBeTrue();
 
-        // Assert
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", "gemini-1.5-pro", "/repo", null), Times.Once);
+        // Assert - Check that Gemini was launched with correct model arguments
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+        );
     }
 
     // New edge case tests
@@ -199,7 +245,9 @@ public class LaunchAgentCommandHandlerTests
 
         _logger.Errors.ShouldContain(e => e.Contains("Failed to create worktree"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
+        
+        // Should not have launched any Gemini processes since worktree creation failed
+        _process.Invocations.ShouldNotContain(i => i.File == "pwsh.exe" && i.Arguments.Contains("gemini"));
     }
 
     [Fact]
@@ -226,7 +274,9 @@ public class LaunchAgentCommandHandlerTests
         _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
         _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
         _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>())).ReturnsAsync("/repo-feature_override/planner_context.md");
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo-feature_override/planner_context.md")
+            .Callback(() => _fs.AddFile("/repo-feature_override/planner_context.md"));
 
         var result = await SystemUnderTest.RunAsync(
                 agentType: "planner",
@@ -272,7 +322,9 @@ public class LaunchAgentCommandHandlerTests
 
         _logger.Errors.ShouldContain(e => e.Contains("already exists"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
+        
+        // Should not have launched any Gemini processes since worktree already exists
+        _process.Invocations.ShouldNotContain(i => i.File == "pwsh.exe" && i.Arguments.Contains("gemini"));
     }
 
     [Fact]
@@ -283,7 +335,11 @@ public class LaunchAgentCommandHandlerTests
         _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
         _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
         _context.Setup(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_launch"))))
-            .ReturnsAsync("/repo-feature_launch/planner_context.md");
+            .ReturnsAsync("/repo-feature_launch/planner_context.md")
+            .Callback(() => {
+                // Set up context file to exist after it's "created" by the context service
+                _fs.AddFile("/repo-feature_launch/planner_context.md");
+            });
 
         var result = await SystemUnderTest.RunAsync(
                 agentType: "planner",
@@ -291,16 +347,24 @@ public class LaunchAgentCommandHandlerTests
                 worktree: "feature_launch",
                 directory: null,
                 dryRun: false);
+        
         result.ShouldBeTrue();
 
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo-feature_launch/planner_context.md", "gemini-1.5-pro", It.IsAny<string>(), null), Times.Once);
+        // Assert - Check that Gemini was launched with correct arguments from worktree directory
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+            i.Arguments.Contains("-i \"/repo-feature_launch/planner_context.md\"")
+        );
     }
 
     [Fact]
     public async Task WhenDirectorySpecifiedWithoutWorktree_ShouldUseDirectoryForContext()
     {
         _context.Setup(c => c.CreateContextFile("planner", "/customdir"))
-            .ReturnsAsync("/customdir/planner_context.md");
+            .ReturnsAsync("/customdir/planner_context.md")
+            .Callback(() => _fs.AddFile("/customdir/planner_context.md"));
 
         var result = await SystemUnderTest.RunAsync(
                 agentType: "planner",
@@ -332,6 +396,9 @@ public class LaunchAgentCommandHandlerTests
     {
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         var result = await SystemUnderTest.RunAsync(
                 agentType: "planner",
@@ -342,7 +409,14 @@ public class LaunchAgentCommandHandlerTests
         result.ShouldBeTrue();
 
         _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, "/repo", null), Times.Once);
+        
+        // Assert - Check that Gemini was launched without worktree (normal case)
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-i \"/repo/planner_context.md\"") &&
+            !i.Arguments.Contains("-m ") // No model specified
+        );
     }
 
     [Fact]
@@ -350,8 +424,6 @@ public class LaunchAgentCommandHandlerTests
     {
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
-        _gemini.Setup(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()))
-            .ThrowsAsync(new InvalidOperationException("Gemini CLI not installed"));
 
         var result = await SystemUnderTest.RunAsync(
                 agentType: "planner",
@@ -359,8 +431,10 @@ public class LaunchAgentCommandHandlerTests
                 worktree: null,
                 directory: null,
                 dryRun: false);
+        
+        // Should fail because context file doesn't exist
         result.ShouldBeFalse();
-        _logger.Errors.ShouldContain(e => e.Contains("Gemini launch failed"));
+        _logger.Errors.ShouldContain(e => e.Contains("Context file not found"));
     }
 
     [Fact]
@@ -369,8 +443,9 @@ public class LaunchAgentCommandHandlerTests
         // Arrange
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
-        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
-            .ReturnsAsync("agent-123");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -383,11 +458,18 @@ public class LaunchAgentCommandHandlerTests
         
         // Assert
         result.ShouldBeTrue();
-        _localAgentService.Verify(s => s.RegisterAgentAsync(It.Is<AgentRegistrationRequest>(r =>
-            r.AgentType == "planner" &&
-            r.WorkingDirectory == "/repo" &&
-            r.Model == "gemini-1.5-pro")), Times.Once);
-        _logger.Infos.ShouldContain(i => i.Contains("Registered agent") && i.Contains("agent-123"));
+        
+        // Verify agent was actually registered in database
+        var agents = await _dbContext.Agents.ToListAsync();
+        agents.ShouldHaveSingleItem();
+        var agent = agents.First();
+        agent.AgentType.ShouldBe("planner");
+        agent.WorkingDirectory.ShouldBe("/repo");
+        agent.Model.ShouldBe("gemini-1.5-pro");
+        agent.Status.ShouldBe(AgentStatus.Starting);
+        agent.RegisteredAt.ShouldBe(_timeService.UtcNow);
+        
+        _logger.Infos.ShouldContain(i => i.Contains("Registered agent") && i.Contains(agent.Id));
     }
 
     [Fact]
@@ -396,8 +478,9 @@ public class LaunchAgentCommandHandlerTests
         // Arrange
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
-        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
-            .ReturnsAsync("agent-456");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -411,15 +494,24 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         result.ShouldBeTrue();
         
-        // Should call LaunchInteractiveAsync with agent settings
-        _gemini.Verify(g => g.LaunchInteractiveAsync(
-            "/repo/planner_context.md", 
-            "gemini-1.5-pro", 
-            "/repo",
-            It.Is<AgentSettings>(s => 
-                s.AgentId == "agent-456" && 
-                s.McpServerUrl != null)), 
-            Times.Once);
+        // Get the registered agent from database
+        var agents = await _dbContext.Agents.ToListAsync();
+        agents.ShouldHaveSingleItem();
+        var agent = agents.First();
+        
+        // Should have launched Gemini with agent settings
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+        );
+        
+        // Should have created Gemini configuration file
+        var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
+        configContent.ShouldNotBeNull();
+        configContent.ShouldContain(agent.Id);
+        configContent.ShouldContain("aiswarm");
         
         _logger.Infos.ShouldContain(i => i.Contains("Configuring Gemini with agent settings"));
     }
@@ -430,8 +522,9 @@ public class LaunchAgentCommandHandlerTests
         // Arrange
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
-        _localAgentService.Setup(s => s.RegisterAgentAsync(It.IsAny<AgentRegistrationRequest>()))
-            .ReturnsAsync("agent-789");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -445,22 +538,30 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         result.ShouldBeTrue();
         
+        // Get the registered agent from database
+        var agents = await _dbContext.Agents.ToListAsync();
+        agents.ShouldHaveSingleItem();
+        var agent = agents.First();
+        
         // Verify agent information was appended to context file
         var contextContent = _fs.GetFileContent("/repo/planner_context.md");
         contextContent.ShouldNotBeNull();
-        contextContent.ShouldContain("You are Agent ID: agent-789");
+        contextContent.ShouldContain($"You are Agent ID: {agent.Id}");
         contextContent.ShouldContain("Available MCP Tools");
         contextContent.ShouldContain("get_next_task");
         contextContent.ShouldContain("create_task");
         contextContent.ShouldContain("Task Management Workflow");
     }
 
-    [Fact]
+        [Fact]
     public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
     {
         // Arrange
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
+        
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
 
         // Act
         var result = await SystemUnderTest.RunAsync(
@@ -474,15 +575,18 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         result.ShouldBeTrue();
         
-        // Should call traditional LaunchInteractiveAsync (no settings)
-        _gemini.Verify(g => g.LaunchInteractiveAsync(
-            "/repo/planner_context.md", 
-            "gemini-1.5-pro", 
-            "/repo",
-            null), 
-            Times.Once);
+        // Should have launched Gemini without agent settings (no configuration file)
+        _process.Invocations.ShouldContain(i => 
+            i.File == "pwsh.exe" && 
+            i.Arguments.Contains("gemini") &&
+            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+        );
         
-        // Should not call any other methods - this test should use LaunchInteractiveAsync with agentSettings=null
+        // Should not have created configuration file since monitor is disabled
+        var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
+        configContent.ShouldBeNull();
+        
         _logger.Infos.ShouldNotContain(i => i.Contains("Configuring Gemini with agent settings"));
     }
 }

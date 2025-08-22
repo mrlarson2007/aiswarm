@@ -109,6 +109,7 @@ public class LaunchAgentCommandHandler(
         {
             logger.Info("Launching Gemini interactive session...");
             
+            bool success;
             if (monitor && agentId != null)
             {
                 // Configure Gemini with agent settings for MCP communication
@@ -118,11 +119,17 @@ public class LaunchAgentCommandHandler(
                     AgentId = agentId,
                     McpServerUrl = "http://localhost:8080" // TODO: Make configurable
                 };
-                await geminiService.LaunchInteractiveAsync(contextPath, model, workDir, agentSettings);
+                success = await geminiService.LaunchInteractiveAsync(contextPath, model, workDir, agentSettings);
             }
             else
             {
-                await geminiService.LaunchInteractiveAsync(contextPath, model, workDir);
+                success = await geminiService.LaunchInteractiveAsync(contextPath, model, workDir);
+            }
+            
+            if (!success)
+            {
+                logger.Error("Failed to launch Gemini interactive session");
+                return false;
             }
         }
         catch (Exception ex)

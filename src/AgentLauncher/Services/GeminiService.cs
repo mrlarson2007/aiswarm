@@ -7,7 +7,8 @@ namespace AgentLauncher.Services;
 /// <inheritdoc />
 public class GeminiService(
     Terminals.IInteractiveTerminalService terminal,
-    IAppLogger logger) : IGeminiService
+    IAppLogger logger,
+    IFileSystemService fileSystem) : IGeminiService
 {
 
     private const string GeminiProcessName = "gemini";
@@ -43,7 +44,7 @@ public class GeminiService(
     /// <inheritdoc />
     public async Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null, AgentSettings? agentSettings = null)
     {
-        if (!File.Exists(contextFilePath))
+        if (!fileSystem.FileExists(contextFilePath))
         {
             logger.Error($"Error: Context file not found: {contextFilePath}");
             return false;
@@ -102,7 +103,7 @@ public class GeminiService(
     private async Task CreateGeminiConfigurationAsync(string workingDirectory, AgentSettings agentSettings)
     {
         var geminiDir = Path.Combine(workingDirectory, ".gemini");
-        Directory.CreateDirectory(geminiDir);
+        fileSystem.CreateDirectory(geminiDir);
 
         var configPath = Path.Combine(geminiDir, "settings.json");
         
@@ -129,7 +130,7 @@ public class GeminiService(
             WriteIndented = true
         });
 
-        await File.WriteAllTextAsync(configPath, json);
+        await fileSystem.WriteAllTextAsync(configPath, json);
         logger.Info($"Created Gemini configuration file: {configPath}");
         logger.Info($"Agent ID: {agentSettings.AgentId}");
         logger.Info($"MCP Server: {agentSettings.McpServerUrl}");
