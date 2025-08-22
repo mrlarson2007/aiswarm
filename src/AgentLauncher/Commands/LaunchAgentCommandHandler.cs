@@ -14,6 +14,7 @@ public class LaunchAgentCommandHandler(
     IEnvironmentService environment,
     IGitService gitService,
     IGeminiService geminiService,
+    IFileSystemService fileSystemService,
     ILocalAgentService? localAgentService = null
 )
 {
@@ -61,18 +62,6 @@ public class LaunchAgentCommandHandler(
             }
         }
 
-        string contextPath;
-        try
-        {
-            logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
-            contextPath = await contextService.CreateContextFile(agentType, workDir);
-        }
-        catch (Exception ex)
-        {
-            logger.Error($"Failed to create context file: {ex.Message}");
-            return false;
-        }
-
         string? agentId = null;
         if (monitor && localAgentService != null)
         {
@@ -96,6 +85,24 @@ public class LaunchAgentCommandHandler(
                 logger.Error($"Failed to register agent for monitoring: {ex.Message}");
                 logger.Info("Continuing without monitoring...");
             }
+        }
+
+        string contextPath;
+        try
+        {
+            logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
+            contextPath = await contextService.CreateContextFile(agentType, workDir);
+            
+            // If monitoring is enabled, append agent ID information to context
+            if (monitor && agentId != null)
+            {
+                await AppendAgentIdToContextAsync(contextPath, agentId);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Failed to create context file: {ex.Message}");
+            return false;
         }
 
         try
@@ -124,5 +131,28 @@ public class LaunchAgentCommandHandler(
             return false;
         }
         return true;
+    }
+
+    private async Task AppendAgentIdToContextAsync(string contextPath, string agentId)
+    {
+        var agentInformation = $@"
+
+## Agent Configuration
+
+You are Agent ID: {agentId}
+
+### Available MCP Tools
+You have access to Model Context Protocol (MCP) tools that allow you to:
+- Request your next pending task: Use the 'get_next_task' MCP tool to retrieve tasks assigned specifically to you
+- Create new tasks: Use the 'create_task' MCP tool to break down work or create subtasks
+
+### Task Management Workflow
+1. Start each work session by calling 'get_next_task' to see if you have pending work
+2. The tool will return reinforcing prompts to check again - follow these suggestions
+3. When you complete work, you can create follow-up tasks using 'create_task'
+4. Always include your agent ID ({agentId}) when working with tasks
+
+";
+        await fileSystemService.AppendAllTextAsync(contextPath, agentInformation);
     }
 }

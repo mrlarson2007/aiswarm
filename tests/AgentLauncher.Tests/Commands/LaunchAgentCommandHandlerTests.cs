@@ -31,6 +31,7 @@ public class LaunchAgentCommandHandlerTests
         _env,
         _git,
         _gemini.Object,
+        _fs,
         _localAgentService.Object
     );
 

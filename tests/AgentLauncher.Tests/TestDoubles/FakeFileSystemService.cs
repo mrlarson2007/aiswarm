@@ -24,6 +24,25 @@ public class FakeFileSystemService : IFileSystemService
         await Task.CompletedTask;
     }
 
+    public async Task AppendAllTextAsync(string path, string content)
+    {
+        var normalizedPath = Norm(path);
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+            _directories.Add(Norm(dir));
+        
+        if (_fileContents.TryGetValue(normalizedPath, out var existingContent))
+        {
+            _fileContents[normalizedPath] = existingContent + content;
+        }
+        else
+        {
+            _files.Add(normalizedPath);
+            _fileContents[normalizedPath] = content;
+        }
+        await Task.CompletedTask;
+    }
+
     public void AddDirectory(string path) => _directories.Add(Norm(path));
     public void AddFile(string path)
     {

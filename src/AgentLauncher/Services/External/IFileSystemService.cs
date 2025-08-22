@@ -10,4 +10,5 @@ public interface IFileSystemService
     void CreateDirectory(string path);
     bool FileExists(string path);
     Task WriteAllTextAsync(string path, string content);
+    Task AppendAllTextAsync(string path, string content);
 }
