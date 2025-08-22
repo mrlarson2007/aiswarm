@@ -1,3 +1,4 @@
+using AISwarm.Shared.Contracts;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Entities;

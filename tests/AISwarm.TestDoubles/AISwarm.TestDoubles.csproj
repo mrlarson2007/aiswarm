@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
+    <ProjectReference Include="..\..\src\AISwarm.Shared\AISwarm.Shared.csproj" />
+    <ProjectReference Include="..\..\src\AgentLauncher\AgentLauncher.csproj" />
+  </ItemGroup>
+
+</Project>

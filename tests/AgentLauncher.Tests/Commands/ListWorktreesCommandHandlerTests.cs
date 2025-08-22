@@ -1,7 +1,7 @@
 using AgentLauncher.Commands;
 using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
-using AgentLauncher.Tests.TestDoubles;
+using AISwarm.TestDoubles;
 using Moq;
 using Shouldly;
 

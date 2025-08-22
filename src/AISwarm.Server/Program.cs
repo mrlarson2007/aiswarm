@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using AISwarm.Server.Services;
 using AISwarm.DataLayer.Services;
 using AISwarm.DataLayer.Database;
+using AISwarm.Shared.Contracts;
 using AISwarm.DataLayer.Contracts;
 using Microsoft.EntityFrameworkCore;
 

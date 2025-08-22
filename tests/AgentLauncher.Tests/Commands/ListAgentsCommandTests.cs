@@ -3,7 +3,7 @@ using AgentLauncher.Services.Logging;
 using Moq;
 using System.Text;
 using Shouldly;
-using AgentLauncher.Tests.TestDoubles;
+using AISwarm.TestDoubles;
 
 namespace AgentLauncher.Tests.Commands;
 

@@ -1,7 +1,7 @@
 using AgentLauncher.Services.External;
 using System.Collections.Concurrent;
 
-namespace AgentLauncher.Tests.TestDoubles;
+namespace AISwarm.TestDoubles;
 
 /// <summary>
 /// Lightweight pass-through test double for IProcessLauncher. Provides default

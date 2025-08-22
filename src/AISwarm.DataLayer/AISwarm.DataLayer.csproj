@@ -11,4 +11,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AISwarm.Shared\AISwarm.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

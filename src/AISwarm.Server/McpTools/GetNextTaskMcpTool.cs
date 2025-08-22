@@ -1,3 +1,4 @@
+using AISwarm.Shared.Contracts;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Entities;
 using ModelContextProtocol.Server;
@@ -42,7 +43,7 @@ public class GetNextTaskMcpTool
     /// <param name="configuration">Polling configuration for timeouts and intervals</param>
     /// <returns>Result with task information or error message</returns>
     public async Task<GetNextTaskResult> GetNextTaskAsync(
-        string agentId, 
+        string agentId,
         GetNextTaskConfiguration configuration)
     {
         // First validate that the agent exists
@@ -67,8 +68,8 @@ public class GetNextTaskMcpTool
             {
                 // Look for the next pending task for this agent
                 var pendingTask = await scope.Tasks
-                    .Where(t => t.AgentId == agentId && 
-                               t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => t.AgentId == agentId)
+                    .Where(t => t.Status == DataLayer.Entities.TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
@@ -84,8 +85,8 @@ public class GetNextTaskMcpTool
 
                 // No assigned tasks found, look for unassigned tasks to claim
                 var unassignedTask = await scope.Tasks
-                    .Where(t => (t.AgentId == null || t.AgentId == string.Empty) && 
-                               t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => t.AgentId == null || t.AgentId == string.Empty)
+                    .Where(t => t.Status == DataLayer.Entities.TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
@@ -94,7 +95,8 @@ public class GetNextTaskMcpTool
                 {
                     // Claim the unassigned task by setting the AgentId
                     // Need to use a write scope for this operation
-                    return await ClaimUnassignedTaskAsync(unassignedTask.Id, agentId);
+                    return await ClaimUnassignedTaskAsync(
+                        unassignedTask.Id, agentId);
                 }
             }
 
@@ -113,32 +115,32 @@ public class GetNextTaskMcpTool
     /// <param name="agentId">ID of the agent claiming the task</param>
     /// <returns>Result with claimed task information or failure if task no longer available</returns>
     private async Task<GetNextTaskResult> ClaimUnassignedTaskAsync(
-        string taskId, 
+        string taskId,
         string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
-        
+
         // Re-fetch the task to ensure it's still unassigned (race condition protection)
         var task = await scope.Tasks.FindAsync(taskId);
-        
+
         if (task == null)
         {
             return GetNextTaskResult.NoTasksAvailable();
         }
-        
+
         // Verify task is still unassigned and pending
-        if (!string.IsNullOrEmpty(task.AgentId) || 
+        if (!string.IsNullOrEmpty(task.AgentId) ||
             task.Status != AISwarm.DataLayer.Entities.TaskStatus.Pending)
         {
             return GetNextTaskResult.NoTasksAvailable();
         }
-        
+
         // Claim the task
         task.AgentId = agentId;
-        
+
         await scope.SaveChangesAsync();
         scope.Complete();
-        
+
         return GetNextTaskResult.SuccessWithTask(
             task.Id,
             task.Persona,

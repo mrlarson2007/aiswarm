@@ -1,6 +1,7 @@
 using AgentLauncher.Services.External;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using AISwarm.Shared.Contracts;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Services;
 using AISwarm.DataLayer.Database;

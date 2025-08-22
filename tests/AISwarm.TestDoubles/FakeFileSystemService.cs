@@ -1,8 +1,10 @@
-using AgentLauncher.Services;
 using AgentLauncher.Services.External;
 
-namespace AgentLauncher.Tests.TestDoubles;
+namespace AISwarm.TestDoubles;
 
+/// <summary>
+/// Fake file system service for testing - stores files and directories in memory
+/// </summary>
 public class FakeFileSystemService : IFileSystemService
 {
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);

@@ -1,8 +1,10 @@
-using AgentLauncher.Services;
 using AgentLauncher.Services.External;
 
-namespace AgentLauncher.Tests.TestDoubles;
+namespace AISwarm.TestDoubles;
 
+/// <summary>
+/// Test environment service that allows setting environment variables for testing
+/// </summary>
 public class TestEnvironmentService : IEnvironmentService
 {
     public string CurrentDirectory { get; set; } = "/repo";
@@ -11,7 +13,9 @@ public class TestEnvironmentService : IEnvironmentService
     public string? GetEnvironmentVariable(string variable)
         => _vars.TryGetValue(variable, out var v) ? v : null;
 
-    public TestEnvironmentService SetVar(string key, string? value)
+    public TestEnvironmentService SetVar(
+        string key, 
+        string? value)
     {
         _vars[key] = value;
         return this;

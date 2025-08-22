@@ -1,6 +1,6 @@
 using AgentLauncher.Services;
 using AgentLauncher.Services.External;
-using AgentLauncher.Tests.TestDoubles;
+using AISwarm.TestDoubles;
 using Shouldly;
 
 namespace AgentLauncher.Tests.Services;

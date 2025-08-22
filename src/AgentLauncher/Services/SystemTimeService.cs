@@ -1,4 +1,4 @@
-using AISwarm.DataLayer.Contracts;
+using AISwarm.Shared.Contracts;
 
 namespace AgentLauncher.Services;
 

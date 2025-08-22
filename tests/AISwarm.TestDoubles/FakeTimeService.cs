@@ -1,9 +1,10 @@
-using AISwarm.DataLayer.Contracts;
+using AISwarm.Shared.Contracts;
 
-namespace AgentLauncher.Tests.TestDoubles;
+namespace AISwarm.TestDoubles;
 
 /// <summary>
 /// Controllable time service for testing - allows setting specific times
+/// and advancing time for deterministic test execution
 /// </summary>
 public class FakeTimeService : ITimeService
 {
@@ -15,5 +16,13 @@ public class FakeTimeService : ITimeService
     public void AdvanceTime(TimeSpan timeSpan)
     {
         UtcNow = UtcNow.Add(timeSpan);
+    }
+    
+    /// <summary>
+    /// Sets the current time to a specific value
+    /// </summary>
+    public void SetCurrentTime(DateTime dateTime)
+    {
+        UtcNow = dateTime;
     }
 }

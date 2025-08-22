@@ -4,7 +4,7 @@ using AISwarm.Shared.Contracts;
 using AISwarm.Server.Services;
 using AISwarm.Server.Data;
 using Microsoft.EntityFrameworkCore;
-using AISwarm.Server.Tests.TestDoubles;
+using AISwarm.TestDoubles;
 
 namespace AISwarm.Server.Tests.Services;
 

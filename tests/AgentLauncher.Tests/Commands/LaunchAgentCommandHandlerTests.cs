@@ -2,7 +2,7 @@ using AgentLauncher.Commands;
 using AgentLauncher.Services;
 using AgentLauncher.Services.Logging;
 using AgentLauncher.Services.Terminals;
-using AgentLauncher.Tests.TestDoubles;
+using AISwarm.TestDoubles;
 using AgentLauncher.Models;
 using Shouldly;
 using Moq;

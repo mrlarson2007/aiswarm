@@ -1,3 +1,4 @@
+using AISwarm.Shared.Contracts;
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Entities;
 using Microsoft.EntityFrameworkCore;

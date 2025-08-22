@@ -1,8 +1,11 @@
 using AgentLauncher.Services.Logging;
 using System.Collections.Concurrent;
 
-namespace AgentLauncher.Tests.TestDoubles;
+namespace AISwarm.TestDoubles;
 
+/// <summary>
+/// Test logger that captures log messages for verification in tests
+/// </summary>
 public class TestLogger : IAppLogger
 {
     public ConcurrentBag<string> Infos { get; } = new();
