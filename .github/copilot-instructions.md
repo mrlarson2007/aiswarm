@@ -28,7 +28,7 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 - **Testing Framework**: xUnit with Shouldly assertions, Moq for mocking, Coverlet for coverage
 - **Test Structure**: AAA pattern (Arrange-Act-Assert) with clear separation
 - **Naming**: `WhenCondition_ShouldExpectedOutcome` for test methods
-- **Test Doubles**: Dedicated `TestDoubles/` folder with `TestLogger`, `FakeFileSystemService`, `PassThroughProcessLauncher`
+- **Test Doubles**: Dedicated `TestDoubles/` folder with `TestLogger`, `FakeFileSystemService`, `PassThroughProcessLauncher`, `FakeTimeService`
 - **System Under Test**: Use `SystemUnderTest` property pattern for clean test setup
 
 ## Composition and Dependency Injection

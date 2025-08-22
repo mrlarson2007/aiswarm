@@ -2,6 +2,7 @@ using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Services;
 using AISwarm.Server.McpTools;
+using AgentLauncher.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -21,7 +22,7 @@ public class GetNextTaskMcpToolTests
         // Add database services
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
-        services.AddSingleton<ITimeService, TestTimeService>();
+        services.AddSingleton<ITimeService, FakeTimeService>();
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
         // Add MCP tools
@@ -136,10 +137,5 @@ public class GetNextTaskMcpToolTests
         await scope.SaveChangesAsync();
         scope.Complete();
         return taskId;
-    }
-
-    private class TestTimeService : ITimeService
-    {
-        public DateTime UtcNow => new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
     }
 }
