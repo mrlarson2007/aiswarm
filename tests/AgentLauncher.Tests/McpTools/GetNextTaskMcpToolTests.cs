@@ -73,6 +73,35 @@ public class GetNextTaskMcpToolTests
         result.Message.ShouldContain("call this tool again");
     }
 
+    [Fact]
+    public async Task WhenAgentHasPendingTask_ShouldReturnTaskWithReinforcingPrompt()
+    {
+        // Arrange
+        var agentId = "agent-123";
+        var expectedPersona = "You are a code reviewer. Review code for quality and security.";
+        var expectedDescription = "Review the authentication module for security vulnerabilities";
+        
+        // Create a running agent first
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create a pending task for the agent
+        var taskId = await CreatePendingTaskAsync(agentId, expectedPersona, expectedDescription);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(taskId);
+        result.Persona.ShouldBe(expectedPersona);
+        result.Description.ShouldBe(expectedDescription);
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("call this tool again");
+        result.Message.ShouldContain("get the next task");
+    }
+
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
@@ -88,6 +117,25 @@ public class GetNextTaskMcpToolTests
         scope.Agents.Add(agent);
         await scope.SaveChangesAsync();
         scope.Complete();
+    }
+
+    private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new AISwarm.DataLayer.Entities.WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Persona = persona,
+            Description = description,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
     }
 
     private class TestTimeService : ITimeService

@@ -55,4 +55,19 @@ public class GetNextTaskResult
         Description = null,
         Message = "No tasks available for this agent. Continue your work and call this tool again periodically to check for new tasks."
     };
+    
+    /// <summary>
+    /// Creates a successful result with task information
+    /// </summary>
+    public static GetNextTaskResult SuccessWithTask(
+        string taskId,
+        string persona,
+        string description) => new()
+    {
+        Success = true,
+        TaskId = taskId,
+        Persona = persona,
+        Description = description,
+        Message = "Task retrieved successfully. After completing this task, call this tool again to get the next task."
+    };
 }
