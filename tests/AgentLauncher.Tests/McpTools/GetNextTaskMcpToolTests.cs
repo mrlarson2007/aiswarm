@@ -494,4 +494,43 @@ public class GetNextTaskMcpToolTests
         scope.Complete();
         return taskId;
     }
+
+    [Fact]
+    public async Task WhenHighPriorityUnassignedAndLowPriorityAssigned_ShouldReturnAssignedTaskFirst()
+    {
+        // Arrange
+        var agentId = "agent-mixed-priority";
+        var assignedPersona = "You are a reviewer. Review code for quality.";
+        var assignedDescription = "Review basic documentation";
+        var unassignedPersona = "You are an emergency responder. Handle critical issues.";
+        var unassignedDescription = "Critical system failure needs immediate attention";
+        
+        // Create a running agent
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create high priority unassigned task first
+        var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, 100);
+        
+        await Task.Delay(10); // Ensure different timestamps
+        
+        // Create low priority assigned task second
+        var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, 1);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert - Should get the assigned task despite unassigned having higher priority
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(assignedTaskId);
+        result.Persona.ShouldBe(assignedPersona);
+        result.Description.ShouldBe(assignedDescription);
+        
+        // Verify the unassigned task is still unassigned and available for claiming
+        using var scope = _scopeService.CreateReadScope();
+        var unassignedTask = await scope.Tasks.FindAsync(unassignedTaskId);
+        unassignedTask.ShouldNotBeNull();
+        unassignedTask.AgentId.ShouldBe(string.Empty);
+    }
 }
