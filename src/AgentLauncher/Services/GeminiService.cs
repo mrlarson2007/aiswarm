@@ -41,19 +41,28 @@ public class GeminiService(
     }
 
     /// <inheritdoc />
-    public async Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null)
+    public async Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null, AgentSettings? agentSettings = null)
     {
         if (!File.Exists(contextFilePath))
         {
             logger.Error($"Error: Context file not found: {contextFilePath}");
             return false;
         }
+
         try
         {
+            var workDir = workingDirectory ?? Environment.CurrentDirectory;
+
+            // If agent settings are provided, create Gemini configuration file
+            if (agentSettings != null)
+            {
+                await CreateGeminiConfigurationAsync(workDir, agentSettings);
+            }
+
             var arguments = BuildGeminiArguments(contextFilePath, model);
             logger.Info("Launching Gemini CLI...");
             logger.Info($"Command: {GeminiProcessName} {arguments}");
-            logger.Info($"Working Directory: {workingDirectory ?? Environment.CurrentDirectory}");
+            logger.Info($"Working Directory: {workDir}");
             logger.Info(string.Empty);
             logger.Info("=" + new string('=', 60));
             logger.Info(" GEMINI CLI SESSION - Press Ctrl+C to exit");
@@ -61,7 +70,7 @@ public class GeminiService(
             logger.Info(string.Empty);
 
             var fullCommand = $"{GeminiProcessName} {arguments}".Trim();
-            var started = terminal.LaunchTerminalInteractive(fullCommand, workingDirectory ?? Environment.CurrentDirectory);
+            var started = terminal.LaunchTerminalInteractive(fullCommand, workDir);
             if (started)
             {
                 logger.Info(string.Empty);
@@ -84,10 +93,42 @@ public class GeminiService(
     }
 
     /// <inheritdoc />
+    [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
     public Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model, AgentSettings agentSettings, string? workingDirectory = null)
     {
-        // TODO: Implement MCP server configuration and agent settings
-        throw new NotImplementedException("LaunchInteractiveWithSettingsAsync not yet implemented");
+        return LaunchInteractiveAsync(contextFilePath, model, workingDirectory, agentSettings);
+    }
+
+    private async Task CreateGeminiConfigurationAsync(string workingDirectory, AgentSettings agentSettings)
+    {
+        var geminiDir = Path.Combine(workingDirectory, ".gemini");
+        Directory.CreateDirectory(geminiDir);
+
+        var configPath = Path.Combine(geminiDir, "settings.json");
+        
+        var configuration = new
+        {
+            mcpServers = new Dictionary<string, object>
+            {
+                ["aiswarm"] = new
+                {
+                    url = agentSettings.McpServerUrl,
+                    description = $"AISwarm coordination server for agent {agentSettings.AgentId}",
+                    timeout = 10000,
+                    trust = true
+                }
+            }
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(configuration, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        await File.WriteAllTextAsync(configPath, json);
+        logger.Info($"Created Gemini configuration file: {configPath}");
+        logger.Info($"Agent ID: {agentSettings.AgentId}");
+        logger.Info($"MCP Server: {agentSettings.McpServerUrl}");
     }
 
     private static string BuildGeminiArguments(string contextFilePath, string? model)

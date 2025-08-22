@@ -24,8 +24,9 @@ public interface IGeminiService
     /// <param name="contextFilePath">Path to context markdown file.</param>
     /// <param name="model">Optional model name override.</param>
     /// <param name="workingDirectory">Optional working directory.</param>
+    /// <param name="agentSettings">Optional agent configuration including ID and MCP server URL.</param>
     /// <returns>True if launch initiated successfully.</returns>
-    Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null);
+    Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null, AgentSettings? agentSettings = null);
 
     /// <summary>
     /// Launch an interactive Gemini CLI session with agent settings including MCP server configuration.
@@ -35,5 +36,6 @@ public interface IGeminiService
     /// <param name="agentSettings">Agent configuration including ID and MCP server URL.</param>
     /// <param name="workingDirectory">Optional working directory.</param>
     /// <returns>True if launch initiated successfully.</returns>
+    [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
     Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model, AgentSettings agentSettings, string? workingDirectory = null);
 }

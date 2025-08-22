@@ -49,7 +49,7 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _logger.Infos.ShouldContain(s => s.Contains("Dry run mode"));
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class LaunchAgentCommandHandlerTests
         result.ShouldBeTrue();
 
         // Assert
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, "/repo", null), Times.Once);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class LaunchAgentCommandHandlerTests
         result.ShouldBeTrue();
 
         // Assert
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", "gemini-1.5-pro", null), Times.Once);
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", "gemini-1.5-pro", "/repo", null), Times.Once);
     }
 
     // New edge case tests
@@ -198,7 +198,7 @@ public class LaunchAgentCommandHandlerTests
 
         _logger.Errors.ShouldContain(e => e.Contains("Failed to create worktree"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class LaunchAgentCommandHandlerTests
 
         _logger.Errors.ShouldContain(e => e.Contains("already exists"));
         _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+        _gemini.Verify(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()), Times.Never);
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class LaunchAgentCommandHandlerTests
                 dryRun: false);
         result.ShouldBeTrue();
 
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo-feature_launch/planner_context.md", "gemini-1.5-pro", null), Times.Once);
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo-feature_launch/planner_context.md", "gemini-1.5-pro", It.IsAny<string>(), null), Times.Once);
     }
 
     [Fact]
@@ -341,7 +341,7 @@ public class LaunchAgentCommandHandlerTests
         result.ShouldBeTrue();
 
         _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
-        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, null), Times.Once);
+        _gemini.Verify(g => g.LaunchInteractiveAsync("/repo/planner_context.md", null, "/repo", null), Times.Once);
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public class LaunchAgentCommandHandlerTests
     {
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
             .ReturnsAsync("/repo/planner_context.md");
-        _gemini.Setup(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+        _gemini.Setup(g => g.LaunchInteractiveAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<AgentSettings?>()))
             .ThrowsAsync(new InvalidOperationException("Gemini CLI not installed"));
 
         var result = await SystemUnderTest.RunAsync(
@@ -390,7 +390,7 @@ public class LaunchAgentCommandHandlerTests
     }
 
     [Fact]
-    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldConfigureGeminiWithAgentIdAndMcpServer()
+    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldConfigureGeminiWithSettingsFile()
     {
         // Arrange
         _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
@@ -410,14 +410,14 @@ public class LaunchAgentCommandHandlerTests
         // Assert
         result.ShouldBeTrue();
         
-        // Should call LaunchInteractiveWithSettingsAsync instead of LaunchInteractiveAsync
-        _gemini.Verify(g => g.LaunchInteractiveWithSettingsAsync(
+        // Should call LaunchInteractiveAsync with agent settings
+        _gemini.Verify(g => g.LaunchInteractiveAsync(
             "/repo/planner_context.md", 
             "gemini-1.5-pro", 
+            "/repo",
             It.Is<AgentSettings>(s => 
                 s.AgentId == "agent-456" && 
-                s.McpServerUrl != null),
-            null), 
+                s.McpServerUrl != null)), 
             Times.Once);
         
         _logger.Infos.ShouldContain(i => i.Contains("Configuring Gemini with agent settings"));
@@ -446,17 +446,11 @@ public class LaunchAgentCommandHandlerTests
         _gemini.Verify(g => g.LaunchInteractiveAsync(
             "/repo/planner_context.md", 
             "gemini-1.5-pro", 
+            "/repo",
             null), 
             Times.Once);
         
-        // Should not call settings-based method
-        _gemini.Verify(g => g.LaunchInteractiveWithSettingsAsync(
-            It.IsAny<string>(), 
-            It.IsAny<string?>(), 
-            It.IsAny<AgentSettings>(),
-            It.IsAny<string?>()), 
-            Times.Never);
-        
+        // Should not call any other methods - this test should use LaunchInteractiveAsync with agentSettings=null
         _logger.Infos.ShouldNotContain(i => i.Contains("Configuring Gemini with agent settings"));
     }
 }
