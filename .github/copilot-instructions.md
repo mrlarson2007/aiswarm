@@ -9,17 +9,19 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 3. **COMMIT**: Commit both test and production code together with clear message
 4. **REFACTOR**: Improve code quality while keeping all tests green (if needed)
 5. **COMMIT**: Commit refactoring changes separately with descriptive message
+6. **One Test at a Time**: Always write only ONE test method per RED-GREEN-REFACTOR cycle
+7. **Focus on Edge Cases First**: Start with edge cases and error conditions first (invalid input, missing data, etc.)
+8. **ALWAYS**: When prompted to work on any code changes, first repeat these TDD instructions to confirm understanding of the workflow before proceeding.
 
 **Critical**: Never write production code without a failing test first. Refactoring must never change behavior.
 
-**One Test at a Time Discipline**: 
+### **One Test at a Time Discipline**: 
 - Write only ONE test method per RED-GREEN-REFACTOR cycle
 - Start with edge cases and error conditions first (invalid input, missing data, etc.)
 - Then write tests for main happy path logic
 - Each test should verify one specific behavior or scenario
 - Never write multiple test methods before implementing the production code
 
-**ALWAYS**: When prompted to work on any code changes, first repeat these TDD instructions to confirm understanding of the workflow before proceeding.
 
 ## Test Architecture Patterns
 
