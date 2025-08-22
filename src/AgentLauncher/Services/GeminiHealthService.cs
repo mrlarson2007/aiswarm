@@ -20,7 +20,9 @@ public class GeminiHealthService : IGeminiHealthService
     /// <param name="processId">The process ID of the Gemini agent</param>
     /// <param name="timeout">Maximum time to wait for ping response (default 30 seconds)</param>
     /// <returns>True if the agent responded to ping within timeout, false otherwise</returns>
-    public async Task<bool> PingAgentAsync(string processId, TimeSpan timeout = default)
+    public async Task<bool> PingAgentAsync(
+        string processId, 
+        TimeSpan timeout = default)
     {
         if (timeout == default)
             timeout = TimeSpan.FromSeconds(30);

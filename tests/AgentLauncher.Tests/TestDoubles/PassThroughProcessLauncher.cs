@@ -13,8 +13,15 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
     private readonly ConcurrentQueue<Expectation> _expectations = new();
     public readonly List<Invocation> Invocations = new();
 
-    public record Invocation(string File, string Arguments, string WorkingDir);
-    public record Expectation(string File, Func<string, bool> ArgsMatch, ProcessResult Result, bool Consume = true);
+    public record Invocation(
+        string File, 
+        string Arguments, 
+        string WorkingDir);
+    public record Expectation(
+        string File, 
+        Func<string, bool> ArgsMatch, 
+        ProcessResult Result, 
+        bool Consume = true);
 
     public void Enqueue(
         string file,
@@ -37,7 +44,10 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
         return Task.FromResult(new ProcessResult(true, string.Empty, string.Empty, 0));
     }
 
-    public bool StartInteractive(string fileName, string arguments, string workingDirectory)
+    public bool StartInteractive(
+        string fileName, 
+        string arguments, 
+        string workingDirectory)
     {
         Invocations.Add(new Invocation(fileName, arguments, workingDirectory));
         return true;

@@ -13,7 +13,9 @@ public class FakeFileSystemService : IFileSystemService
     public void CreateDirectory(string path) => _directories.Add(Norm(path));
     public bool FileExists(string path) => _files.Contains(Norm(path));
 
-    public async Task WriteAllTextAsync(string path, string content)
+    public async Task WriteAllTextAsync(
+        string path, 
+        string content)
     {
         var normalizedPath = Norm(path);
         var dir = Path.GetDirectoryName(path);
@@ -24,7 +26,9 @@ public class FakeFileSystemService : IFileSystemService
         await Task.CompletedTask;
     }
 
-    public async Task AppendAllTextAsync(string path, string content)
+    public async Task AppendAllTextAsync(
+        string path, 
+        string content)
     {
         var normalizedPath = Norm(path);
         var dir = Path.GetDirectoryName(path);

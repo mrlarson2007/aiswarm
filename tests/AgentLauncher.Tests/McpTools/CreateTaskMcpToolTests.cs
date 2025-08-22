@@ -54,9 +54,9 @@ public class CreateTaskMcpToolTests
 
         using var scope = _scopeService.CreateReadScope();
         var tasks = scope.Tasks
-        .Where(t => t.Id == result.TaskId)
-        .Where(t => t.AgentId == agentId)
-        .ToList();
+            .Where(t => t.Id == result.TaskId)
+            .Where(t => t.AgentId == agentId)
+            .ToList();
 
         tasks.Count.ShouldBe(1);
         var task = tasks.First();

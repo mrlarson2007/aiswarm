@@ -71,7 +71,9 @@ public partial class GitService(
     }
 
     /// <inheritdoc />
-    public async Task<string> CreateWorktreeAsync(string name, string? baseBranch = null)
+    public async Task<string> CreateWorktreeAsync(
+        string name, 
+        string? baseBranch = null)
     {
         if (!IsValidWorktreeName(name))
             throw new ArgumentException($"Invalid worktree name: {name}", nameof(name));

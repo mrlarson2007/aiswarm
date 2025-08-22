@@ -119,11 +119,18 @@ public class LaunchAgentCommandHandler(
                     AgentId = agentId,
                     McpServerUrl = "http://localhost:8080" // TODO: Make configurable
                 };
-                success = await geminiService.LaunchInteractiveAsync(contextPath, model, workDir, agentSettings);
+                success = await geminiService.LaunchInteractiveAsync(
+                    contextPath, 
+                    model, 
+                    workDir, 
+                    agentSettings);
             }
             else
             {
-                success = await geminiService.LaunchInteractiveAsync(contextPath, model, workDir);
+                success = await geminiService.LaunchInteractiveAsync(
+                    contextPath, 
+                    model, 
+                    workDir);
             }
             
             if (!success)

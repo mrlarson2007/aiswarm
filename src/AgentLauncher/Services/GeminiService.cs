@@ -42,7 +42,11 @@ public class GeminiService(
     }
 
     /// <inheritdoc />
-    public async Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null, AgentSettings? agentSettings = null)
+    public async Task<bool> LaunchInteractiveAsync(
+        string contextFilePath, 
+        string? model = null, 
+        string? workingDirectory = null, 
+        AgentSettings? agentSettings = null)
     {
         if (!fileSystem.FileExists(contextFilePath))
         {
@@ -95,12 +99,22 @@ public class GeminiService(
 
     /// <inheritdoc />
     [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
-    public Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model, AgentSettings agentSettings, string? workingDirectory = null)
+    public Task<bool> LaunchInteractiveWithSettingsAsync(
+        string contextFilePath, 
+        string? model, 
+        AgentSettings agentSettings, 
+        string? workingDirectory = null)
     {
-        return LaunchInteractiveAsync(contextFilePath, model, workingDirectory, agentSettings);
+        return LaunchInteractiveAsync(
+            contextFilePath, 
+            model, 
+            workingDirectory, 
+            agentSettings);
     }
 
-    private async Task CreateGeminiConfigurationAsync(string workingDirectory, AgentSettings agentSettings)
+    private async Task CreateGeminiConfigurationAsync(
+        string workingDirectory, 
+        AgentSettings agentSettings)
     {
         var geminiDir = Path.Combine(workingDirectory, ".gemini");
         fileSystem.CreateDirectory(geminiDir);

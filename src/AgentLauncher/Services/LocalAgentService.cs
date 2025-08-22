@@ -17,7 +17,10 @@ public class LocalAgentService : ILocalAgentService
     private readonly IDatabaseScopeService _scopeService;
     private readonly IProcessTerminationService? _processTerminationService;
 
-    public LocalAgentService(ITimeService timeService, IDatabaseScopeService scopeService, IProcessTerminationService? processTerminationService = null)
+    public LocalAgentService(
+        ITimeService timeService, 
+        IDatabaseScopeService scopeService, 
+        IProcessTerminationService? processTerminationService = null)
     {
         _timeService = timeService;
         _scopeService = scopeService;
@@ -84,7 +87,9 @@ public class LocalAgentService : ILocalAgentService
     /// <summary>
     /// Mark agent as running with process ID
     /// </summary>
-    public async Task MarkAgentRunningAsync(string agentId, string processId)
+    public async Task MarkAgentRunningAsync(
+        string agentId, 
+        string processId)
     {
         using var scope = _scopeService.CreateWriteScope();
         

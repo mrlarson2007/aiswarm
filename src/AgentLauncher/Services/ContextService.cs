@@ -36,7 +36,9 @@ public class ContextService : IContextService
     }
 
     /// <inheritdoc />
-    public async Task<string> CreateContextFile(string agentType, string workingDirectory)
+    public async Task<string> CreateContextFile(
+        string agentType, 
+        string workingDirectory)
     {
         Directory.CreateDirectory(workingDirectory);
         var promptContent = GetAgentPrompt(agentType);

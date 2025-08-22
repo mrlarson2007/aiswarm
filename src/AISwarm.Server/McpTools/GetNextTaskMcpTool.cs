@@ -67,7 +67,8 @@ public class GetNextTaskMcpTool
             {
                 // Look for the next pending task for this agent
                 var pendingTask = await scope.Tasks
-                    .Where(t => t.AgentId == agentId && t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => t.AgentId == agentId && 
+                               t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
@@ -83,7 +84,8 @@ public class GetNextTaskMcpTool
 
                 // No assigned tasks found, look for unassigned tasks to claim
                 var unassignedTask = await scope.Tasks
-                    .Where(t => (t.AgentId == null || t.AgentId == string.Empty) && t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => (t.AgentId == null || t.AgentId == string.Empty) && 
+                               t.Status == AISwarm.DataLayer.Entities.TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
@@ -110,7 +112,9 @@ public class GetNextTaskMcpTool
     /// <param name="taskId">ID of the task to claim</param>
     /// <param name="agentId">ID of the agent claiming the task</param>
     /// <returns>Result with claimed task information or failure if task no longer available</returns>
-    private async Task<GetNextTaskResult> ClaimUnassignedTaskAsync(string taskId, string agentId)
+    private async Task<GetNextTaskResult> ClaimUnassignedTaskAsync(
+        string taskId, 
+        string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
         
@@ -123,7 +127,8 @@ public class GetNextTaskMcpTool
         }
         
         // Verify task is still unassigned and pending
-        if (!string.IsNullOrEmpty(task.AgentId) || task.Status != AISwarm.DataLayer.Entities.TaskStatus.Pending)
+        if (!string.IsNullOrEmpty(task.AgentId) || 
+            task.Status != AISwarm.DataLayer.Entities.TaskStatus.Pending)
         {
             return GetNextTaskResult.NoTasksAvailable();
         }
