@@ -43,4 +43,16 @@ public class GetNextTaskResult
         Success = false,
         ErrorMessage = errorMessage
     };
+    
+    /// <summary>
+    /// Creates a successful result indicating no tasks are available
+    /// </summary>
+    public static GetNextTaskResult NoTasksAvailable() => new()
+    {
+        Success = true,
+        TaskId = null,
+        Persona = null,
+        Description = null,
+        Message = "No tasks available for this agent. Continue your work and call this tool again periodically to check for new tasks."
+    };
 }

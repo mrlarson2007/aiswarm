@@ -38,9 +38,8 @@ public class GetNextTaskMcpTool
                 .Failure($"Agent not found: {agentId}");
         }
 
-        // For now, just return the error case to make the test pass
-        // We'll implement the actual logic in subsequent tests
-        return GetNextTaskResult
-            .Failure($"Agent not found: {agentId}");
+        // For now, if agent exists, return no tasks available (to make the test pass)
+        // We'll implement actual task retrieval in the next test
+        return GetNextTaskResult.NoTasksAvailable();
     }
 }

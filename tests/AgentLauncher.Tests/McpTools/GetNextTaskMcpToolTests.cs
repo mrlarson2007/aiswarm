@@ -49,6 +49,47 @@ public class GetNextTaskMcpToolTests
         result.ErrorMessage.ShouldContain(nonExistentAgentId);
     }
 
+    [Fact]
+    public async Task WhenAgentHasNoTasks_ShouldReturnNoTasksWithReinforcingPrompt()
+    {
+        // Arrange
+        var agentId = "agent-no-tasks";
+        
+        // Create a running agent with no tasks
+        await CreateRunningAgentAsync(agentId);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBeNull();
+        result.Persona.ShouldBeNull();
+        result.Description.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("No tasks available");
+        result.Message.ShouldContain("call this tool again");
+    }
+
+    private async Task CreateRunningAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var agent = new AISwarm.DataLayer.Entities.Agent
+        {
+            Id = agentId,
+            PersonaId = "test-persona",
+            AgentType = "test",
+            WorkingDirectory = "/test",
+            Status = AISwarm.DataLayer.Entities.AgentStatus.Running,
+            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
     private class TestTimeService : ITimeService
     {
         public DateTime UtcNow => new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
