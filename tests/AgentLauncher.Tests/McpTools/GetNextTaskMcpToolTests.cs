@@ -294,4 +294,87 @@ public class GetNextTaskMcpToolTests
         scope.Complete();
         return taskId;
     }
+
+    [Fact]
+    public async Task WhenAgentHasAssignedAndUnassignedTasks_ShouldReturnAssignedTaskFirst()
+    {
+        // Arrange
+        var agentId = "agent-priority-test";
+        var assignedPersona = "You are a reviewer. Review code for quality.";
+        var assignedDescription = "Review the authentication module";
+        var unassignedPersona = "You are a planner. Plan development tasks.";
+        var unassignedDescription = "Plan the next feature implementation";
+        
+        // Create a running agent
+        await CreateRunningAgentAsync(agentId);
+        
+        // Create an unassigned task first (older timestamp)
+        await Task.Delay(10); // Ensure different timestamps
+        var unassignedTaskId = await CreateUnassignedTaskAsync(unassignedPersona, unassignedDescription);
+        
+        await Task.Delay(10); // Ensure different timestamps
+        // Create an assigned task second (newer timestamp)
+        var assignedTaskId = await CreatePendingTaskAsync(agentId, assignedPersona, assignedDescription);
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert - Should get the assigned task, not the unassigned one (even though unassigned is older)
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(assignedTaskId);  // Assigned task should have priority
+        result.Persona.ShouldBe(assignedPersona);
+        result.Description.ShouldBe(assignedDescription);
+        
+        // Verify the unassigned task is still unassigned
+        using var scope = _scopeService.CreateReadScope();
+        var unassignedTask = await scope.Tasks.FindAsync(unassignedTaskId);
+        unassignedTask.ShouldNotBeNull();
+        unassignedTask.AgentId.ShouldBe(string.Empty); // Still unassigned
+    }
+
+    [Fact]
+    public async Task WhenTaskAlreadyClaimed_ShouldReturnNoTasksAvailable()
+    {
+        // Arrange
+        var agentId = "agent-race-condition";
+        var otherAgentId = "other-agent";
+        var persona = "You are a planner. Plan development tasks.";
+        var description = "Plan the authentication feature";
+        
+        // Create running agents
+        await CreateRunningAgentAsync(agentId);
+        await CreateRunningAgentAsync(otherAgentId);
+        
+        // Create an unassigned task
+        var taskId = await CreateUnassignedTaskAsync(persona, description);
+        
+        // Simulate another agent claiming the task first
+        using (var scope = _scopeService.CreateWriteScope())
+        {
+            var task = await scope.Tasks.FindAsync(taskId);
+            task!.AgentId = otherAgentId; // Other agent claims it
+            await scope.SaveChangesAsync();
+            scope.Complete();
+        }
+
+        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+
+        // Act - Try to get task after it's already been claimed
+        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+
+        // Assert - Should return no tasks available
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBeNull();
+        result.Message.ShouldNotBeNull();
+        result.Message.ShouldContain("No tasks available");
+        result.Message.ShouldContain("call this tool again");
+        
+        // Verify the task is still assigned to the other agent
+        using var readScope = _scopeService.CreateReadScope();
+        var claimedTask = await readScope.Tasks.FindAsync(taskId);
+        claimedTask.ShouldNotBeNull();
+        claimedTask.AgentId.ShouldBe(otherAgentId);
+    }
 }
