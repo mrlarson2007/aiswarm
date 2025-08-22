@@ -31,9 +31,9 @@ public class WorkItem
     public string Description { get; set; } = string.Empty;
     
     /// <summary>
-    /// Priority of the task (higher numbers = higher priority, default = 0)
+    /// Priority of the task (higher values = higher priority)
     /// </summary>
-    public int Priority { get; set; } = 0;
+    public TaskPriority Priority { get; set; } = TaskPriority.Normal;
     
     /// <summary>
     /// When the work item was created

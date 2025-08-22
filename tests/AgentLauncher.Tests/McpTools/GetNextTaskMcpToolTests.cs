@@ -1,6 +1,7 @@
 using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Services;
+using AISwarm.DataLayer.Entities;
 using AISwarm.Server.McpTools;
 using AgentLauncher.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -392,12 +393,12 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
         
         // Create low priority task first (older timestamp)
-        var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, 1);
+        var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
         
         await Task.Delay(10); // Ensure different timestamps
         
         // Create high priority task second (newer timestamp but higher priority)
-        var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, 10);
+        var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, TaskPriority.Critical);
 
         var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
 
@@ -422,7 +423,7 @@ public class GetNextTaskMcpToolTests
         lowPriorityTask.AgentId.ShouldBe(string.Empty);
     }
 
-    private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description, int priority)
+    private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description, TaskPriority priority)
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
@@ -456,12 +457,12 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
         
         // Create low priority assigned task first (older timestamp)
-        var lowPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, 1);
+        var lowPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
         
         await Task.Delay(10); // Ensure different timestamps
         
         // Create high priority assigned task second (newer timestamp but higher priority)
-        var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, 10);
+        var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, TaskPriority.High);
 
         var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
 
@@ -475,7 +476,7 @@ public class GetNextTaskMcpToolTests
         result.Description.ShouldBe(highPriorityDescription);
     }
 
-    private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, int priority)
+    private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, TaskPriority priority)
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
@@ -509,12 +510,12 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
         
         // Create high priority unassigned task first
-        var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, 100);
+        var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, TaskPriority.Critical);
         
         await Task.Delay(10); // Ensure different timestamps
         
         // Create low priority assigned task second
-        var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, 1);
+        var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, TaskPriority.Low);
 
         var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
 

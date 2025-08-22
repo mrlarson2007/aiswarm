@@ -28,7 +28,7 @@ public class CreateTaskMcpTool
     /// <param name="agentId">ID of the agent to assign the task to</param>
     /// <param name="persona">Full persona markdown content for the agent</param>
     /// <param name="description">Description of what the agent should accomplish</param>
-    /// <param name="priority">Priority of the task (higher numbers = higher priority, default = 0)</param>
+    /// <param name="priority">Priority of the task (Low, Normal, High, Critical)</param>
     /// <returns>Result indicating success with task ID or failure with error message</returns>
     [McpServerTool(Name = "create_task")]
     [Description("Creates a new task and assigns it to the specified agent")]
@@ -36,7 +36,7 @@ public class CreateTaskMcpTool
         [Description("ID of the agent to assign the task to")] string agentId,
         [Description("Full persona markdown content for the agent")] string persona,
         [Description("Description of what the agent should accomplish")] string description,
-        [Description("Priority of the task (higher numbers = higher priority, default = 0)")] int priority = 0)
+        [Description("Priority of the task: Low, Normal, High, or Critical")] TaskPriority priority = TaskPriority.Normal)
     {
         using var scope = _scopeService.CreateWriteScope();
 
