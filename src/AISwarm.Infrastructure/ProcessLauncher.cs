@@ -116,9 +116,9 @@ public class ProcessLauncher : IProcessLauncher
             }
 
             int counter = 0;
-            while (result.HasExited == false && counter < 15)
+            while (result.HasExited == false && counter < 5)
             {
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
                 result.Refresh();
                 counter++;
             }
@@ -126,8 +126,6 @@ public class ProcessLauncher : IProcessLauncher
             if (result.HasExited)
             {
                 _logger.Error($"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
-                _logger.Error(result.StandardOutput.ReadToEnd());
-                _logger.Error(result.StandardError.ReadToEnd());
                 return false;
             }
             return true;
