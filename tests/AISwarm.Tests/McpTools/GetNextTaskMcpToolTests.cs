@@ -65,11 +65,12 @@ public class GetNextTaskMcpToolTests
         // Act
         var result = await getNextTaskTool.GetNextTaskAsync(agentId);
 
-        // Assert
+        // Assert: return a default synthetic task instructing the agent to re-query
         result.Success.ShouldBeTrue();
-        result.TaskId.ShouldBeNull();
-        result.Persona.ShouldBeNull();
-        result.Description.ShouldBeNull();
+        result.TaskId.ShouldNotBeNull();
+        result.TaskId.ShouldStartWith("system:");
+        result.Persona.ShouldNotBeNull();
+        result.Description.ShouldNotBeNull();
         result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("No tasks available");
         result.Message.ShouldContain("call this tool again");
@@ -127,11 +128,12 @@ public class GetNextTaskMcpToolTests
         var result = await getNextTaskTool.GetNextTaskAsync(agentId, configuration);
         var elapsed = DateTime.UtcNow - startTime;
 
-        // Assert
+        // Assert - returns a synthetic default task instructing a re-query
         result.Success.ShouldBeTrue();
-        result.TaskId.ShouldBeNull();
-        result.Persona.ShouldBeNull();
-        result.Description.ShouldBeNull();
+        result.TaskId.ShouldNotBeNull();
+        result.TaskId!.ShouldStartWith("system:");
+        result.Persona.ShouldNotBeNull();
+        result.Description.ShouldNotBeNull();
         result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("No tasks available");
         result.Message.ShouldContain("call this tool again");
@@ -366,9 +368,12 @@ public class GetNextTaskMcpToolTests
         // Act - Try to get task after it's already been claimed
         var result = await getNextTaskTool.GetNextTaskAsync(agentId);
 
-        // Assert - Should return no tasks available
+        // Assert - Should return a synthetic default task instructing a re-query
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeNullExtensions.ShouldBeNull<string>(result.TaskId);
+        result.TaskId.ShouldNotBeNull();
+        result.TaskId!.ShouldStartWith("system:");
+        result.Persona.ShouldNotBeNull();
+        result.Description.ShouldNotBeNull();
         ShouldBeNullExtensions.ShouldNotBeNull<string>(result.Message);
         ShouldBeStringTestExtensions.ShouldContain(result.Message, "No tasks available");
         ShouldBeStringTestExtensions.ShouldContain(result.Message, "call this tool again");

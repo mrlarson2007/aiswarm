@@ -53,6 +53,7 @@ public class GetNextTaskResult
         get; set;
     }
 
+
     /// <summary>
     /// Creates a failure result with error message
     /// </summary>
@@ -65,14 +66,17 @@ public class GetNextTaskResult
     /// <summary>
     /// Creates a successful result indicating no tasks are available
     /// </summary>
-    public static GetNextTaskResult NoTasksAvailable() => new()
+    public static GetNextTaskResult NoTasksAvailable()
     {
-        Success = true,
-        TaskId = null,
-        Persona = null,
-        Description = null,
-        Message = "No tasks available for this agent. Continue your work and call this tool again periodically to check for new tasks."
-    };
+        return new GetNextTaskResult
+        {
+            Success = true,
+            TaskId = $"system:requery:{Guid.NewGuid():N}",
+            Persona = "You are a cooperative agent. When you receive a system requery task, you must immediately re-invoke the get_next_task tool to check for work.",
+            Description = "No tasks available right now. Immediately call the get_next_task tool again to check for new tasks.",
+            Message = "No tasks available. Please call this tool again to check for new tasks."
+        };
+    }
 
     /// <summary>
     /// Creates a successful result with task information
