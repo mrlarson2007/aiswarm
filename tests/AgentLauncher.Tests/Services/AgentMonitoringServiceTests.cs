@@ -17,7 +17,7 @@ namespace AgentLauncher.Tests.Services;
 public class AgentMonitoringServiceTests : IDisposable
 {
     private readonly AgentMonitoringService _systemUnderTest;
-    private readonly TestTimeService _timeService;
+    private readonly FakeTimeService _timeService;
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly Mock<ILocalAgentService> _localAgentService;
@@ -31,7 +31,7 @@ public class AgentMonitoringServiceTests : IDisposable
         _dbContext = new CoordinationDbContext(options);
         _dbContext.Database.EnsureCreated();
         
-        _timeService = new TestTimeService();
+        _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(_dbContext);
         _localAgentService = new Mock<ILocalAgentService>();
         

@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
-    <ProjectReference Include="..\..\src\AISwarm.Shared\AISwarm.Shared.csproj" />
     <ProjectReference Include="..\..\src\AgentLauncher\AgentLauncher.csproj" />
   </ItemGroup>
 

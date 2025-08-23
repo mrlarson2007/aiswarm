@@ -4,6 +4,7 @@ using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Entities;
 using AISwarm.DataLayer.Services;
+using AISwarm.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Moq;
@@ -14,13 +15,13 @@ namespace AgentLauncher.Tests.Services;
 public class LocalAgentServiceTests : IDisposable
 {
     private readonly LocalAgentService _systemUnderTest;
-    private readonly TestTimeService _timeService;
+    private readonly FakeTimeService _timeService;
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
 
     public LocalAgentServiceTests()
     {
-        _timeService = new TestTimeService();
+        _timeService = new FakeTimeService();
         
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -349,20 +350,5 @@ public class LocalAgentServiceTests : IDisposable
     public void Dispose()
     {
         _dbContext.Dispose();
-    }
-}
-
-/// <summary>
-/// Test double for ITimeService that allows time manipulation
-/// </summary>
-public class TestTimeService : ITimeService
-{
-    private DateTime _currentTime = new DateTime(2025, 8, 20, 10, 0, 0, DateTimeKind.Utc);
-
-    public DateTime UtcNow => _currentTime;
-
-    public void AdvanceTime(TimeSpan timeSpan)
-    {
-        _currentTime = _currentTime.Add(timeSpan);
     }
 }

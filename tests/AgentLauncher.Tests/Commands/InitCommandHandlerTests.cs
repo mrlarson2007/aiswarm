@@ -1,5 +1,5 @@
 using AgentLauncher.Commands;
-using AgentLauncher.Services.External;
+using AISwarm.Infrastructure;
 using AgentLauncher.Services.Logging;
 using AISwarm.TestDoubles;
 using Shouldly;

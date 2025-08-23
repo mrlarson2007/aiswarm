@@ -6,7 +6,7 @@ using AISwarm.TestDoubles;
 using AgentLauncher.Models;
 using Shouldly;
 using Moq;
-using AgentLauncher.Services.External;
+using AISwarm.Infrastructure;
 using AISwarm.DataLayer.Database;
 using AISwarm.DataLayer.Services;
 using Microsoft.EntityFrameworkCore;

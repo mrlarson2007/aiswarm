@@ -1,4 +1,4 @@
-using AgentLauncher.Services.External;
+using AISwarm.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using AISwarm.Shared.Contracts;
@@ -14,7 +14,7 @@ public static class ServiceRegistration
     public static IServiceCollection AddAgentLauncherServices(this IServiceCollection services)
     {
         // External / infrastructure
-        services.AddSingleton<External.IProcessLauncher, External.ProcessLauncher>();
+        services.AddSingleton<IProcessLauncher, ProcessLauncher>();
         services.AddSingleton<Logging.IAppLogger, Logging.ConsoleAppLogger>();
         services.AddSingleton<IEnvironmentService, EnvironmentService>();
 
@@ -36,8 +36,8 @@ public static class ServiceRegistration
         // Data layer services
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseSqlite("Data Source=aiswarm.db"));
-        services.AddSingleton<ITimeService, SystemTimeService>();
-        services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
+        services.AddSingleton<AISwarm.Infrastructure.ITimeService, AISwarm.Infrastructure.SystemTimeService>();
+        services.AddSingleton<AISwarm.DataLayer.Contracts.IDatabaseScopeService, DatabaseScopeService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
         

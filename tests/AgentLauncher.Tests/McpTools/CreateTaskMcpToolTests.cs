@@ -22,7 +22,7 @@ public class CreateTaskMcpToolTests
         // Add database services
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
-        services.AddSingleton<ITimeService, FakeTimeService>();
+        services.AddSingleton<AISwarm.Shared.Contracts.ITimeService, FakeTimeService>();
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
         // Add MCP tools

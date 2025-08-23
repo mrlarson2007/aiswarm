@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services.External;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Minimal abstraction for file system operations to facilitate testing code
@@ -9,6 +9,10 @@ public interface IFileSystemService
     bool DirectoryExists(string path);
     void CreateDirectory(string path);
     bool FileExists(string path);
-    Task WriteAllTextAsync(string path, string content);
-    Task AppendAllTextAsync(string path, string content);
+    Task WriteAllTextAsync(
+        string path, 
+        string content);
+    Task AppendAllTextAsync(
+        string path, 
+        string content);
 }

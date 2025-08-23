@@ -26,7 +26,7 @@ public class GetNextTaskMcpToolTests
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
         _timeService = new FakeTimeService();
-        services.AddSingleton<ITimeService>(_timeService);
+        services.AddSingleton<AISwarm.Shared.Contracts.ITimeService>(_timeService);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
         // Add MCP tools

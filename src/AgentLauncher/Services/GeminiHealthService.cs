@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Services;
 
@@ -7,9 +8,9 @@ namespace AgentLauncher.Services;
 /// </summary>
 public class GeminiHealthService : IGeminiHealthService
 {
-    private readonly External.IProcessLauncher _processLauncher;
+    private readonly IProcessLauncher _processLauncher;
 
-    public GeminiHealthService(External.IProcessLauncher processLauncher)
+    public GeminiHealthService(IProcessLauncher processLauncher)
     {
         _processLauncher = processLauncher;
     }

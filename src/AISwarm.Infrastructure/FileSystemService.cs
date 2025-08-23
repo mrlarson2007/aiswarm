@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services.External;
+namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
 public class FileSystemService : IFileSystemService

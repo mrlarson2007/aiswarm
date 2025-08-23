@@ -1,5 +1,5 @@
 using System.Reflection;
-using AgentLauncher.Services.External;
+using AISwarm.Infrastructure;
 using AgentLauncher.Services.Logging;
 
 namespace AgentLauncher.Commands;

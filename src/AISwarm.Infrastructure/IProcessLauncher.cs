@@ -1,7 +1,4 @@
-using System.Diagnostics;
-using System.Threading.Tasks;
-
-namespace AgentLauncher.Services.External;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Abstraction for launching external processes in either captured (wait + collect output)

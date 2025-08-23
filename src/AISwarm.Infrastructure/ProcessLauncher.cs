@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace AgentLauncher.Services.External;
+namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
 public class ProcessLauncher : IProcessLauncher

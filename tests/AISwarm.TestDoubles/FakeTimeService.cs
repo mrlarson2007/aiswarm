@@ -1,4 +1,4 @@
-using AISwarm.Shared.Contracts;
+using AISwarm.Infrastructure;
 
 namespace AISwarm.TestDoubles;
 
@@ -6,7 +6,7 @@ namespace AISwarm.TestDoubles;
 /// Controllable time service for testing - allows setting specific times
 /// and advancing time for deterministic test execution
 /// </summary>
-public class FakeTimeService : ITimeService
+public class FakeTimeService : ITimeService, AISwarm.Shared.Contracts.ITimeService
 {
     public DateTime UtcNow { get; set; } = new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
     
