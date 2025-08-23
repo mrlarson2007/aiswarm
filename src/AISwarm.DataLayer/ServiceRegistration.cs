@@ -16,7 +16,8 @@ public static class ServiceRegistration
         var aiswarmDirectory = Path.Combine(workingDirectory, ".aiswarm");
         var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
         services.AddDbContext<CoordinationDbContext>(options =>
-            options.UseSqlite($"Data Source={databasePath}"));
+            options.UseSqlite($"Data Source={databasePath}")
+                .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.AmbientTransactionWarning)));
 
         return services;
     }
