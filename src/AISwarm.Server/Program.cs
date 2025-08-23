@@ -34,6 +34,12 @@ internal static class Program
             .WithHttpTransport()           // For Gemini CLI
             .WithToolsFromAssembly();
 
+        builder.WebHost.ConfigureKestrel(serverOptions =>
+        {
+            // Set a longer timeout for long polling requests
+            serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(10);
+        });
+
         var app = builder.Build();
 
 

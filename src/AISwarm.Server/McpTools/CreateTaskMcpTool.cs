@@ -10,19 +10,10 @@ namespace AISwarm.Server.McpTools;
 /// MCP tool implementation for creating tasks and assigning them to agents
 /// </summary>
 [McpServerToolType]
-public class CreateTaskMcpTool
+public class CreateTaskMcpTool(
+    IDatabaseScopeService scopeService,
+    ITimeService timeService)
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly ITimeService _timeService;
-
-    public CreateTaskMcpTool(
-        IDatabaseScopeService scopeService,
-        ITimeService timeService)
-    {
-        _scopeService = scopeService;
-        _timeService = timeService;
-    }
-
     /// <summary>
     /// Creates a new task and assigns it to the specified agent
     /// </summary>
@@ -39,7 +30,7 @@ public class CreateTaskMcpTool
         [Description("Description of what the agent should accomplish")] string description,
         [Description("Priority of the task: Low, Normal, High, or Critical")] TaskPriority priority = TaskPriority.Normal)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = scopeService.CreateWriteScope();
 
         // Only validate agent if agentId is provided (for assigned tasks)
         if (!string.IsNullOrEmpty(agentId))
@@ -70,7 +61,7 @@ public class CreateTaskMcpTool
             Persona = persona,
             Description = description,
             Priority = priority,
-            CreatedAt = _timeService.UtcNow
+            CreatedAt = timeService.UtcNow
         };
 
         scope.Tasks.Add(workItem);

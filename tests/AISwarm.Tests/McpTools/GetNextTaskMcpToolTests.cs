@@ -33,16 +33,24 @@ public class GetNextTaskMcpToolTests
         _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
     }
 
+    private GetNextTaskMcpTool SystemUnderTest
+    {
+        get
+        {
+            var tool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
+            tool.Configuration = new GetNextTaskConfiguration();
+            return tool;
+        }
+    }
+
     [Fact]
     public async Task WhenNonExistentAgent_ShouldReturnFailureResult()
     {
         // Arrange
         var nonExistentAgentId = "non-existent-agent";
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(nonExistentAgentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(nonExistentAgentId);
 
         // Assert
         result.Success.ShouldBeFalse();
@@ -60,10 +68,8 @@ public class GetNextTaskMcpToolTests
         // Create a running agent with no tasks
         await CreateRunningAgentAsync(agentId);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert: return a default synthetic task instructing the agent to re-query
         result.Success.ShouldBeTrue();
@@ -90,10 +96,8 @@ public class GetNextTaskMcpToolTests
         // Create a pending task for the agent
         var taskId = await CreatePendingTaskAsync(agentId, expectedPersona, expectedDescription);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert
         result.Success.ShouldBeTrue();
@@ -121,11 +125,9 @@ public class GetNextTaskMcpToolTests
             PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
         };
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
         var startTime = DateTime.UtcNow;
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId, configuration);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId, configuration);
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert - returns a synthetic default task instructing a re-query
@@ -162,10 +164,8 @@ public class GetNextTaskMcpToolTests
             PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
         };
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act - Start polling in background and add task after delay
-        var pollingTask = getNextTaskTool.GetNextTaskAsync(agentId, configuration);
+        var pollingTask = SystemUnderTest.GetNextTaskAsync(agentId, configuration);
 
         // Advance time to simulate task arriving during polling
         _timeService.AdvanceTime(TimeSpan.FromMilliseconds(200));
@@ -259,10 +259,8 @@ public class GetNextTaskMcpToolTests
         // Create an unassigned task (AgentId is null/empty)
         var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
@@ -320,10 +318,8 @@ public class GetNextTaskMcpToolTests
         // Create an assigned task second (newer timestamp)
         var assignedTaskId = await CreatePendingTaskAsync(agentId, assignedPersona, assignedDescription);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the assigned task, not the unassigned one (even though unassigned is older)
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
@@ -363,10 +359,8 @@ public class GetNextTaskMcpToolTests
             scope.Complete();
         }
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act - Try to get task after it's already been claimed
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should return a synthetic default task instructing a re-query
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
@@ -407,10 +401,8 @@ public class GetNextTaskMcpToolTests
         // Create high priority task second (newer timestamp but higher priority)
         var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, TaskPriority.Critical);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the high priority task despite being newer
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
@@ -472,10 +464,8 @@ public class GetNextTaskMcpToolTests
         // Create high priority assigned task second (newer timestamp but higher priority)
         var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, TaskPriority.High);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the high priority task despite being newer
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
@@ -526,10 +516,8 @@ public class GetNextTaskMcpToolTests
         // Create low priority assigned task second
         var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, TaskPriority.Low);
 
-        var getNextTaskTool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-
         // Act
-        var result = await getNextTaskTool.GetNextTaskAsync(agentId);
+        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the assigned task despite unassigned having higher priority
         ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);

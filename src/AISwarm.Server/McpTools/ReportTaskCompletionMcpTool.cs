@@ -8,26 +8,17 @@ using System.ComponentModel;
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
-public class ReportTaskCompletionMcpTool
+public class ReportTaskCompletionMcpTool(
+    IDatabaseScopeService databaseScopeService,
+    ITimeService timeService)
 {
-    private readonly IDatabaseScopeService _databaseScopeService;
-    private readonly ITimeService _timeService;
-
-    public ReportTaskCompletionMcpTool(
-        IDatabaseScopeService databaseScopeService,
-        ITimeService timeService)
-    {
-        _databaseScopeService = databaseScopeService;
-        _timeService = timeService;
-    }
-
     [McpServerTool(Name = "report_task_completion")]
     [Description("Reports completion of a task with results")]
     public async Task<ReportTaskCompletionResult> ReportTaskCompletionAsync(
         [Description("ID of the task to mark as completed")] string taskId,
         [Description("Result of the completed task")] string result)
     {
-        using var scope = _databaseScopeService.CreateWriteScope();
+        using var scope = databaseScopeService.CreateWriteScope();
 
         var task = await scope.Tasks.FindAsync(taskId);
         if (task == null)
@@ -44,7 +35,7 @@ public class ReportTaskCompletionMcpTool
 
         task.Status = AISwarm.DataLayer.Entities.TaskStatus.Completed;
         task.Result = result;
-        task.CompletedAt = _timeService.UtcNow;
+        task.CompletedAt = timeService.UtcNow;
 
         await scope.SaveChangesAsync();
         scope.Complete();

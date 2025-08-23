@@ -30,19 +30,15 @@ public class DatabaseScopeService(
 /// <summary>
 /// Read scope implementation that provides access to database operations
 /// </summary>
-public class ReadScope : IReadScope
+public class ReadScope(CoordinationDbContext context) : IReadScope
 {
     public CoordinationDbContext Context
     {
         get;
-    }
+    } = context;
+
     public DbSet<Agent> Agents => Context.Agents;
     public DbSet<WorkItem> Tasks => Context.Tasks;
-
-    public ReadScope(CoordinationDbContext context)
-    {
-        Context = context;
-    }
 
     public void Dispose()
     {
@@ -53,24 +49,19 @@ public class ReadScope : IReadScope
 /// <summary>
 /// Write scope implementation that provides access to database operations with transaction support
 /// </summary>
-public class WriteScope : IWriteScope
+public class WriteScope(CoordinationDbContext context) : IWriteScope
 {
-    private readonly TransactionScope _transactionScope;
+    private readonly TransactionScope _transactionScope = new(
+        TransactionScopeOption.Required,
+        TransactionScopeAsyncFlowOption.Enabled);
 
     public CoordinationDbContext Context
     {
         get;
-    }
+    } = context;
+
     public DbSet<Agent> Agents => Context.Agents;
     public DbSet<WorkItem> Tasks => Context.Tasks;
-
-    public WriteScope(CoordinationDbContext context)
-    {
-        Context = context;
-        _transactionScope = new TransactionScope(
-            TransactionScopeOption.Required,
-            TransactionScopeAsyncFlowOption.Enabled);
-    }
 
     /// <summary>
     /// Save changes to the database

@@ -10,17 +10,12 @@ namespace AISwarm.Server.McpTools;
 /// MCP tool implementation for agents to request their next task
 /// </summary>
 [McpServerToolType]
-public class GetNextTaskMcpTool
+public class GetNextTaskMcpTool(IDatabaseScopeService scopeService)
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly GetNextTaskConfiguration _defaultConfiguration;
-
-    public GetNextTaskMcpTool(
-        IDatabaseScopeService scopeService)
-    {
-        _scopeService = scopeService;
-        _defaultConfiguration = new GetNextTaskConfiguration();
-    }
+    public GetNextTaskConfiguration Configuration {
+        get;
+        set;
+    } = GetNextTaskConfiguration.Production;
 
     /// <summary>
     /// Gets the next pending task for the specified agent
@@ -32,7 +27,7 @@ public class GetNextTaskMcpTool
     public async Task<GetNextTaskResult> GetNextTaskAsync(
         [Description("ID of the agent requesting a task")] string agentId)
     {
-        return await GetNextTaskAsync(agentId, _defaultConfiguration);
+        return await GetNextTaskAsync(agentId, Configuration);
     }
 
     /// <summary>
@@ -46,7 +41,7 @@ public class GetNextTaskMcpTool
         GetNextTaskConfiguration configuration)
     {
         // First validate that the agent exists
-        using (var scope = _scopeService.CreateReadScope())
+        using (var scope = scopeService.CreateReadScope())
         {
             var agent = await scope.Agents.FindAsync(agentId);
             if (agent == null)
@@ -63,7 +58,7 @@ public class GetNextTaskMcpTool
         while (DateTime.UtcNow < endTime)
         {
             // Create a fresh scope for each poll to see new tasks
-            using (var scope = _scopeService.CreateReadScope())
+            using (var scope = scopeService.CreateReadScope())
             {
                 // Look for the next pending task for this agent
                 var pendingTask = await scope.Tasks
@@ -117,7 +112,7 @@ public class GetNextTaskMcpTool
         string taskId,
         string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = scopeService.CreateWriteScope();
 
         // Re-fetch the task to ensure it's still unassigned (race condition protection)
         var task = await scope.Tasks.FindAsync(taskId);

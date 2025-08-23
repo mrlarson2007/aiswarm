@@ -3,15 +3,8 @@ using System.Diagnostics;
 namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
-public class ProcessLauncher : IProcessLauncher
+public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
 {
-    private readonly IAppLogger _logger;
-
-    public ProcessLauncher(IAppLogger logger)
-    {
-        _logger = logger;
-    }
-
     /// <inheritdoc />
     public async Task<ProcessResult> RunAsync(
         string fileName,
@@ -111,7 +104,7 @@ public class ProcessLauncher : IProcessLauncher
             var result = Process.Start(startInfo);
             if (result == null)
             {
-                _logger.Error($"Failed to start interactive process: Process.Start returned null for '{fileName} {arguments}'");
+                logger.Error($"Failed to start interactive process: Process.Start returned null for '{fileName} {arguments}'");
                 return false;
             }
 
@@ -125,14 +118,14 @@ public class ProcessLauncher : IProcessLauncher
 
             if (result.HasExited)
             {
-                _logger.Error($"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
+                logger.Error($"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
                 return false;
             }
             return true;
         }
         catch (Exception ex)
         {
-            _logger.Error($"Exception starting interactive process '{fileName} {arguments}': {ex.Message}");
+            logger.Error($"Exception starting interactive process '{fileName} {arguments}': {ex.Message}");
             return false;
         }
     }

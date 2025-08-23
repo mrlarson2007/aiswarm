@@ -128,7 +128,6 @@ public class GeminiService(
                 {
                     url = agentSettings.McpServerUrl,
                     description = $"AISwarm coordination server for agent {agentSettings.AgentId}",
-                    timeout = 10000,
                     trust = true,
                     env = new Dictionary<string, string>
                     {

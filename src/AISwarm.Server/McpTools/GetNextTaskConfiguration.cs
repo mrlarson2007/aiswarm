@@ -13,7 +13,7 @@ public class GetNextTaskConfiguration
     /// <summary>
     /// Interval between polling attempts (default: 50ms for testing)
     /// </summary>
-    public TimeSpan PollingInterval { get; set; } = TimeSpan.FromMilliseconds(50);
+    public TimeSpan PollingInterval { get; set; } = TimeSpan.FromMilliseconds(10);
 
     /// <summary>
     /// Production configuration with longer timeouts suitable for real agent use
@@ -21,6 +21,6 @@ public class GetNextTaskConfiguration
     public static GetNextTaskConfiguration Production => new()
     {
         TimeToWaitForTask = TimeSpan.FromMinutes(5),
-        PollingInterval = TimeSpan.FromSeconds(15)
+        PollingInterval = TimeSpan.FromSeconds(1)
     };
 }
