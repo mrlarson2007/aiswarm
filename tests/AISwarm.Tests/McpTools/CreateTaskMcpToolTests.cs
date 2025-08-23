@@ -110,6 +110,30 @@ public class CreateTaskMcpToolTests
         ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, agentId);
     }
 
+    [Fact]
+    public async Task WhenCreatingUnassignedTask_ShouldCreateTaskWithNullAgentId()
+    {
+        // Arrange
+        var persona = "You are a code reviewer. Review code for quality and security.";
+        var description = "Review the authentication module for security vulnerabilities";
+
+        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
+
+        // Act
+        var result = await createTaskTool.CreateTaskAsync(null, persona, description);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldNotBeNull();
+
+        using var scope = _scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(result.TaskId);
+        task.ShouldNotBeNull();
+        task.AgentId.ShouldBeNull();
+        task.Persona.ShouldBe(persona);
+        task.Description.ShouldBe(description);
+        task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
+    }
 
     private async Task CreateRunningAgentAsync(string agentId)
     {

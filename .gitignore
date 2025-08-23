@@ -29,3 +29,4 @@ temp/
 *_context.md
 *-worktree/
 *.worktree/
+.aiswarm/aiswarm.db

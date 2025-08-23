@@ -34,27 +34,31 @@ public class CreateTaskMcpTool
     [McpServerTool(Name = "create_task")]
     [Description("Creates a new task and assigns it to the specified agent")]
     public async Task<CreateTaskResult> CreateTaskAsync(
-        [Description("ID of the agent to assign the task to")] string agentId,
+        [Description("ID of the agent to assign the task to (optional - leave empty for unassigned task)")] string? agentId,
         [Description("Full persona markdown content for the agent")] string persona,
         [Description("Description of what the agent should accomplish")] string description,
         [Description("Priority of the task: Low, Normal, High, or Critical")] TaskPriority priority = TaskPriority.Normal)
     {
         using var scope = _scopeService.CreateWriteScope();
 
-        // Validate that the agent exists
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent == null)
+        // Only validate agent if agentId is provided (for assigned tasks)
+        if (!string.IsNullOrEmpty(agentId))
         {
-            return CreateTaskResult
-                .Failure($"Agent not found: {agentId}");
-        }
+            // Validate that the agent exists
+            var agent = await scope.Agents.FindAsync(agentId);
+            if (agent == null)
+            {
+                return CreateTaskResult
+                    .Failure($"Agent not found: {agentId}");
+            }
 
-        // Validate that the agent is running
-        if (agent.Status != AgentStatus.Running)
-        {
-            return CreateTaskResult
-                .Failure($"Agent is not running: {agentId}. " +
-                    $"Current status: {agent.Status}");
+            // Validate that the agent is running
+            if (agent.Status != AgentStatus.Running)
+            {
+                return CreateTaskResult
+                    .Failure($"Agent is not running: {agentId}. " +
+                        $"Current status: {agent.Status}");
+            }
         }
 
         var taskId = Guid.NewGuid().ToString();

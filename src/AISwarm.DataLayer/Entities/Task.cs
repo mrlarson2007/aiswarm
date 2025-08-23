@@ -13,7 +13,7 @@ public class WorkItem
     /// <summary>
     /// ID of the agent this work item is assigned to
     /// </summary>
-    public string AgentId { get; set; } = string.Empty;
+    public string? AgentId { get; set; }
     
     /// <summary>
     /// Current status of the work item
