@@ -8,18 +8,27 @@ public class CreateTaskResult
     /// <summary>
     /// Whether the task was successfully created
     /// </summary>
-    public bool Success { get; set; }
-    
+    public bool Success
+    {
+        get; set;
+    }
+
     /// <summary>
     /// ID of the created task (only populated on success)
     /// </summary>
-    public string? TaskId { get; set; }
-    
+    public string? TaskId
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Error message if task creation failed
     /// </summary>
-    public string? ErrorMessage { get; set; }
-    
+    public string? ErrorMessage
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Creates a successful result with task ID
     /// </summary>
@@ -28,7 +37,7 @@ public class CreateTaskResult
         Success = true,
         TaskId = taskId
     };
-    
+
     /// <summary>
     /// Creates a failure result with error message
     /// </summary>

@@ -22,15 +22,15 @@ public class ProcessTerminationService : IProcessTerminationService
         try
         {
             var process = Process.GetProcessById(pid);
-            
+
             // First try graceful termination
             if (!process.HasExited)
             {
                 process.CloseMainWindow();
-                
+
                 // Give the process a chance to close gracefully
                 await Task.Delay(TimeSpan.FromSeconds(5));
-                
+
                 // If still running, force kill
                 if (!process.HasExited)
                 {
@@ -38,7 +38,7 @@ public class ProcessTerminationService : IProcessTerminationService
                     await process.WaitForExitAsync();
                 }
             }
-            
+
             return true;
         }
         catch (ArgumentException)

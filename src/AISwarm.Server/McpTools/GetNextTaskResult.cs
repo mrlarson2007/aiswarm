@@ -8,33 +8,51 @@ public class GetNextTaskResult
     /// <summary>
     /// Whether the operation was successful
     /// </summary>
-    public bool Success { get; set; }
-    
+    public bool Success
+    {
+        get; set;
+    }
+
     /// <summary>
     /// ID of the retrieved task (null if no tasks available)
     /// </summary>
-    public string? TaskId { get; set; }
-    
+    public string? TaskId
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Persona content for the task (null if no tasks available)
     /// </summary>
-    public string? Persona { get; set; }
-    
+    public string? Persona
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Description of the task (null if no tasks available)
     /// </summary>
-    public string? Description { get; set; }
-    
+    public string? Description
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Message with reinforcing prompt to call the tool again
     /// </summary>
-    public string? Message { get; set; }
-    
+    public string? Message
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Error message if operation failed
     /// </summary>
-    public string? ErrorMessage { get; set; }
-    
+    public string? ErrorMessage
+    {
+        get; set;
+    }
+
     /// <summary>
     /// Creates a failure result with error message
     /// </summary>
@@ -43,7 +61,7 @@ public class GetNextTaskResult
         Success = false,
         ErrorMessage = errorMessage
     };
-    
+
     /// <summary>
     /// Creates a successful result indicating no tasks are available
     /// </summary>
@@ -55,7 +73,7 @@ public class GetNextTaskResult
         Description = null,
         Message = "No tasks available for this agent. Continue your work and call this tool again periodically to check for new tasks."
     };
-    
+
     /// <summary>
     /// Creates a successful result with task information
     /// </summary>
@@ -63,11 +81,11 @@ public class GetNextTaskResult
         string taskId,
         string persona,
         string description) => new()
-    {
-        Success = true,
-        TaskId = taskId,
-        Persona = persona,
-        Description = description,
-        Message = "Task retrieved successfully. After completing this task, call this tool again to get the next task."
-    };
+        {
+            Success = true,
+            TaskId = taskId,
+            Persona = persona,
+            Description = description,
+            Message = "Task retrieved successfully. After completing this task, call this tool again to get the next task."
+        };
 }

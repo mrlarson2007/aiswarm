@@ -9,17 +9,17 @@ public enum TaskPriority
     /// Low priority tasks - documentation, cleanup, non-urgent improvements
     /// </summary>
     Low = 1,
-    
+
     /// <summary>
     /// Normal priority tasks - regular development work, standard reviews
     /// </summary>
     Normal = 2,
-    
+
     /// <summary>
     /// High priority tasks - important features, critical reviews
     /// </summary>
     High = 3,
-    
+
     /// <summary>
     /// Critical priority tasks - security issues, production bugs, urgent fixes
     /// </summary>

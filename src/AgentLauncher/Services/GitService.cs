@@ -71,7 +71,7 @@ public partial class GitService(
 
     /// <inheritdoc />
     public async Task<string> CreateWorktreeAsync(
-        string name, 
+        string name,
         string? baseBranch = null)
     {
         if (!IsValidWorktreeName(name))

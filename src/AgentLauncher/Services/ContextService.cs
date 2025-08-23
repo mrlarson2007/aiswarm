@@ -37,7 +37,7 @@ public class ContextService : IContextService
 
     /// <inheritdoc />
     public async Task<string> CreateContextFile(
-        string agentType, 
+        string agentType,
         string workingDirectory)
     {
         Directory.CreateDirectory(workingDirectory);

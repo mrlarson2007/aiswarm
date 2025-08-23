@@ -193,7 +193,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         _process.Invocations.ShouldContain(i =>
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
-            i.Arguments.Contains(string.Format(_expectedPromptFormatString,"/repo/planner_context.md")) &&
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md")) &&
             !i.Arguments.Contains("-m ") // No model specified
         );
     }
@@ -336,7 +336,8 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
         _context.Setup(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_launch"))))
             .ReturnsAsync("/repo-feature_launch/planner_context.md")
-            .Callback(() => {
+            .Callback(() =>
+            {
                 // Set up context file to exist after it's "created" by the context service
                 _fs.AddFile("/repo-feature_launch/planner_context.md");
             });
@@ -583,22 +584,22 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         var contextContent = _fs.GetFileContent("/repo/planner_context.md");
         contextContent.ShouldNotBeNull();
         contextContent.ShouldContain(agent.Id);
-        
+
         // Should reference actual MCP tool names
         contextContent.ShouldContain("mcp_aiswarm_get_next_task");
         contextContent.ShouldContain("mcp_aiswarm_create_task");
         contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
-        
+
         // Should include proper parameter names
         contextContent.ShouldContain("agentId");
         contextContent.ShouldContain("taskId");
         contextContent.ShouldContain("result");
-        
+
         // Should include task completion workflow
         contextContent.ShouldContain("report_task_completion");
     }
 
-        [Fact]
+    [Fact]
     public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
     {
         // Arrange

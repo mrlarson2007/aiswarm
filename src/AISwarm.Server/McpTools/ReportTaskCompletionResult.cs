@@ -2,8 +2,14 @@ namespace AISwarm.Server.McpTools;
 
 public class ReportTaskCompletionResult
 {
-    public bool IsSuccess { get; }
-    public string Message { get; }
+    public bool IsSuccess
+    {
+        get;
+    }
+    public string Message
+    {
+        get;
+    }
 
     private ReportTaskCompletionResult(bool isSuccess, string message)
     {

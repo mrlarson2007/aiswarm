@@ -45,7 +45,7 @@ internal static class Program
         Console.WriteLine($"- Stdio transport for VS Code MCP integration");
         Console.WriteLine($"- HTTP transport for Gemini CLI at {url}");
 
-        
+
         await task;
     }
 

@@ -1,4 +1,4 @@
-﻿namespace AISwarm.DataLayer.Entities;
+namespace AISwarm.DataLayer.Entities;
 
 /// <summary>
 /// Represents a work item that can be assigned to and executed by an agent
@@ -13,12 +13,18 @@ public class WorkItem
     /// <summary>
     /// ID of the agent this work item is assigned to
     /// </summary>
-    public string? AgentId { get; set; }
+    public string? AgentId
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Current status of the work item
     /// </summary>
-    public TaskStatus Status { get; set; }
+    public TaskStatus Status
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Full persona markdown content defining the agent's role and behavior
@@ -38,20 +44,32 @@ public class WorkItem
     /// <summary>
     /// When the work item was created
     /// </summary>
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// When the agent started working on this item
     /// </summary>
-    public DateTime? StartedAt { get; set; }
+    public DateTime? StartedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// When the work item was completed or failed
     /// </summary>
-    public DateTime? CompletedAt { get; set; }
+    public DateTime? CompletedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Optional result or output from work item execution
     /// </summary>
-    public string? Result { get; set; }
+    public string? Result
+    {
+        get; set;
+    }
 }

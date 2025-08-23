@@ -11,9 +11,9 @@ public interface IFileSystemService
     bool FileExists(string path);
     Task<string> ReadAllTextAsync(string path);
     Task WriteAllTextAsync(
-        string path, 
+        string path,
         string content);
     Task AppendAllTextAsync(
-        string path, 
+        string path,
         string content);
 }

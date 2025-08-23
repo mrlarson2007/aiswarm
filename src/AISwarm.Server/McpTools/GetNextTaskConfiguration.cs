@@ -9,12 +9,12 @@ public class GetNextTaskConfiguration
     /// Maximum time to wait for a task before giving up (default: 100ms for testing)
     /// </summary>
     public TimeSpan TimeToWaitForTask { get; set; } = TimeSpan.FromMilliseconds(100);
-    
+
     /// <summary>
     /// Interval between polling attempts (default: 50ms for testing)
     /// </summary>
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromMilliseconds(50);
-    
+
     /// <summary>
     /// Production configuration with longer timeouts suitable for real agent use
     /// </summary>

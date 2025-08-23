@@ -8,9 +8,9 @@ public class FileSystemService : IFileSystemService
     public bool FileExists(string path) => File.Exists(path);
     public async Task<string> ReadAllTextAsync(string path) => await File.ReadAllTextAsync(path);
     public async Task WriteAllTextAsync(
-        string path, 
+        string path,
         string content) => await File.WriteAllTextAsync(path, content);
     public async Task AppendAllTextAsync(
-        string path, 
+        string path,
         string content) => await File.AppendAllTextAsync(path, content);
 }

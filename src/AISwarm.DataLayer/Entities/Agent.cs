@@ -10,14 +10,38 @@ public class Agent
     public string AgentType { get; set; } = string.Empty;
     public string WorkingDirectory { get; set; } = string.Empty;
     public AgentStatus Status { get; set; } = AgentStatus.Starting;
-    public DateTime StartedAt { get; set; }
-    public DateTime? StoppedAt { get; set; }
-    public DateTime RegisteredAt { get; set; }
-    public DateTime LastHeartbeat { get; set; }
-    public string? ProcessId { get; set; }
-    public string? Model { get; set; }
-    public string? WorktreeName { get; set; }
-    public string? AssignedWorktree { get; set; }
+    public DateTime StartedAt
+    {
+        get; set;
+    }
+    public DateTime? StoppedAt
+    {
+        get; set;
+    }
+    public DateTime RegisteredAt
+    {
+        get; set;
+    }
+    public DateTime LastHeartbeat
+    {
+        get; set;
+    }
+    public string? ProcessId
+    {
+        get; set;
+    }
+    public string? Model
+    {
+        get; set;
+    }
+    public string? WorktreeName
+    {
+        get; set;
+    }
+    public string? AssignedWorktree
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Update the agent's last heartbeat time

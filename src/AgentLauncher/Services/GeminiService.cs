@@ -154,11 +154,11 @@ public class GeminiService(
         var args = new List<string>();
         if (!string.IsNullOrEmpty(model))
             args.Add($"-m \"{model}\"");
-        
+
         // Tell Gemini that we just created the file and to read it for instructions
         var prompt = $"I've just created \"{contextFilePath}\". Please read it for your instructions.";
         args.Add($"-i \\\"{prompt}\\\"");
-        
+
         return string.Join(' ', args);
     }
 }

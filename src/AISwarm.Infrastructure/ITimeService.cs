@@ -8,5 +8,8 @@ public interface ITimeService
     /// <summary>
     /// Gets the current UTC time
     /// </summary>
-    DateTime UtcNow { get; }
+    DateTime UtcNow
+    {
+        get;
+    }
 }

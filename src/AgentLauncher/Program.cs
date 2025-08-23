@@ -123,7 +123,7 @@ public class Program
             var dryRun = context.ParseResult.GetValueForOption(dryRunOption);
             var init = context.ParseResult.GetValueForOption(initOption);
             var monitor = context.ParseResult.GetValueForOption(monitorOption);
-            
+
             if (list)
             {
                 var listAgents = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListAgentsCommandHandler>();

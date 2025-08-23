@@ -27,17 +27,26 @@ public interface IReadScope : IDisposable
     /// <summary>
     /// Database context for advanced operations
     /// </summary>
-    CoordinationDbContext Context { get; }
+    CoordinationDbContext Context
+    {
+        get;
+    }
 
     /// <summary>
     /// Agents DbSet for direct access
     /// </summary>
-    DbSet<Agent> Agents { get; }
+    DbSet<Agent> Agents
+    {
+        get;
+    }
 
     /// <summary>
     /// Tasks DbSet for direct access
     /// </summary>
-    DbSet<WorkItem> Tasks { get; }
+    DbSet<WorkItem> Tasks
+    {
+        get;
+    }
 }
 
 /// <summary>
@@ -48,17 +57,26 @@ public interface IWriteScope : IDisposable
     /// <summary>
     /// Database context for advanced operations
     /// </summary>
-    CoordinationDbContext Context { get; }
+    CoordinationDbContext Context
+    {
+        get;
+    }
 
     /// <summary>
     /// Agents DbSet for direct access
     /// </summary>
-    DbSet<Agent> Agents { get; }
+    DbSet<Agent> Agents
+    {
+        get;
+    }
 
     /// <summary>
     /// Tasks DbSet for direct access
     /// </summary>
-    DbSet<WorkItem> Tasks { get; }
+    DbSet<WorkItem> Tasks
+    {
+        get;
+    }
 
     /// <summary>
     /// Save changes to the database

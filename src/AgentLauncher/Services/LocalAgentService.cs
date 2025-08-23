@@ -146,6 +146,12 @@ public record AgentRegistrationRequest
     public string PersonaId { get; init; } = string.Empty;
     public string AgentType { get; init; } = string.Empty;
     public string WorkingDirectory { get; init; } = string.Empty;
-    public string? Model { get; init; }
-    public string? WorktreeName { get; init; }
+    public string? Model
+    {
+        get; init;
+    }
+    public string? WorktreeName
+    {
+        get; init;
+    }
 }
