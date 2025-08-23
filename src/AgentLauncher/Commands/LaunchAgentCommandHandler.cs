@@ -155,15 +155,41 @@ public class LaunchAgentCommandHandler(
 You are Agent ID: {agentId}
 
 ### Available MCP Tools
-You have access to Model Context Protocol (MCP) tools that allow you to:
-- Request your next pending task: Use the 'get_next_task' MCP tool to retrieve tasks assigned specifically to you
-- Create new tasks: Use the 'create_task' MCP tool to break down work or create subtasks
+You have access to Model Context Protocol (MCP) tools that allow you to coordinate tasks:
+
+#### mcp_aiswarm_get_next_task
+- **Purpose**: Request your next pending task assigned specifically to you
+- **Parameters**: 
+  - `agentId`: Your agent ID ({agentId})
+- **Usage**: Call this at the start of each work session to check for pending tasks
+
+#### mcp_aiswarm_create_task  
+- **Purpose**: Create new tasks for yourself or other agents
+- **Parameters**:
+  - `agentId`: Target agent ID (use your ID {agentId} for self-assignment, or leave empty for unassigned tasks)
+  - `persona`: Full persona markdown content defining the agent's role and behavior
+  - `description`: Description of what should be accomplished
+  - `priority`: Task priority (Low, Normal, High, Critical) - defaults to Normal
+- **Usage**: Break down work or create subtasks for coordination
+
+#### mcp_aiswarm_report_task_completion
+- **Purpose**: Report task completion and provide results
+- **Parameters**:
+  - `taskId`: The ID of the completed task
+  - `result`: Summary of work completed and any important findings
+- **Usage**: Call when you finish working on a task to update its status
 
 ### Task Management Workflow
-1. Start each work session by calling 'get_next_task' to see if you have pending work
-2. The tool will return reinforcing prompts to check again - follow these suggestions
-3. When you complete work, you can create follow-up tasks using 'create_task'
-4. Always include your agent ID ({agentId}) when working with tasks
+1. **Start Work Session**: Call `mcp_aiswarm_get_next_task` with your agentId ({agentId}) to check for pending tasks
+2. **Work on Task**: Complete the assigned work according to the task description and persona
+3. **Report Completion**: Call `mcp_aiswarm_report_task_completion` with the taskId and your results
+4. **Create Follow-up Tasks**: Use `mcp_aiswarm_create_task` to break down work or create coordination tasks as needed
+
+### Best Practices
+- Always include your agent ID ({agentId}) when calling get_next_task
+- Provide detailed results when reporting task completion
+- Create specific, actionable tasks when coordinating with other agents
+- Use appropriate priority levels for time-sensitive work
 
 ";
         await fileSystemService.AppendAllTextAsync(contextPath, agentInformation);

@@ -544,9 +544,57 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         contextContent.ShouldNotBeNull();
         contextContent.ShouldContain($"You are Agent ID: {agent.Id}");
         contextContent.ShouldContain("Available MCP Tools");
-        contextContent.ShouldContain("get_next_task");
-        contextContent.ShouldContain("create_task");
+        contextContent.ShouldContain("mcp_aiswarm_get_next_task");
+        contextContent.ShouldContain("mcp_aiswarm_create_task");
+        contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
         contextContent.ShouldContain("Task Management Workflow");
+    }
+
+    [Fact]
+    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendCorrectMcpToolInstructions()
+    {
+        // Arrange
+        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+            .ReturnsAsync("/repo/planner_context.md");
+
+        // Set up context file to exist (Gemini service checks this)
+        _fs.AddFile("/repo/planner_context.md");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync(
+            agentType: "planner",
+            model: "gemini-1.5-pro",
+            worktree: null,
+            directory: "/repo",
+            dryRun: false,
+            monitor: true);
+
+        // Assert
+        ShouldBeBooleanExtensions.ShouldBeTrue(result);
+
+        // Get the registered agent from database
+        var agents = await _dbContext.Agents.ToListAsync();
+        agents.ShouldHaveSingleItem();
+        var agent = agents.First();
+
+        // Verify correct MCP tool instructions were appended to context file
+        var contextContent = _fs.GetFileContent("/repo/planner_context.md");
+        contextContent.ShouldNotBeNull();
+        contextContent.ShouldContain($"You are Agent ID: {agent.Id}");
+        contextContent.ShouldContain("Available MCP Tools");
+        
+        // Should reference actual MCP tool names
+        contextContent.ShouldContain("mcp_aiswarm_get_next_task");
+        contextContent.ShouldContain("mcp_aiswarm_create_task");
+        contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
+        
+        // Should include proper parameter names
+        contextContent.ShouldContain("agentId");
+        contextContent.ShouldContain("taskId");
+        contextContent.ShouldContain("result");
+        
+        // Should include task completion workflow
+        contextContent.ShouldContain("report_task_completion");
     }
 
         [Fact]
