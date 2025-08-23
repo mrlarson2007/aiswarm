@@ -1,0 +1,54 @@
+using AISwarm.DataLayer;
+using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
+
+namespace AISwarm.Server.McpTools;
+
+[McpServerToolType]
+public class ReportTaskCompletionMcpTool
+{
+    private readonly IDatabaseScopeService _databaseScopeService;
+    private readonly ITimeService _timeService;
+
+    public ReportTaskCompletionMcpTool(
+        IDatabaseScopeService databaseScopeService,
+        ITimeService timeService)
+    {
+        _databaseScopeService = databaseScopeService;
+        _timeService = timeService;
+    }
+
+    [McpServerTool(Name = "report_task_completion")]
+    [Description("Reports completion of a task with results")]
+    public async Task<ReportTaskCompletionResult> ReportTaskCompletionAsync(
+        [Description("ID of the task to mark as completed")] string taskId,
+        [Description("Result of the completed task")] string result)
+    {
+        using var scope = _databaseScopeService.CreateWriteScope();
+
+        var task = await scope.Tasks.FindAsync(taskId);
+        if (task == null)
+        {
+            return ReportTaskCompletionResult
+                .Failure($"Task not found: {taskId}");
+        }
+
+        if (task.Status == AISwarm.DataLayer.Entities.TaskStatus.Completed)
+        {
+            return ReportTaskCompletionResult
+                .Failure($"Task {taskId} is already completed");
+        }
+
+        task.Status = AISwarm.DataLayer.Entities.TaskStatus.Completed;
+        task.Result = result;
+        task.CompletedAt = _timeService.UtcNow;
+
+        await scope.SaveChangesAsync();
+        scope.Complete();
+
+        return ReportTaskCompletionResult.Success(taskId);
+    }
+}
