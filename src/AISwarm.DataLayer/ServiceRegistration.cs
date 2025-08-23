@@ -10,14 +10,23 @@ public static class ServiceRegistration
         this IServiceCollection services,
         IConfiguration? configuration = null)
     {
-
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         var workingDirectory = configuration?["WorkingDirectory"] ?? Environment.CurrentDirectory;
         var aiswarmDirectory = Path.Combine(workingDirectory, ".aiswarm");
+
+        // Ensure .aiswarm directory exists
+        Directory.CreateDirectory(aiswarmDirectory);
+
         var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseSqlite($"Data Source={databasePath}")
                 .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.AmbientTransactionWarning)));
+
+        // Initialize database after registration
+        using var tempServiceProvider = services.BuildServiceProvider();
+        using var scope = tempServiceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<CoordinationDbContext>();
+        context.Database.EnsureCreated();
 
         return services;
     }

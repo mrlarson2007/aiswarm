@@ -15,6 +15,17 @@ public class FakeFileSystemService : IFileSystemService
     public void CreateDirectory(string path) => _directories.Add(Norm(path));
     public bool FileExists(string path) => _files.Contains(Norm(path));
 
+    public async Task<string> ReadAllTextAsync(string path)
+    {
+        var normalizedPath = Norm(path);
+        if (_fileContents.TryGetValue(normalizedPath, out var content))
+        {
+            await Task.CompletedTask;
+            return content;
+        }
+        throw new FileNotFoundException($"File not found: {path}");
+    }
+
     public async Task WriteAllTextAsync(
         string path,
         string content)
@@ -56,6 +67,7 @@ public class FakeFileSystemService : IFileSystemService
         if (!string.IsNullOrEmpty(dir))
             _directories.Add(Norm(dir));
         _files.Add(Norm(path));
+        _fileContents.Add(path, string.Empty);
     }
 
     public string? GetFileContent(string path) => _fileContents.TryGetValue(Norm(path), out var content) ? content : null;

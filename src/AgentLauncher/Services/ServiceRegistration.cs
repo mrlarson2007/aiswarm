@@ -1,8 +1,8 @@
-using AISwarm.DataLayer;
-using AISwarm.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
+using AISwarm.DataLayer;
+using Microsoft.Extensions.Configuration;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Services;
 
@@ -18,8 +18,9 @@ public static class ServiceRegistration
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IGeminiService, GeminiService>();
 
-        // Data layer services
-        services.AddDataLayerServices();
+        // Use centralized data layer services with proper database initialization
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddDataLayerServices(configuration);
 
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();

@@ -12,5 +12,5 @@ public class WindowsTerminalService(IProcessLauncher inner) : IInteractiveTermin
     public bool LaunchTerminalInteractive(
         string command,
         string workingDirectory) =>
-        inner.StartInteractive("pwsh.exe", command, workingDirectory);
+        inner.StartInteractive("pwsh.exe", $"-Command \"{command}\"", workingDirectory);
 }

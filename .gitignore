@@ -30,3 +30,4 @@ temp/
 *-worktree/
 *.worktree/
 .aiswarm/aiswarm.db
+src/AISwarm.Server/.aiswarm/aiswarm.db

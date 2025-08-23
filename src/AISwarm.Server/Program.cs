@@ -5,6 +5,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using AISwarm.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using System.Net.Sockets;
 
 namespace AISwarm.Server;
 
@@ -12,7 +15,7 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = WebApplication.CreateBuilder(args);
 
         // Configure console logging to stderr (MCP standard)
         builder.Logging.AddConsole(options =>
@@ -23,15 +26,27 @@ internal static class Program
         // Add database services
         ConfigureDatabaseServices(builder.Services, builder.Configuration);
 
-
-        // Configure MCP server for agent coordination
+        // Configure MCP server with BOTH stdio and HTTP transports
         builder.Services
             .AddInfrastructureServices()
             .AddMcpServer()
-            .WithStdioServerTransport()
+            .WithStdioServerTransport()    // For VS Code
+            .WithHttpTransport()           // For Gemini CLI
             .WithToolsFromAssembly();
 
-        await builder.Build().RunAsync();
+        var app = builder.Build();
+
+
+        // Map MCP HTTP endpoints
+        app.MapMcp();
+        var task = app.RunAsync();
+        var url = app.Urls.FirstOrDefault();
+        Console.WriteLine($"AISwarm MCP Server starting with dual transport support:");
+        Console.WriteLine($"- Stdio transport for VS Code MCP integration");
+        Console.WriteLine($"- HTTP transport for Gemini CLI at {url}");
+
+        
+        await task;
     }
 
     private static void ConfigureDatabaseServices(
@@ -42,5 +57,27 @@ internal static class Program
         var aiswarmDirectory = Path.Combine(workingDirectory, ".aiswarm");
         Directory.CreateDirectory(aiswarmDirectory);
         services.AddDataLayerServices(configuration);
+    }
+
+    private static int GetAvailablePort()
+    {
+        // Find an available port starting from 8081 (avoiding 8080 as requested)
+        for (int port = 8081; port <= 9000; port++)
+        {
+            try
+            {
+                using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+                listener.Start();
+                listener.Stop();
+                return port;
+            }
+            catch
+            {
+                // Port is in use, try next one
+            }
+        }
+
+        // Fallback to a default port if no available port found
+        return 8081;
     }
 }

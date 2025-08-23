@@ -41,7 +41,8 @@ public class LaunchAgentCommandHandler(
             logger.Info($"Monitor: {monitor}");
             var planned = Path.Combine(workingDirectory, agentType + "_context.md");
             logger.Info($"Planned context file: {planned}");
-            var manual = $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \"{planned}\"";
+            var fileName = Path.GetFileName(planned);
+            var manual = $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \\\"I've just created {fileName}. Please read it for your instructions.\\\"";
             logger.Info("Manual launch: " + manual);
             return true;
         }
@@ -75,7 +76,7 @@ public class LaunchAgentCommandHandler(
                     Model = model,
                     WorktreeName = worktree
                 };
-                
+
                 agentId = await localAgentService.RegisterAgentAsync(request);
                 logger.Info($"Registered agent with ID: {agentId}");
             }
@@ -91,7 +92,7 @@ public class LaunchAgentCommandHandler(
         {
             logger.Info($"Creating context file for '{agentType}' in '{workDir}'...");
             contextPath = await contextService.CreateContextFile(agentType, workDir);
-            
+
             // If monitoring is enabled, append agent ID information to context
             if (monitor && agentId != null)
             {
@@ -107,7 +108,7 @@ public class LaunchAgentCommandHandler(
         try
         {
             logger.Info("Launching Gemini interactive session...");
-            
+
             bool success;
             if (monitor && agentId != null)
             {
@@ -116,25 +117,25 @@ public class LaunchAgentCommandHandler(
                 var agentSettings = new AgentSettings
                 {
                     AgentId = agentId,
-                    McpServerUrl = "http://localhost:8080" // TODO: Make configurable
+                    McpServerUrl = "http://localhost:5000/sse" // Updated to use correct port
                 };
                 success = await geminiService.LaunchInteractiveAsync(
-                    contextPath, 
-                    model, 
-                    workDir, 
+                    contextPath,
+                    model,
+                    workDir,
                     agentSettings);
             }
             else
             {
                 success = await geminiService.LaunchInteractiveAsync(
-                    contextPath, 
-                    model, 
+                    contextPath,
+                    model,
                     workDir);
             }
-            
+
             if (!success)
             {
-                logger.Error("Failed to launch Gemini interactive session");
+                logger.Error("Gemini interactive session failed to start.");
                 return false;
             }
         }
@@ -148,37 +149,51 @@ public class LaunchAgentCommandHandler(
 
     private async Task AppendAgentIdToContextAsync(string contextPath, string agentId)
     {
-        var agentInformation = $@"
+        var mcpToolInstructionsPrompt = $@"## Your Agent ID
 
-## Agent Configuration
+Your unique agent ID is: `{agentId}`
+**You MUST use this ID for all MCP tool interactions.**
 
-You are Agent ID: {agentId}
+## IMMEDIATE ACTION REQUIRED
 
-### Available MCP Tools
-You have access to Model Context Protocol (MCP) tools that allow you to coordinate tasks:
+**1. Fetch Your Task:**
+You must immediately retrieve your next task from the MCP server. Use the following tool call:
 
-#### mcp_aiswarm_get_next_task
-- **Purpose**: Request your next pending task assigned specifically to you
-- **Parameters**: 
-  - `agentId`: Your agent ID ({agentId})
-- **Usage**: Call this at the start of each work session to check for pending tasks
+`mcp_aiswarm_get_next_task(agentId='{agentId}')`
 
-#### mcp_aiswarm_create_task  
-- **Purpose**: Create new tasks for yourself or other agents
+**2. Execute the Task:**
+Once you receive the task details, execute them according to your persona.
+
+**3. Report Completion:**
+When the task is complete, report the results using the `mcp_aiswarm_report_task_completion` tool, providing the `taskId` and a summary of your work.
+
+---
+
+## Reference: Available Tools
+
+You have access to the following MCP tools for task management:
+
+### `mcp_aiswarm_get_next_task`
+
+- **Purpose**: Fetches your next assigned task.
 - **Parameters**:
-  - `agentId`: Target agent ID (use your ID {agentId} for self-assignment, or leave empty for unassigned tasks)
-  - `persona`: Full persona markdown content defining the agent's role and behavior
-  - `description`: Description of what should be accomplished
-  - `priority`: Task priority (Low, Normal, High, Critical) - defaults to Normal
-- **Usage**: Break down work or create subtasks for coordination
+  - `agentId`: Your agent ID.
 
-#### mcp_aiswarm_report_task_completion
-- **Purpose**: Report task completion and provide results
+### `mcp_aiswarm_create_task`
+
+- **Purpose**: Creates new tasks for other agents.
 - **Parameters**:
-  - `taskId`: The ID of the completed task
-  - `result`: Summary of work completed and any important findings
-- **Usage**: Call when you finish working on a task to update its status
+  - `agentId`: Target agent ID (or empty for unassigned).
+  - `persona`: Full persona markdown for the new agent.
+  - `description`: A clear description of the task.
+  - `priority`: `Low`, `Normal`, `High`, `Critical`.
 
+### `mcp_aiswarm_report_task_completion`
+
+- **Purpose**: Reports that a task is finished.
+- **Parameters**:
+  - `taskId`: The ID of the completed task.
+  - `result`: A summary of the results.
 ### Task Management Workflow
 1. **Start Work Session**: Call `mcp_aiswarm_get_next_task` with your agentId ({agentId}) to check for pending tasks
 2. **Work on Task**: Complete the assigned work according to the task description and persona
@@ -189,9 +204,8 @@ You have access to Model Context Protocol (MCP) tools that allow you to coordina
 - Always include your agent ID ({agentId}) when calling get_next_task
 - Provide detailed results when reporting task completion
 - Create specific, actionable tasks when coordinating with other agents
-- Use appropriate priority levels for time-sensitive work
+- Use appropriate priority levels for time-sensitive work";
 
-";
-        await fileSystemService.AppendAllTextAsync(contextPath, agentInformation);
+        await fileSystemService.AppendAllTextAsync(contextPath, mcpToolInstructionsPrompt);
     }
 }

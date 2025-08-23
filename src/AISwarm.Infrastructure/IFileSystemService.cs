@@ -9,6 +9,7 @@ public interface IFileSystemService
     bool DirectoryExists(string path);
     void CreateDirectory(string path);
     bool FileExists(string path);
+    Task<string> ReadAllTextAsync(string path);
     Task WriteAllTextAsync(
         string path, 
         string content);

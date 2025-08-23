@@ -5,6 +5,13 @@ namespace AISwarm.Infrastructure;
 /// <inheritdoc />
 public class ProcessLauncher : IProcessLauncher
 {
+    private readonly IAppLogger _logger;
+
+    public ProcessLauncher(IAppLogger logger)
+    {
+        _logger = logger;
+    }
+
     /// <inheritdoc />
     public async Task<ProcessResult> RunAsync(
         string fileName,
@@ -101,11 +108,33 @@ public class ProcessLauncher : IProcessLauncher
 
         try
         {
-            Process.Start(startInfo);
+            var result = Process.Start(startInfo);
+            if (result == null)
+            {
+                _logger.Error($"Failed to start interactive process: Process.Start returned null for '{fileName} {arguments}'");
+                return false;
+            }
+
+            int counter = 0;
+            while (result.HasExited == false && counter < 15)
+            {
+                Thread.Sleep(1000);
+                result.Refresh();
+                counter++;
+            }
+
+            if (result.HasExited)
+            {
+                _logger.Error($"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
+                _logger.Error(result.StandardOutput.ReadToEnd());
+                _logger.Error(result.StandardError.ReadToEnd());
+                return false;
+            }
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.Error($"Exception starting interactive process '{fileName} {arguments}': {ex.Message}");
             return false;
         }
     }

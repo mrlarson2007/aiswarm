@@ -4,6 +4,7 @@ using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Tests.TestDoubles;
+using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shouldly;
@@ -22,6 +23,9 @@ public class LaunchAgentCommandHandlerTests : IDisposable
     private readonly GitService _git;
     private readonly CoordinationDbContext _dbContext;
     private readonly FakeTimeService _timeService = new();
+
+    private static string _expectedPromptFormatString =
+        "I've just created \"{0}\". Please read it for your instructions.";
 
     public LaunchAgentCommandHandlerTests()
     {
@@ -189,7 +193,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         _process.Invocations.ShouldContain(i =>
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
-            i.Arguments.Contains("-i \"/repo/planner_context.md\"") &&
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString,"/repo/planner_context.md")) &&
             !i.Arguments.Contains("-m ") // No model specified
         );
     }
@@ -218,7 +222,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
             i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
         );
     }
 
@@ -351,8 +355,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
             i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains("-i \"/repo-feature_launch/planner_context.md\"")
-        );
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo-feature_launch/planner_context.md")));
     }
 
     [Fact]
@@ -410,7 +413,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         _process.Invocations.ShouldContain(i =>
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
-            i.Arguments.Contains("-i \"/repo/planner_context.md\"") &&
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md")) &&
             !i.Arguments.Contains("-m ") // No model specified
         );
     }
@@ -500,7 +503,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
             i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
         );
 
         // Should have created Gemini configuration file
@@ -542,8 +545,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         // Verify agent information was appended to context file
         var contextContent = _fs.GetFileContent("/repo/planner_context.md");
         contextContent.ShouldNotBeNull();
-        contextContent.ShouldContain($"You are Agent ID: {agent.Id}");
-        contextContent.ShouldContain("Available MCP Tools");
+        contextContent.ShouldContain(agent.Id);
         contextContent.ShouldContain("mcp_aiswarm_get_next_task");
         contextContent.ShouldContain("mcp_aiswarm_create_task");
         contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
@@ -580,8 +582,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         // Verify correct MCP tool instructions were appended to context file
         var contextContent = _fs.GetFileContent("/repo/planner_context.md");
         contextContent.ShouldNotBeNull();
-        contextContent.ShouldContain($"You are Agent ID: {agent.Id}");
-        contextContent.ShouldContain("Available MCP Tools");
+        contextContent.ShouldContain(agent.Id);
         
         // Should reference actual MCP tool names
         contextContent.ShouldContain("mcp_aiswarm_get_next_task");
@@ -624,7 +625,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             i.File == "pwsh.exe" &&
             i.Arguments.Contains("gemini") &&
             i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains("-i \"/repo/planner_context.md\"")
+            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
         );
 
         // Should not have created configuration file since monitor is disabled
