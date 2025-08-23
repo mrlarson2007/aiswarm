@@ -1,12 +1,11 @@
 using AISwarm.Infrastructure;
-using AgentLauncher.Services.Logging;
 using AgentLauncher.Models;
 
 namespace AgentLauncher.Services;
 
 /// <inheritdoc />
 public class GeminiService(
-    Terminals.IInteractiveTerminalService terminal,
+    IInteractiveTerminalService terminal,
     IAppLogger logger,
     IFileSystemService fileSystem) : IGeminiService
 {
@@ -43,9 +42,9 @@ public class GeminiService(
 
     /// <inheritdoc />
     public async Task<bool> LaunchInteractiveAsync(
-        string contextFilePath, 
-        string? model = null, 
-        string? workingDirectory = null, 
+        string contextFilePath,
+        string? model = null,
+        string? workingDirectory = null,
         AgentSettings? agentSettings = null)
     {
         if (!fileSystem.FileExists(contextFilePath))
@@ -100,27 +99,27 @@ public class GeminiService(
     /// <inheritdoc />
     [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
     public Task<bool> LaunchInteractiveWithSettingsAsync(
-        string contextFilePath, 
-        string? model, 
-        AgentSettings agentSettings, 
+        string contextFilePath,
+        string? model,
+        AgentSettings agentSettings,
         string? workingDirectory = null)
     {
         return LaunchInteractiveAsync(
-            contextFilePath, 
-            model, 
-            workingDirectory, 
+            contextFilePath,
+            model,
+            workingDirectory,
             agentSettings);
     }
 
     private async Task CreateGeminiConfigurationAsync(
-        string workingDirectory, 
+        string workingDirectory,
         AgentSettings agentSettings)
     {
         var geminiDir = Path.Combine(workingDirectory, ".gemini");
         fileSystem.CreateDirectory(geminiDir);
 
         var configPath = Path.Combine(geminiDir, "settings.json");
-        
+
         var configuration = new
         {
             mcpServers = new Dictionary<string, object>

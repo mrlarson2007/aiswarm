@@ -1,8 +1,7 @@
-using AISwarm.Shared.Contracts;
-using AISwarm.DataLayer.Contracts;
 using AISwarm.DataLayer.Entities;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using AISwarm.DataLayer;
 using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.McpTools;

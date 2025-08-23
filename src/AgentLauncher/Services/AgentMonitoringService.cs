@@ -1,6 +1,6 @@
-using AISwarm.Shared.Contracts;
-using AISwarm.DataLayer.Contracts;
+using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 
@@ -9,25 +9,13 @@ namespace AgentLauncher.Services;
 /// <summary>
 /// Background service that monitors agent health and terminates unresponsive agents
 /// </summary>
-public class AgentMonitoringService : BackgroundService
+public class AgentMonitoringService(
+    IDatabaseScopeService scopeService,
+    ILocalAgentService localAgentService,
+    ITimeService timeService,
+    AgentMonitoringConfiguration config)
+    : BackgroundService
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly ILocalAgentService _localAgentService;
-    private readonly ITimeService _timeService;
-    private readonly AgentMonitoringConfiguration _config;
-
-    public AgentMonitoringService(
-        IDatabaseScopeService scopeService,
-        ILocalAgentService localAgentService,
-        ITimeService timeService,
-        AgentMonitoringConfiguration config)
-    {
-        _scopeService = scopeService;
-        _localAgentService = localAgentService;
-        _timeService = timeService;
-        _config = config;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -35,7 +23,7 @@ public class AgentMonitoringService : BackgroundService
             try
             {
                 await CheckForUnresponsiveAgentsAsync();
-                await Task.Delay(TimeSpan.FromMinutes(_config.CheckIntervalMinutes), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(config.CheckIntervalMinutes), stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -46,7 +34,7 @@ public class AgentMonitoringService : BackgroundService
             {
                 // Log error but continue monitoring
                 // TODO: Add proper logging once logger infrastructure is available
-                await Task.Delay(TimeSpan.FromMinutes(_config.CheckIntervalMinutes), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(config.CheckIntervalMinutes), stoppingToken);
             }
         }
     }
@@ -56,18 +44,18 @@ public class AgentMonitoringService : BackgroundService
     /// </summary>
     public async Task CheckForUnresponsiveAgentsAsync()
     {
-        using var scope = _scopeService.CreateReadScope();
-        
-        var timeoutThreshold = _timeService.UtcNow.AddMinutes(-_config.HeartbeatTimeoutMinutes);
-        
+        using var scope = scopeService.CreateReadScope();
+
+        var timeoutThreshold = timeService.UtcNow.AddMinutes(-config.HeartbeatTimeoutMinutes);
+
         var unresponsiveAgents = await scope.Agents
-            .Where(a => a.Status == AgentStatus.Running && 
+            .Where(a => a.Status == AgentStatus.Running &&
                        a.LastHeartbeat < timeoutThreshold)
             .ToListAsync();
 
         foreach (var agent in unresponsiveAgents)
         {
-            await _localAgentService.KillAgentAsync(agent.Id);
+            await localAgentService.KillAgentAsync(agent.Id);
         }
     }
 }

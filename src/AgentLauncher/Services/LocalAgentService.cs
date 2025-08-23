@@ -1,43 +1,31 @@
-using AISwarm.Shared.Contracts;
-using AISwarm.DataLayer.Contracts;
-using AISwarm.DataLayer.Database;
+using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
-using Microsoft.EntityFrameworkCore;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Services;
 
 /// <summary>
 /// Local agent service focused on launcher's specific needs:
 /// - Agent registration and tracking
-/// - Local health monitoring  
+/// - Local health monitoring
 /// - Process lifecycle management
 /// </summary>
-public class LocalAgentService : ILocalAgentService
+public class LocalAgentService(
+    ITimeService timeService,
+    IDatabaseScopeService scopeService,
+    IProcessTerminationService? processTerminationService = null)
+    : ILocalAgentService
 {
-    private readonly ITimeService _timeService;
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly IProcessTerminationService? _processTerminationService;
-
-    public LocalAgentService(
-        ITimeService timeService, 
-        IDatabaseScopeService scopeService, 
-        IProcessTerminationService? processTerminationService = null)
-    {
-        _timeService = timeService;
-        _scopeService = scopeService;
-        _processTerminationService = processTerminationService;
-    }
-
     /// <summary>
     /// Register a new agent with the launcher
     /// </summary>
     public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
-        using var scope = _scopeService.CreateWriteScope();
-        
+        using var scope = scopeService.CreateWriteScope();
+
         var agentId = Guid.NewGuid().ToString();
-        var currentTime = _timeService.UtcNow;
-        
+        var currentTime = timeService.UtcNow;
+
         var agent = new Agent
         {
             Id = agentId,
@@ -54,7 +42,7 @@ public class LocalAgentService : ILocalAgentService
         scope.Agents.Add(agent);
         await scope.SaveChangesAsync();
         scope.Complete();
-        
+
         return agentId;
     }
 
@@ -63,7 +51,7 @@ public class LocalAgentService : ILocalAgentService
     /// </summary>
     public async Task<Agent?> GetAgentAsync(string agentId)
     {
-        using var scope = _scopeService.CreateReadScope();
+        using var scope = scopeService.CreateReadScope();
         return await scope.Agents.FindAsync(agentId);
     }
 
@@ -72,12 +60,12 @@ public class LocalAgentService : ILocalAgentService
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
-        
+        using var scope = scopeService.CreateWriteScope();
+
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
-            agent.UpdateHeartbeat(_timeService.UtcNow);
+            agent.UpdateHeartbeat(timeService.UtcNow);
             await scope.SaveChangesAsync();
             scope.Complete();
             return true;
@@ -89,17 +77,17 @@ public class LocalAgentService : ILocalAgentService
     /// Mark agent as running with process ID
     /// </summary>
     public async Task MarkAgentRunningAsync(
-        string agentId, 
+        string agentId,
         string processId)
     {
-        using var scope = _scopeService.CreateWriteScope();
-        
+        using var scope = scopeService.CreateWriteScope();
+
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.Status = AISwarm.DataLayer.Entities.AgentStatus.Running;
             agent.ProcessId = processId;
-            agent.StartedAt = _timeService.UtcNow;
+            agent.StartedAt = timeService.UtcNow;
             await scope.SaveChangesAsync();
             scope.Complete();
         }
@@ -110,12 +98,12 @@ public class LocalAgentService : ILocalAgentService
     /// </summary>
     public async Task StopAgentAsync(string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
-        
+        using var scope = scopeService.CreateWriteScope();
+
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
-            agent.Stop(_timeService.UtcNow);
+            agent.Stop(timeService.UtcNow);
             await scope.SaveChangesAsync();
             scope.Complete();
         }
@@ -126,24 +114,24 @@ public class LocalAgentService : ILocalAgentService
     /// </summary>
     public async Task KillAgentAsync(string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
-        
+        using var scope = scopeService.CreateWriteScope();
+
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             // Attempt to kill the actual process if we have a process ID and termination service
-            if (!string.IsNullOrEmpty(agent.ProcessId) && _processTerminationService != null)
+            if (!string.IsNullOrEmpty(agent.ProcessId) && processTerminationService != null)
             {
-                await _processTerminationService.KillProcessAsync(agent.ProcessId);
+                await processTerminationService.KillProcessAsync(agent.ProcessId);
             }
-            
-            agent.Kill(_timeService.UtcNow);
-            
+
+            agent.Kill(timeService.UtcNow);
+
             // TODO: Update any pending tasks assigned to this agent once task infrastructure is implemented
             // - Mark tasks as failed/cancelled due to agent termination
             // - Potentially reassign tasks to other available agents
             // - Update task status and add termination reason
-            
+
             await scope.SaveChangesAsync();
             scope.Complete();
         }

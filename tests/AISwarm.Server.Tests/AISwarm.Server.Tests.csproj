@@ -26,9 +26,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AISwarm.Server\AISwarm.Server.csproj" />
-    <ProjectReference Include="..\..\src\AISwarm.Shared\AISwarm.Shared.csproj" />
-    <ProjectReference Include="..\AISwarm.TestDoubles\AISwarm.TestDoubles.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Configuration\" />
   </ItemGroup>
 
 </Project>

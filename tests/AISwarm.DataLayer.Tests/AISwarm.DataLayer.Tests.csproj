@@ -24,4 +24,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Database\Entities\" />
+    <Folder Include="Entities\" />
+  </ItemGroup>
+
 </Project>

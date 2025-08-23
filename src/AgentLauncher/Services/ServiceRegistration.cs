@@ -1,10 +1,7 @@
+using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AISwarm.Shared.Contracts;
-using AISwarm.DataLayer.Contracts;
-using AISwarm.DataLayer.Services;
-using AISwarm.DataLayer.Database;
 using Microsoft.EntityFrameworkCore;
 
 namespace AgentLauncher.Services;
@@ -14,33 +11,19 @@ public static class ServiceRegistration
     public static IServiceCollection AddAgentLauncherServices(this IServiceCollection services)
     {
         // External / infrastructure
-        services.AddSingleton<IProcessLauncher, ProcessLauncher>();
-        services.AddSingleton<Logging.IAppLogger, Logging.ConsoleAppLogger>();
-        services.AddSingleton<IEnvironmentService, EnvironmentService>();
+        services.AddInfrastructureServices();
 
         // Core services (placeholders until refactor complete)
         services.AddSingleton<IContextService, ContextService>();
-        services.AddSingleton<IFileSystemService, FileSystemService>();
         services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<IOperatingSystemService, OperatingSystemService>();
-        services.AddSingleton<Terminals.IInteractiveTerminalService>(sp =>
-        {
-            var os = sp.GetRequiredService<IOperatingSystemService>();
-            var proc = sp.GetRequiredService<IProcessLauncher>();
-            return os.IsWindows()
-                ? new Terminals.WindowsTerminalService(proc)
-                : new Terminals.UnixTerminalService(proc);
-        });
         services.AddSingleton<IGeminiService, GeminiService>();
 
         // Data layer services
-        services.AddDbContext<CoordinationDbContext>(options =>
-            options.UseSqlite("Data Source=aiswarm.db"));
-        services.AddSingleton<AISwarm.Infrastructure.ITimeService, AISwarm.Infrastructure.SystemTimeService>();
-        services.AddSingleton<AISwarm.DataLayer.Contracts.IDatabaseScopeService, DatabaseScopeService>();
+        services.AddDataLayerServices();
+
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
-        
+
         // Background monitoring services
         services.AddSingleton<AgentMonitoringConfiguration>();
         services.AddHostedService<AgentMonitoringService>();

@@ -1,5 +1,5 @@
 using AgentLauncher.Services;
-using AgentLauncher.Services.Logging;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Commands;
 

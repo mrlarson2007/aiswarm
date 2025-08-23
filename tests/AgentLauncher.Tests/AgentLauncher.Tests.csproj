@@ -24,8 +24,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AgentLauncher\AgentLauncher.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.Server\AISwarm.Server.csproj" />
-    <ProjectReference Include="..\AISwarm.TestDoubles\AISwarm.TestDoubles.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Commands\" />
+    <Folder Include="McpTools\" />
+    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>
