@@ -9,6 +9,7 @@ Core architectural documentation, database schemas, and foundational design deci
 - [SQLite Task Coordination Design](sqlite-task-coordination-design.md) - Complete system architecture with Mermaid diagrams, multi-project structure, and MCP server integration
 - [Coordination Server Structure](coordination-server-structure.md) - Clean architecture layout, service patterns, and implementation examples
 - [Gemini CLI Integration Guide](gemini-cli-integration-guide.md) - Comprehensive implementation patterns for plugin hooks, VS Code integration, and extended Tools API
+- [Event-Driven Notifications for Agent Coordination](event-driven-notifications.md) - Replace polling with in-memory event bus using Channels; supports task/agent/log events, multi-subscriber wakeups, and sinks
 
 ## 🗃️ Database Design
 
