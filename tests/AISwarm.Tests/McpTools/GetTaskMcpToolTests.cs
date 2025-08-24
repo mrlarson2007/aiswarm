@@ -210,32 +210,61 @@ public class GetTaskMcpToolTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public async Task GetTasksByAgentIdAsync_WhenAgentIdIsInvalidOrEmpty_ShouldReturnFailure(string? agentId)
+    [InlineData("non-existent-agent")]
+    public async Task GetTasksByAgentIdAsync_WhenNoTasksForAgent_ShouldReturnEmptyArray(string? agentId)
     {
+        // Arrange - Create some tasks but not for the target agent
+        await CreateTaskAsync("task1", TaskStatus.Pending, "existing-agent-1");
+        await CreateTaskAsync("task2", TaskStatus.InProgress, "existing-agent-2");
+
         // Act
         var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId!);
-
-        // Assert
-        result.Success.ShouldBeFalse();
-        result.ErrorMessage.ShouldNotBeNull();
-        result.ErrorMessage.ShouldContain("Agent ID cannot be null or empty");
-        result.Tasks.ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task GetTasksByAgentIdAsync_WhenNoTasksForAgent_ShouldReturnEmptyArray()
-    {
-        // Arrange
-        var agentId = "non-existent-agent";
-
-        // Act
-        var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId);
 
         // Assert
         result.Success.ShouldBeTrue();
         result.ErrorMessage.ShouldBeNull();
         result.Tasks.ShouldNotBeNull();
         result.Tasks.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTasksByAgentIdAsync_WhenAgentExistsButNoTasks_ShouldReturnEmptyArray()
+    {
+        // Arrange - Create a task for an agent, then query for different agent that has no tasks
+        await CreateTaskAsync("task1", TaskStatus.Pending, "agent-with-tasks");
+        var agentWithNoTasks = "agent-without-tasks";
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentWithNoTasks);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTasksByAgentIdAsync_WhenSearchingForNullAgentId_ShouldReturnTasksWithNullAgentId()
+    {
+        // Arrange - Create tasks with null and non-null agent IDs
+        await CreateTaskAsync("task1", TaskStatus.Pending, null);
+        await CreateTaskAsync("task2", TaskStatus.InProgress, "actual-agent");
+        await CreateTaskAsync("task3", TaskStatus.Completed, null);
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(null!);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.Length.ShouldBe(2);
+        result.Tasks.ShouldAllBe(t => t.AgentId == null);
+        
+        // Verify specific tasks are included
+        result.Tasks.Any(t => t.TaskId == "task1").ShouldBeTrue();
+        result.Tasks.Any(t => t.TaskId == "task3").ShouldBeTrue();
     }
 
     [Fact]

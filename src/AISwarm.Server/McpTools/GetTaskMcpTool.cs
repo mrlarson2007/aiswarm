@@ -62,11 +62,6 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
     public async Task<GetTasksByStatusResult> GetTasksByAgentIdAsync(
         [Description("ID of the agent to query tasks for")] string agentId)
     {
-        if (string.IsNullOrWhiteSpace(agentId))
-        {
-            return GetTasksByStatusResult.Failure("Agent ID cannot be null or empty");
-        }
-
         using var scope = scopeService.CreateReadScope();
         var tasks = await scope.Tasks
             .Where(t => t.AgentId == agentId)
