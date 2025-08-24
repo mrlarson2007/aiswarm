@@ -109,21 +109,21 @@ public static class CommandFactory
 
             if (list)
             {
-                var listAgents = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListAgentsCommandHandler>();
+                var listAgents = serviceProvider.GetRequiredService<Commands.ListAgentsCommandHandler>();
                 listAgents.Run();
                 return;
             }
 
             if (listWorktrees)
             {
-                var listWorktreesHandler = serviceProvider.GetRequiredService<AgentLauncher.Commands.ListWorktreesCommandHandler>();
+                var listWorktreesHandler = serviceProvider.GetRequiredService<Commands.ListWorktreesCommandHandler>();
                 await listWorktreesHandler.RunAsync();
                 return;
             }
 
             if (init)
             {
-                var initHandler = serviceProvider.GetRequiredService<AgentLauncher.Commands.InitCommandHandler>();
+                var initHandler = serviceProvider.GetRequiredService<Commands.InitCommandHandler>();
                 var initOk = await initHandler.RunAsync();
                 if (!initOk)
                 {
@@ -139,7 +139,7 @@ public static class CommandFactory
                 return;
             }
 
-            var launcher = serviceProvider.GetRequiredService<AgentLauncher.Commands.LaunchAgentCommandHandler>();
+            var launcher = serviceProvider.GetRequiredService<Commands.LaunchAgentCommandHandler>();
             var ok = await launcher.RunAsync(agentType, model, worktree, directory, dryRun, monitor);
             if (!ok)
             {

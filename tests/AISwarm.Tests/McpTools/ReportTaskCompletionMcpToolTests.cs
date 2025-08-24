@@ -55,7 +55,7 @@ public class ReportTaskCompletionMcpToolTests
         using var scope = _scopeService.CreateReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
         task.ShouldNotBeNull();
-        task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Completed);
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Completed);
         task.Result.ShouldBe(completionResult);
         task.CompletedAt.ShouldNotBeNull();
     }
@@ -124,7 +124,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
@@ -143,7 +143,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Completed,
+            Status = DataLayer.Entities.TaskStatus.Completed,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,

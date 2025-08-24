@@ -2,6 +2,7 @@ using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using AISwarm.Server.Entities;
 
 namespace AISwarm.Server.McpTools;
 
@@ -25,13 +26,13 @@ public class ReportTaskCompletionMcpTool(
                 .Failure($"Task not found: {taskId}");
         }
 
-        if (task.Status == AISwarm.DataLayer.Entities.TaskStatus.Completed)
+        if (task.Status == DataLayer.Entities.TaskStatus.Completed)
         {
             return ReportTaskCompletionResult
                 .Failure($"Task {taskId} is already completed");
         }
 
-        task.Status = AISwarm.DataLayer.Entities.TaskStatus.Completed;
+        task.Status = DataLayer.Entities.TaskStatus.Completed;
         task.Result = result;
         task.CompletedAt = timeService.UtcNow;
 

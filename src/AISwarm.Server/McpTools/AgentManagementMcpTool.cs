@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 
@@ -155,7 +156,7 @@ public class AgentManagementMcpTool(
 
             // Use the local agent service to handle process termination and database updates
             await localAgentService.KillAgentAsync(agentId);
-            
+
             return KillAgentResult.SuccessWith(agentId);
         }
         catch (Exception ex)

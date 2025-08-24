@@ -1,4 +1,4 @@
-namespace AISwarm.Server.McpTools;
+namespace AISwarm.Server.Entities;
 
 public class GetTaskStatusResult
 {

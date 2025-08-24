@@ -1,4 +1,4 @@
-namespace AISwarm.Server.McpTools;
+namespace AISwarm.Server.Entities;
 
 /// <summary>
 /// Result of creating a task via MCP tool

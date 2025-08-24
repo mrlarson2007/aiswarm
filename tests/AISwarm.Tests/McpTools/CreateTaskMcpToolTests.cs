@@ -61,7 +61,7 @@ public class CreateTaskMcpToolTests
         task.AgentId.ShouldBe(agentId);
         task.Persona.ShouldBe(persona);
         task.Description.ShouldBe(description);
-        task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
         task.CreatedAt.ShouldBe(expectedCreatedAt);
     }
 
@@ -132,19 +132,19 @@ public class CreateTaskMcpToolTests
         task.AgentId.ShouldBeNull();
         task.Persona.ShouldBe(persona);
         task.Description.ShouldBe(description);
-        task.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
     }
 
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
-        var agent = new AISwarm.DataLayer.Entities.Agent
+        var agent = new DataLayer.Entities.Agent
         {
             Id = agentId,
             PersonaId = "test-persona",
             AgentType = "test",
             WorkingDirectory = "/test",
-            Status = AISwarm.DataLayer.Entities.AgentStatus.Running,
+            Status = DataLayer.Entities.AgentStatus.Running,
             LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
         };
         scope.Agents.Add(agent);
@@ -155,13 +155,13 @@ public class CreateTaskMcpToolTests
     private async Task CreateStoppedAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
-        var agent = new AISwarm.DataLayer.Entities.Agent
+        var agent = new DataLayer.Entities.Agent
         {
             Id = agentId,
             PersonaId = "test-persona",
             AgentType = "test",
             WorkingDirectory = "/test",
-            Status = AISwarm.DataLayer.Entities.AgentStatus.Stopped,
+            Status = DataLayer.Entities.AgentStatus.Stopped,
             LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
         };
         scope.Agents.Add(agent);

@@ -3,6 +3,7 @@ using ModelContextProtocol.Server;
 using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Server.Entities;
 
 namespace AISwarm.Server.McpTools;
 
@@ -57,7 +58,7 @@ public class CreateTaskMcpTool(
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,

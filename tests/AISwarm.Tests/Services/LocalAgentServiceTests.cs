@@ -351,38 +351,38 @@ public class LocalAgentServiceTests : IDisposable
         var request = new AgentRegistrationRequest
         {
             PersonaId = "implementer",
-            AgentType = "implementer", 
+            AgentType = "implementer",
             WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
-        
+
         // Create some tasks for this agent
         var task1 = new WorkItem
         {
             Id = "task-1",
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.InProgress,
+            Status = DataLayer.Entities.TaskStatus.InProgress,
             Persona = "implementer",
             Description = "Task 1 in progress",
             CreatedAt = _timeService.UtcNow,
             StartedAt = _timeService.UtcNow
         };
-        
+
         var task2 = new WorkItem
         {
-            Id = "task-2", 
+            Id = "task-2",
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = "implementer",
             Description = "Task 2 pending",
             CreatedAt = _timeService.UtcNow
         };
-        
+
         var task3 = new WorkItem
         {
             Id = "task-3",
             AgentId = "other-agent",
-            Status = AISwarm.DataLayer.Entities.TaskStatus.InProgress, 
+            Status = DataLayer.Entities.TaskStatus.InProgress,
             Persona = "implementer",
             Description = "Task 3 for different agent",
             CreatedAt = _timeService.UtcNow
@@ -400,18 +400,18 @@ public class LocalAgentServiceTests : IDisposable
         var updatedTask3 = await _dbContext.Tasks.FindAsync("task-3");
 
         // Task 1 was InProgress for this agent - should be Failed
-        updatedTask1!.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Failed);
+        updatedTask1!.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
         updatedTask1.Result.ShouldNotBeNull();
         updatedTask1.Result.ShouldContain("Agent terminated");
         updatedTask1.CompletedAt.ShouldBe(_timeService.UtcNow);
 
-        // Task 2 was only Pending for this agent - should remain Pending 
-        updatedTask2!.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.Pending);
+        // Task 2 was only Pending for this agent - should remain Pending
+        updatedTask2!.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
         updatedTask2.Result.ShouldBeNull();
         updatedTask2.CompletedAt.ShouldBeNull();
 
         // Task 3 belongs to different agent - should be unchanged
-        updatedTask3!.Status.ShouldBe(AISwarm.DataLayer.Entities.TaskStatus.InProgress);
+        updatedTask3!.Status.ShouldBe(DataLayer.Entities.TaskStatus.InProgress);
         updatedTask3.Result.ShouldBeNull();
         updatedTask3.CompletedAt.ShouldBeNull();
     }

@@ -1,6 +1,7 @@
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using AISwarm.DataLayer;
+using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.McpTools;
@@ -124,7 +125,7 @@ public class GetNextTaskMcpTool(IDatabaseScopeService scopeService)
 
         // Verify task is still unassigned and pending
         if (!string.IsNullOrEmpty(task.AgentId) ||
-            task.Status != AISwarm.DataLayer.Entities.TaskStatus.Pending)
+            task.Status != DataLayer.Entities.TaskStatus.Pending)
         {
             return GetNextTaskResult.NoTasksAvailable();
         }

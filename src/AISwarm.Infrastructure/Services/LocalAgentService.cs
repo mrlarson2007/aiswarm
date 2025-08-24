@@ -31,7 +31,7 @@ public class LocalAgentService(
             PersonaId = request.PersonaId,
             AgentType = request.AgentType,
             WorkingDirectory = request.WorkingDirectory,
-            Status = AISwarm.DataLayer.Entities.AgentStatus.Starting,
+            Status = AgentStatus.Starting,
             RegisteredAt = currentTime,
             LastHeartbeat = currentTime,
             Model = request.Model,
@@ -84,7 +84,7 @@ public class LocalAgentService(
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
-            agent.Status = AISwarm.DataLayer.Entities.AgentStatus.Running;
+            agent.Status = AgentStatus.Running;
             agent.ProcessId = processId;
             agent.StartedAt = timeService.UtcNow;
             await scope.SaveChangesAsync();
@@ -128,7 +128,8 @@ public class LocalAgentService(
 
             // Handle dangling tasks when agent is killed
             var inProgressTasks = scope.Tasks
-                .Where(t => t.AgentId == agentId && t.Status == DataLayer.Entities.TaskStatus.InProgress)
+                .Where(t => t.AgentId == agentId)
+                .Where(t => t.Status == DataLayer.Entities.TaskStatus.InProgress)
                 .ToList();
 
             foreach (var task in inProgressTasks)

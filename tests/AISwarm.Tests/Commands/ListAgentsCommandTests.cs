@@ -34,7 +34,7 @@ public class ListAgentsCommandTests
         _logger.Infos.ShouldContain(i => i.Contains("planner"));
         _logger.Infos.ShouldContain(i => i.Contains("custom"));
         _logger.Infos.ShouldContain(i => i.Contains("External:"));
-        var sep = System.IO.Path.DirectorySeparatorChar;
+        var sep = Path.DirectorySeparatorChar;
         var expectedSegment = $"/repo{sep}.aiswarm{sep}personas";
         _logger.Infos.ShouldContain(s => s.Contains(expectedSegment));
     }

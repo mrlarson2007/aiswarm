@@ -119,7 +119,7 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
 
         // Configure very short polling timeout and interval for fast test
-        var configuration = new AISwarm.Server.McpTools.GetNextTaskConfiguration
+        var configuration = new GetNextTaskConfiguration
         {
             TimeToWaitForTask = TimeSpan.FromMilliseconds(50),  // Very short timeout
             PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
@@ -158,7 +158,7 @@ public class GetNextTaskMcpToolTests
         await CreateRunningAgentAsync(agentId);
 
         // Configure longer polling timeout so we can simulate task arriving
-        var configuration = new AISwarm.Server.McpTools.GetNextTaskConfiguration
+        var configuration = new GetNextTaskConfiguration
         {
             TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
             PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
@@ -191,13 +191,13 @@ public class GetNextTaskMcpToolTests
     private async Task CreateRunningAgentAsync(string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
-        var agent = new AISwarm.DataLayer.Entities.Agent
+        var agent = new Agent
         {
             Id = agentId,
             PersonaId = "test-persona",
             AgentType = "test",
             WorkingDirectory = "/test",
-            Status = AISwarm.DataLayer.Entities.AgentStatus.Running,
+            Status = AgentStatus.Running,
             LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
         };
         scope.Agents.Add(agent);
@@ -209,11 +209,11 @@ public class GetNextTaskMcpToolTests
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
-        var task = new AISwarm.DataLayer.Entities.WorkItem
+        var task = new WorkItem
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
@@ -230,11 +230,11 @@ public class GetNextTaskMcpToolTests
         var newScopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
         using var scope = newScopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
-        var task = new AISwarm.DataLayer.Entities.WorkItem
+        var task = new WorkItem
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
@@ -281,11 +281,11 @@ public class GetNextTaskMcpToolTests
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
-        var task = new AISwarm.DataLayer.Entities.WorkItem
+        var task = new WorkItem
         {
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
@@ -426,11 +426,11 @@ public class GetNextTaskMcpToolTests
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
-        var task = new AISwarm.DataLayer.Entities.WorkItem
+        var task = new WorkItem
         {
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,
@@ -478,11 +478,11 @@ public class GetNextTaskMcpToolTests
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
-        var task = new AISwarm.DataLayer.Entities.WorkItem
+        var task = new WorkItem
         {
             Id = taskId,
             AgentId = agentId,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = DataLayer.Entities.TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,
