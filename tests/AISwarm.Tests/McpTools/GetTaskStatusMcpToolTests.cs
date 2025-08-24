@@ -79,6 +79,22 @@ public class GetTaskStatusMcpToolTests
         result.CompletedAt.ShouldBe(_timeService.UtcNow.AddMinutes(5));
     }
 
+    [Fact]
+    public async Task WhenTaskHasAgentId_ShouldReturnAgentId()
+    {
+        // Arrange
+        var expectedAgentId = "test-agent-123";
+        var taskId = await CreateTaskWithAgentAsync("Pending", "Test persona", "Test description", expectedAgentId);
+
+        // Act
+        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(taskId);
+        result.AgentId.ShouldBe(expectedAgentId);
+    }
+
     private async Task<string> CreateTaskWithStatusAsync(
         string statusName,
         string persona,
@@ -93,6 +109,34 @@ public class GetTaskStatusMcpToolTests
         {
             Id = id,
             AgentId = string.Empty,
+            Status = status,
+            Persona = persona,
+            Description = description,
+            CreatedAt = _timeService.UtcNow,
+            StartedAt = _timeService.UtcNow.AddMinutes(1),
+            CompletedAt = _timeService.UtcNow.AddMinutes(5)
+        };
+        
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return id;
+    }
+
+    private async Task<string> CreateTaskWithAgentAsync(
+        string statusName,
+        string persona,
+        string description,
+        string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var id = Guid.NewGuid().ToString();
+        var status = Enum.Parse<DataLayer.Entities.TaskStatus>(statusName);
+
+        var task = new WorkItem
+        {
+            Id = id,
+            AgentId = agentId,
             Status = status,
             Persona = persona,
             Description = description,
