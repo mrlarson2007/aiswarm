@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace AISwarm.Infrastructure;
@@ -37,14 +38,18 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
 
                 if (timeoutMs.HasValue)
                 {
-                    var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()), Task.Delay(timeoutMs.Value));
+                    var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()),
+                        Task.Delay(timeoutMs.Value));
                     if (completed is not Task t || t.IsCanceled)
                     {
                         try
                         {
                             process.Kill();
                         }
-                        catch { }
+                        catch
+                        {
+                        }
+
                         return new ProcessResult(false, "", "Process timed out", -1);
                     }
                 }
@@ -57,29 +62,31 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
                 var stderr = await stderrTask;
                 return new ProcessResult(process.ExitCode == 0, stdout, stderr, process.ExitCode);
             }
+
+            if (timeoutMs.HasValue)
+            {
+                var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()), Task.Delay(timeoutMs.Value));
+                if (completed is not Task t || t.IsCanceled)
+                {
+                    try
+                    {
+                        process.Kill();
+                    }
+                    catch
+                    {
+                    }
+
+                    return new ProcessResult(false, "", "Process timed out", -1);
+                }
+            }
             else
             {
-                if (timeoutMs.HasValue)
-                {
-                    var completed = await Task.WhenAny(Task.Run(() => process.WaitForExit()), Task.Delay(timeoutMs.Value));
-                    if (completed is not Task t || t.IsCanceled)
-                    {
-                        try
-                        {
-                            process.Kill();
-                        }
-                        catch { }
-                        return new ProcessResult(false, "", "Process timed out", -1);
-                    }
-                }
-                else
-                {
-                    await process.WaitForExitAsync();
-                }
-                return new ProcessResult(process.ExitCode == 0, "", "", process.ExitCode);
+                await process.WaitForExitAsync();
             }
+
+            return new ProcessResult(process.ExitCode == 0, "", "", process.ExitCode);
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (Win32Exception ex)
         {
             // Common when the executable is not found or is not executable
             logger.Error($"Win32Exception launching '{fileName} {arguments}': {ex.Message}");
@@ -122,11 +129,12 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
             var result = Process.Start(startInfo);
             if (result == null)
             {
-                logger.Error($"Failed to start interactive process: Process.Start returned null for '{fileName} {arguments}'");
+                logger.Error(
+                    $"Failed to start interactive process: Process.Start returned null for '{fileName} {arguments}'");
                 return false;
             }
 
-            int counter = 0;
+            var counter = 0;
             while (result.HasExited == false && counter < 5)
             {
                 Thread.Sleep(500);
@@ -136,9 +144,11 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
 
             if (result.HasExited)
             {
-                logger.Error($"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
+                logger.Error(
+                    $"Interactive process exited immediately with code {result.ExitCode}: '{fileName} {arguments}' in directory '{workingDirectory}'");
                 return false;
             }
+
             return true;
         }
         catch (Exception ex)

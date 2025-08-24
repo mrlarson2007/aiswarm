@@ -9,15 +9,15 @@ using Moq;
 namespace AISwarm.Tests.Services;
 
 /// <summary>
-/// Tests for agent monitoring service that detects and terminates unresponsive agents
+///     Tests for agent monitoring service that detects and terminates unresponsive agents
 /// </summary>
 public class AgentMonitoringServiceTests : IDisposable
 {
+    private readonly CoordinationDbContext _dbContext;
+    private readonly Mock<ILocalAgentService> _localAgentService;
+    private readonly IDatabaseScopeService _scopeService;
     private readonly AgentMonitoringService _systemUnderTest;
     private readonly FakeTimeService _timeService;
-    private readonly CoordinationDbContext _dbContext;
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly Mock<ILocalAgentService> _localAgentService;
 
     public AgentMonitoringServiceTests()
     {
@@ -32,17 +32,18 @@ public class AgentMonitoringServiceTests : IDisposable
         _scopeService = new DatabaseScopeService(_dbContext);
         _localAgentService = new Mock<ILocalAgentService>();
 
-        var config = new AgentMonitoringConfiguration
-        {
-            HeartbeatTimeoutMinutes = 5,
-            CheckIntervalMinutes = 1
-        };
+        var config = new AgentMonitoringConfiguration { HeartbeatTimeoutMinutes = 5, CheckIntervalMinutes = 1 };
 
         _systemUnderTest = new AgentMonitoringService(
             _scopeService,
             _localAgentService.Object,
             _timeService,
             config);
+    }
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
     }
 
     [Fact]
@@ -114,10 +115,5 @@ public class AgentMonitoringServiceTests : IDisposable
 
         // Assert
         _localAgentService.Verify(s => s.KillAgentAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
     }
 }

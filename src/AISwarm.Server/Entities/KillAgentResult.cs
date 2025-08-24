@@ -4,26 +4,29 @@ public class KillAgentResult
 {
     public bool Success
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? ErrorMessage
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? AgentId
     {
-        get; init;
+        get;
+        init;
     }
 
-    public static KillAgentResult Failure(string message) => new()
+    public static KillAgentResult Failure(string message)
     {
-        Success = false,
-        ErrorMessage = message
-    };
+        return new KillAgentResult { Success = false, ErrorMessage = message };
+    }
 
-    public static KillAgentResult SuccessWith(string agentId) => new()
+    public static KillAgentResult SuccessWith(string agentId)
     {
-        Success = true,
-        AgentId = agentId
-    };
+        return new KillAgentResult { Success = true, AgentId = agentId };
+    }
 }

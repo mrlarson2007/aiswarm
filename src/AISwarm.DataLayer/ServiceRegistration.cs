@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,7 @@ public static class ServiceRegistration
         var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseSqlite($"Data Source={databasePath}")
-                .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.AmbientTransactionWarning)));
+                .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));
 
         // Initialize database after registration
         using var tempServiceProvider = services.BuildServiceProvider();

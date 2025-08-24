@@ -11,17 +11,17 @@ namespace AISwarm.Tests.McpTools;
 
 public class AgentManagementMcpToolTests
 {
-    private readonly ServiceProvider _serviceProvider;
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly FakeTimeService _timeService;
     private readonly TestLogger _logger;
+    private readonly IDatabaseScopeService _scopeService;
+    private readonly ServiceProvider _serviceProvider;
+    private readonly FakeTimeService _timeService;
 
     public AgentManagementMcpToolTests()
     {
         var services = new ServiceCollection();
 
         services.AddDbContext<CoordinationDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
+            options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         _timeService = new FakeTimeService();
         _logger = new TestLogger();
         services.AddSingleton<ITimeService>(_timeService);
@@ -148,7 +148,8 @@ public class AgentManagementMcpToolTests
 
         // Assert
         result.Success.ShouldBeTrue();
-        result.AgentId.ShouldBe("test-agent-123"); // Should be the registered agent ID from fake service, not random GUID
+        result.AgentId
+            .ShouldBe("test-agent-123"); // Should be the registered agent ID from fake service, not random GUID
         result.ProcessId.ShouldBeNull(); // Currently null since IGeminiService doesn't return process ID
         result.ErrorMessage.ShouldBeNull();
     }
@@ -178,11 +179,11 @@ public class AgentManagementMcpToolTests
 
         // Act
         var result = await SystemUnderTest.LaunchAgentAsync(
-            persona: "implementer",
-            description: "Test task",
-            model: null,
-            worktreeName: null,
-            yolo: true);
+            "implementer",
+            "Test task",
+            null,
+            null,
+            true);
 
         // Assert
         result.Success.ShouldBeTrue();

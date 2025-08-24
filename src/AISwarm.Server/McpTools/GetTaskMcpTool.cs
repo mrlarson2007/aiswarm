@@ -3,6 +3,7 @@ using AISwarm.DataLayer;
 using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Server.McpTools;
 
@@ -12,14 +13,13 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
     [McpServerTool(Name = "get_tasks_by_status")]
     [Description("Get tasks by status")]
     public async Task<GetTasksByStatusResult> GetTasksByStatusAsync(
-        [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")] string status)
+        [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")]
+        string status)
     {
-        if (!Enum.TryParse<DataLayer.Entities.TaskStatus>(
-                status, ignoreCase: true, out var taskStatus))
-        {
+        if (!Enum.TryParse<TaskStatus>(
+                status, true, out var taskStatus))
             return GetTasksByStatusResult.Failure(
                 $"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
-        }
 
         using var scope = scopeService.CreateReadScope();
 
@@ -40,33 +40,33 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
     [McpServerTool(Name = "get_task_status")]
     [Description("Get the status of a task by ID")]
     public async Task<GetTaskStatusResult> GetTaskStatusAsync(
-        [Description("ID of the task to query")] string taskId)
+        [Description("ID of the task to query")]
+        string taskId)
     {
         using var scope = scopeService.CreateReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
 
         if (task is null)
-        {
             return GetTaskStatusResult.SuccessWith(
-                taskId: null,
-                status: null,
-                agentId: null,
-                startedAt: null,
-                completedAt: null);
-        }
+                null,
+                null,
+                null,
+                null,
+                null);
 
         return GetTaskStatusResult.SuccessWith(
-            taskId: task.Id,
-            status: task.Status.ToString(),
-            agentId: task.AgentId,
-            startedAt: task.StartedAt,
-            completedAt: task.CompletedAt);
+            task.Id,
+            task.Status.ToString(),
+            task.AgentId,
+            task.StartedAt,
+            task.CompletedAt);
     }
 
     [McpServerTool(Name = "get_tasks_by_agent_id")]
     [Description("Get tasks by agent ID")]
     public async Task<GetTasksByStatusResult> GetTasksByAgentIdAsync(
-        [Description("ID of the agent to query tasks for")] string agentId)
+        [Description("ID of the agent to query tasks for")]
+        string agentId)
     {
         using var scope = scopeService.CreateReadScope();
         var tasks = await scope.Tasks
@@ -86,13 +86,14 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
     [McpServerTool(Name = "get_tasks_by_agent_id_and_status")]
     [Description("Get tasks by agent ID and status")]
     public async Task<GetTasksByStatusResult> GetTasksByAgentIdAndStatusAsync(
-        [Description("ID of the agent to query tasks for")] string agentId,
-        [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")] string status)
+        [Description("ID of the agent to query tasks for")]
+        string agentId,
+        [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")]
+        string status)
     {
-        if (!Enum.TryParse<DataLayer.Entities.TaskStatus>(status, ignoreCase: true, out var taskStatus))
-        {
-            return GetTasksByStatusResult.Failure($"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
-        }
+        if (!Enum.TryParse<TaskStatus>(status, true, out var taskStatus))
+            return GetTasksByStatusResult.Failure(
+                $"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
 
         using var scope = scopeService.CreateReadScope();
         var tasks = await scope.Tasks

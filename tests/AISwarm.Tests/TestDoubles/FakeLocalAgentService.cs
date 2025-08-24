@@ -5,12 +5,24 @@ namespace AISwarm.Tests.TestDoubles;
 
 public class FakeLocalAgentService : ILocalAgentService
 {
-    public string FailureMessage { get; set; } = string.Empty;
+    public string FailureMessage
+    {
+        get;
+        set;
+    } = string.Empty;
+
     public bool ShouldFail => !string.IsNullOrEmpty(FailureMessage);
-    public string RegisteredAgentId { get; set; } = "test-agent-123";
+
+    public string RegisteredAgentId
+    {
+        get;
+        set;
+    } = "test-agent-123";
+
     public Agent? RetrievedAgent
     {
-        get; set;
+        get;
+        set;
     }
 
     public Task<string> RegisterAgentAsync(AgentRegistrationRequest request)

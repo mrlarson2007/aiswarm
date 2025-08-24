@@ -4,12 +4,37 @@ namespace AISwarm.Tests.TestDoubles;
 
 public class FakeGitService : IGitService
 {
-    public string FailureMessage { get; set; } = string.Empty;
+    public string FailureMessage
+    {
+        get;
+        set;
+    } = string.Empty;
+
     public bool ShouldFail => !string.IsNullOrEmpty(FailureMessage);
-    public bool IsRepository { get; set; } = true;
-    public string? RepositoryRoot { get; set; } = "/test/repo";
-    public Dictionary<string, string> ExistingWorktrees { get; set; } = new();
-    public string CreatedWorktreePath { get; set; } = "/test/repo/worktree";
+
+    public bool IsRepository
+    {
+        get;
+        set;
+    } = true;
+
+    public string? RepositoryRoot
+    {
+        get;
+        set;
+    } = "/test/repo";
+
+    public Dictionary<string, string> ExistingWorktrees
+    {
+        get;
+        set;
+    } = new();
+
+    public string CreatedWorktreePath
+    {
+        get;
+        set;
+    } = "/test/repo/worktree";
 
     public Task<bool> IsGitRepositoryAsync()
     {

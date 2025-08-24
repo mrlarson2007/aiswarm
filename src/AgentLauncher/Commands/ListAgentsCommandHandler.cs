@@ -1,27 +1,29 @@
-using AISwarm.Infrastructure;
 using System.Text;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Commands;
 
 /// <summary>
-/// Handler responsible for displaying available agent types and their source origins.
+///     Handler responsible for displaying available agent types and their source origins.
 /// </summary>
 public class ListAgentsCommandHandler(
     IContextService contextService,
     IAppLogger logger,
     IEnvironmentService env)
 {
-
     public bool Run()
     {
-        static string Describe(string key) => key switch
+        static string Describe(string key)
         {
-            "planner" => "Plans and breaks down tasks",
-            "implementer" => "Implements code and features using TDD",
-            "reviewer" => "Reviews and tests code",
-            "tester" => "Tests code and functionality",
-            _ => "Custom agent type"
-        };
+            return key switch
+            {
+                "planner" => "Plans and breaks down tasks",
+                "implementer" => "Implements code and features using TDD",
+                "reviewer" => "Reviews and tests code",
+                "tester" => "Tests code and functionality",
+                _ => "Custom agent type"
+            };
+        }
 
         var sources = contextService.GetAgentTypeSources();
         var envPaths = env.GetEnvironmentVariable("AISWARM_PERSONAS_PATH");

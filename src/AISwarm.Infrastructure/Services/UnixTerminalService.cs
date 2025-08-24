@@ -6,18 +6,22 @@ public class UnixTerminalService(IProcessLauncher inner) : IInteractiveTerminalS
         string command,
         string workingDirectory,
         int? timeoutMs = null,
-        bool captureOutput = true) =>
-            await inner.RunAsync("bash", $"-c '{EscapeShellArgument(command)}'", workingDirectory, timeoutMs, captureOutput);
+        bool captureOutput = true)
+    {
+        return await inner.RunAsync("bash", $"-c '{EscapeShellArgument(command)}'", workingDirectory, timeoutMs,
+            captureOutput);
+    }
 
     public bool LaunchTerminalInteractive(
         string command,
-        string workingDirectory) =>
-            inner.StartInteractive("bash", $"-c '{EscapeShellArgument(command)} && exec $SHELL'", workingDirectory);
+        string workingDirectory)
+    {
+        return inner.StartInteractive("bash", $"-c '{EscapeShellArgument(command)} && exec $SHELL'", workingDirectory);
+    }
 
     private static string EscapeShellArgument(string argument)
     {
         // Escape single quotes by replacing each ' with '\''
         return argument.Replace("'", "'\\''");
     }
-
 }

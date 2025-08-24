@@ -4,13 +4,22 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-/// Database context for agent coordination and task management
+///     Database context for agent coordination and task management
 /// </summary>
 public class CoordinationDbContext(
     DbContextOptions<CoordinationDbContext> options) : DbContext(options)
 {
-    public DbSet<Agent> Agents { get; set; } = null!;
-    public DbSet<WorkItem> Tasks { get; set; } = null!;
+    public DbSet<Agent> Agents
+    {
+        get;
+        set;
+    } = null!;
+
+    public DbSet<WorkItem> Tasks
+    {
+        get;
+        set;
+    } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

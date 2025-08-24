@@ -248,9 +248,9 @@ public class GetTaskMcpToolTests
     public async Task GetTasksByAgentIdAsync_WhenSearchingForNullAgentId_ShouldReturnTasksWithNullAgentId()
     {
         // Arrange - Create tasks with null and non-null agent IDs
-        await CreateTaskAsync("task1", TaskStatus.Pending, null);
+        await CreateTaskAsync("task1", TaskStatus.Pending);
         await CreateTaskAsync("task2", TaskStatus.InProgress, "actual-agent");
-        await CreateTaskAsync("task3", TaskStatus.Completed, null);
+        await CreateTaskAsync("task3", TaskStatus.Completed);
 
         // Act
         var result = await SystemUnderTest.GetTasksByAgentIdAsync(null!);
@@ -272,10 +272,10 @@ public class GetTaskMcpToolTests
     {
         // Arrange
         var targetAgentId = "agent-123";
-        var task1 = await CreateTaskAsync("task1", TaskStatus.Pending, targetAgentId);
-        var task2 = await CreateTaskAsync("task2", TaskStatus.InProgress, "other-agent");
-        var task3 = await CreateTaskAsync("task3", TaskStatus.Completed, targetAgentId);
-        var task4 = await CreateTaskAsync("task4", TaskStatus.Failed, "another-agent");
+        await CreateTaskAsync("task1", TaskStatus.Pending, targetAgentId);
+        await CreateTaskAsync("task2", TaskStatus.InProgress, "other-agent");
+        await CreateTaskAsync("task3", TaskStatus.Completed, targetAgentId);
+        await CreateTaskAsync("task4", TaskStatus.Failed, "another-agent");
 
         // Act
         var result = await SystemUnderTest.GetTasksByAgentIdAsync(targetAgentId);
@@ -305,8 +305,8 @@ public class GetTaskMcpToolTests
         // Arrange
         var agentId = "timestamp-agent";
         var baseTime = _timeService.UtcNow;
-        var task1 = await CreateTaskAsync("inProgressTask", TaskStatus.InProgress, agentId);
-        var task2 = await CreateTaskAsync("completedTask", TaskStatus.Completed, agentId);
+        await CreateTaskAsync("inProgressTask", TaskStatus.InProgress, agentId);
+        await CreateTaskAsync("completedTask", TaskStatus.Completed, agentId);
 
         // Act
         var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId);
@@ -324,7 +324,7 @@ public class GetTaskMcpToolTests
         completedTask.CompletedAt.ShouldBe(baseTime);
     }
 
-    // GetTasksByAgentIdAndStatus Tests  
+    // GetTasksByAgentIdAndStatus Tests
     [Fact]
     public async Task GetTasksByAgentIdAndStatusAsync_WhenInvalidStatus_ShouldReturnFailure()
     {

@@ -4,44 +4,62 @@ public class GetTasksByStatusResult
 {
     public bool Success
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? ErrorMessage
     {
-        get; init;
+        get;
+        init;
     }
+
     public TaskInfo[]? Tasks
     {
-        get; init;
+        get;
+        init;
     }
 
-    public static GetTasksByStatusResult Failure(string message) => new()
+    public static GetTasksByStatusResult Failure(string message)
     {
-        Success = false,
-        ErrorMessage = message
-    };
+        return new GetTasksByStatusResult { Success = false, ErrorMessage = message };
+    }
 
-    public static GetTasksByStatusResult SuccessWith(TaskInfo[] tasks) => new()
+    public static GetTasksByStatusResult SuccessWith(TaskInfo[] tasks)
     {
-        Success = true,
-        Tasks = tasks
-    };
+        return new GetTasksByStatusResult { Success = true, Tasks = tasks };
+    }
 }
 
 public class TaskInfo
 {
-    public string TaskId { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
+    public string TaskId
+    {
+        get;
+        init;
+    } = string.Empty;
+
+    public string Status
+    {
+        get;
+        init;
+    } = string.Empty;
+
     public string? AgentId
     {
-        get; init;
+        get;
+        init;
     }
+
     public DateTime? StartedAt
     {
-        get; init;
+        get;
+        init;
     }
+
     public DateTime? CompletedAt
     {
-        get; init;
+        get;
+        init;
     }
 }

@@ -1,14 +1,15 @@
-using ModelContextProtocol.Server;
 using System.ComponentModel;
 using AISwarm.DataLayer;
+using AISwarm.Infrastructure;
 using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
-using AISwarm.Infrastructure;
+using ModelContextProtocol.Server;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Server.McpTools;
 
 /// <summary>
-/// MCP tool implementation for agents to request their next task
+///     MCP tool implementation for agents to request their next task
 /// </summary>
 [McpServerToolType]
 public class GetNextTaskMcpTool(
@@ -22,20 +23,21 @@ public class GetNextTaskMcpTool(
     } = GetNextTaskConfiguration.Production;
 
     /// <summary>
-    /// Gets the next pending task for the specified agent
+    ///     Gets the next pending task for the specified agent
     /// </summary>
     /// <param name="agentId">ID of the agent requesting a task</param>
     /// <returns>Result with task information or error message</returns>
     [McpServerTool(Name = "get_next_task")]
     [Description("Gets the next pending task for the specified agent")]
     public async Task<GetNextTaskResult> GetNextTaskAsync(
-        [Description("ID of the agent requesting a task")] string agentId)
+        [Description("ID of the agent requesting a task")]
+        string agentId)
     {
         return await GetNextTaskAsync(agentId, Configuration);
     }
 
     /// <summary>
-    /// Gets the next pending task for the specified agent with custom configuration
+    ///     Gets the next pending task for the specified agent with custom configuration
     /// </summary>
     /// <param name="agentId">ID of the agent requesting a task</param>
     /// <param name="configuration">Polling configuration for timeouts and intervals</param>
@@ -49,10 +51,8 @@ public class GetNextTaskMcpTool(
         {
             var agent = await scope.Agents.FindAsync(agentId);
             if (agent == null)
-            {
                 return GetNextTaskResult
                     .Failure($"Agent not found: {agentId}");
-            }
         }
 
         // Update agent heartbeat since the agent is actively requesting tasks
@@ -70,35 +70,31 @@ public class GetNextTaskMcpTool(
                 // Look for the next pending task for this agent
                 var pendingTask = await scope.Tasks
                     .Where(t => t.AgentId == agentId)
-                    .Where(t => t.Status == DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => t.Status == TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
 
                 // If task found, return it immediately
                 if (pendingTask != null)
-                {
                     return GetNextTaskResult.SuccessWithTask(
                         pendingTask.Id,
                         pendingTask.Persona,
                         pendingTask.Description);
-                }
 
                 // No assigned tasks found, look for unassigned tasks to claim
                 var unassignedTask = await scope.Tasks
                     .Where(t => t.AgentId == null || t.AgentId == string.Empty)
-                    .Where(t => t.Status == DataLayer.Entities.TaskStatus.Pending)
+                    .Where(t => t.Status == TaskStatus.Pending)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
                     .FirstOrDefaultAsync();
 
                 if (unassignedTask != null)
-                {
                     // Claim the unassigned task by setting the AgentId
                     // Need to use a write scope for this operation
                     return await ClaimUnassignedTaskAsync(
                         unassignedTask.Id, agentId);
-                }
             }
 
             // Wait for the polling interval before checking again
@@ -110,7 +106,7 @@ public class GetNextTaskMcpTool(
     }
 
     /// <summary>
-    /// Claims an unassigned task by setting the AgentId to the requesting agent
+    ///     Claims an unassigned task by setting the AgentId to the requesting agent
     /// </summary>
     /// <param name="taskId">ID of the task to claim</param>
     /// <param name="agentId">ID of the agent claiming the task</param>
@@ -124,17 +120,12 @@ public class GetNextTaskMcpTool(
         // Re-fetch the task to ensure it's still unassigned (race condition protection)
         var task = await scope.Tasks.FindAsync(taskId);
 
-        if (task == null)
-        {
-            return GetNextTaskResult.NoTasksAvailable();
-        }
+        if (task == null) return GetNextTaskResult.NoTasksAvailable();
 
         // Verify task is still unassigned and pending
         if (!string.IsNullOrEmpty(task.AgentId) ||
-            task.Status != DataLayer.Entities.TaskStatus.Pending)
-        {
+            task.Status != TaskStatus.Pending)
             return GetNextTaskResult.NoTasksAvailable();
-        }
 
         // Claim the task
         task.AgentId = agentId;

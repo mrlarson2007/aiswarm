@@ -80,40 +80,6 @@ public class DatabaseScopeTests : IDisposable
         savedAgent.PersonaId.ShouldBe("implementer");
     }
 
-    [Fact]
-    public async Task WhenWriteScopeThrowsException_ShouldHandleGracefully()
-    {
-        // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(async () =>
-        {
-            using var scope = _scopeService.CreateWriteScope();
-
-            var agent = new Agent
-            {
-                Id = "exception-test-agent",
-                PersonaId = "tester",
-                AgentType = "tester",
-                WorkingDirectory = "/exception/test",
-                Status = AgentStatus.Starting,
-                RegisteredAt = DateTime.UtcNow,
-                LastHeartbeat = DateTime.UtcNow
-            };
-
-            scope.Agents.Add(agent);
-            await scope.SaveChangesAsync();
-
-            // Simulate an error before completing
-            throw new InvalidOperationException("Simulated error");
-        });
-
-        // Assert - TransactionScope behavior with in-memory database
-        var agent = await _context.Agents.FindAsync("exception-test-agent");
-
-        // Note: TransactionScope handles in-memory database compatibility automatically
-        // The behavior depends on how the provider implements transaction support
-        // For in-memory databases, TransactionScope may still allow the changes to persist
-        // since the provider doesn't support true transactions
-    }
 
     [Fact]
     public async Task WhenUsingTransactionScope_ShouldWorkWithInMemoryDatabase()

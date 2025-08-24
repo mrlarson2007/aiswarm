@@ -1,14 +1,15 @@
-using AISwarm.DataLayer.Entities;
-using ModelContextProtocol.Server;
 using System.ComponentModel;
 using AISwarm.DataLayer;
+using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Server.Entities;
+using ModelContextProtocol.Server;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Server.McpTools;
 
 /// <summary>
-/// MCP tool implementation for creating tasks and assigning them to agents
+///     MCP tool implementation for creating tasks and assigning them to agents
 /// </summary>
 [McpServerToolType]
 public class CreateTaskMcpTool(
@@ -16,7 +17,7 @@ public class CreateTaskMcpTool(
     ITimeService timeService)
 {
     /// <summary>
-    /// Creates a new task and assigns it to the specified agent
+    ///     Creates a new task and assigns it to the specified agent
     /// </summary>
     /// <param name="agentId">ID of the agent to assign the task to</param>
     /// <param name="persona">Full persona markdown content for the agent</param>
@@ -26,10 +27,14 @@ public class CreateTaskMcpTool(
     [McpServerTool(Name = "create_task")]
     [Description("Creates a new task and assigns it to the specified agent")]
     public async Task<CreateTaskResult> CreateTaskAsync(
-        [Description("ID of the agent to assign the task to (optional - leave empty for unassigned task)")] string? agentId,
-        [Description("Full persona markdown content for the agent")] string persona,
-        [Description("Description of what the agent should accomplish")] string description,
-        [Description("Priority of the task: Low, Normal, High, or Critical")] TaskPriority priority = TaskPriority.Normal)
+        [Description("ID of the agent to assign the task to (optional - leave empty for unassigned task)")]
+        string? agentId,
+        [Description("Full persona markdown content for the agent")]
+        string persona,
+        [Description("Description of what the agent should accomplish")]
+        string description,
+        [Description("Priority of the task: Low, Normal, High, or Critical")]
+        TaskPriority priority = TaskPriority.Normal)
     {
         using var scope = scopeService.CreateWriteScope();
 
@@ -39,18 +44,14 @@ public class CreateTaskMcpTool(
             // Validate that the agent exists
             var agent = await scope.Agents.FindAsync(agentId);
             if (agent == null)
-            {
                 return CreateTaskResult
                     .Failure($"Agent not found: {agentId}");
-            }
 
             // Validate that the agent is in a valid state to receive tasks
             if (agent.Status != AgentStatus.Running && agent.Status != AgentStatus.Starting)
-            {
                 return CreateTaskResult
                     .Failure($"Agent is not in a valid state to receive tasks: {agentId}. " +
-                        $"Current status: {agent.Status}. Agent must be Running or Starting.");
-            }
+                             $"Current status: {agent.Status}. Agent must be Running or Starting.");
         }
 
         var taskId = Guid.NewGuid().ToString();
@@ -58,7 +59,7 @@ public class CreateTaskMcpTool(
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,

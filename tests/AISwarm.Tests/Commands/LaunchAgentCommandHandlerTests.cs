@@ -490,7 +490,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             monitor: true);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result);
+        result.ShouldBeTrue();
 
         // Get the registered agent from database
         var agents = await _dbContext.Agents.ToListAsync();
@@ -534,7 +534,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             monitor: true);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result);
+        result.ShouldBeTrue();
 
         // Get the registered agent from database
         var agents = await _dbContext.Agents.ToListAsync();
@@ -571,7 +571,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             monitor: true);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result);
+        result.ShouldBeTrue();
 
         // Get the registered agent from database
         var agents = await _dbContext.Agents.ToListAsync();
@@ -617,7 +617,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
             monitor: false);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result);
+        result.ShouldBeTrue();
 
         // Should have launched Gemini without agent settings (no configuration file)
         _process.Invocations.ShouldContain(i =>

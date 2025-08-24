@@ -182,13 +182,13 @@ public class GetNextTaskMcpToolTests
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, taskId);
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, expectedPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, expectedDescription);
-        ShouldBeNullExtensions.ShouldNotBeNull<string>(result.Message);
-        ShouldBeStringTestExtensions.ShouldContain(result.Message, "call this tool again");
-        ShouldBeStringTestExtensions.ShouldContain(result.Message, "get the next task");
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(taskId);
+        result.Persona.ShouldBe(expectedPersona);
+        result.Description.ShouldBe(expectedDescription);
+        result.Message.ShouldNotBeNull<string>();
+        result.Message.ShouldContain("call this tool again");
+        result.Message.ShouldContain("get the next task");
 
         // Should have returned quickly once task was available, not waited full timeout
         elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
@@ -269,12 +269,12 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, unassignedTaskId);
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, expectedPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, expectedDescription);
-        ShouldBeNullExtensions.ShouldNotBeNull<string>(result.Message);
-        ShouldBeStringTestExtensions.ShouldContain(result.Message, "call this tool again");
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(unassignedTaskId);
+        result.Persona.ShouldBe(expectedPersona);
+        result.Description.ShouldBe(expectedDescription);
+        result.Message.ShouldNotBeNull<string>();
+        result.Message.ShouldContain("call this tool again");
 
         // Verify the task is now assigned to the requesting agent
         using var scope = _scopeService.CreateReadScope();
@@ -328,10 +328,10 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the assigned task, not the unassigned one (even though unassigned is older)
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, assignedTaskId);  // Assigned task should have priority
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, assignedPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, assignedDescription);
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(assignedTaskId);  // Assigned task should have priority
+        result.Persona.ShouldBe(assignedPersona);
+        result.Description.ShouldBe(assignedDescription);
 
         // Verify the unassigned task is still unassigned
         using var scope = _scopeService.CreateReadScope();
@@ -369,14 +369,14 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should return a synthetic default task instructing a re-query
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
+        result.Success.ShouldBeTrue();
         result.TaskId.ShouldNotBeNull();
         result.TaskId!.ShouldStartWith("system:");
         result.Persona.ShouldNotBeNull();
         result.Description.ShouldNotBeNull();
-        ShouldBeNullExtensions.ShouldNotBeNull<string>(result.Message);
-        ShouldBeStringTestExtensions.ShouldContain(result.Message, "No tasks available");
-        ShouldBeStringTestExtensions.ShouldContain(result.Message, "call this tool again");
+        result.Message.ShouldNotBeNull<string>();
+        result.Message.ShouldContain("No tasks available");
+        result.Message.ShouldContain("call this tool again");
 
         // Verify the task is still assigned to the other agent
         using var readScope = _scopeService.CreateReadScope();
@@ -411,10 +411,10 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the high priority task despite being newer
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, highPriorityTaskId);
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, highPriorityPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, highPriorityDescription);
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(highPriorityTaskId);
+        result.Persona.ShouldBe(highPriorityPersona);
+        result.Description.ShouldBe(highPriorityDescription);
 
         // Verify the task is now assigned to the requesting agent
         using var scope = _scopeService.CreateReadScope();
@@ -474,10 +474,10 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the high priority task despite being newer
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, highPriorityTaskId);
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, highPriorityPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, highPriorityDescription);
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(highPriorityTaskId);
+        result.Persona.ShouldBe(highPriorityPersona);
+        result.Description.ShouldBe(highPriorityDescription);
     }
 
     private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, TaskPriority priority)
@@ -526,10 +526,10 @@ public class GetNextTaskMcpToolTests
         var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
         // Assert - Should get the assigned task despite unassigned having higher priority
-        ShouldBeBooleanExtensions.ShouldBeTrue(result.Success);
-        ShouldBeStringTestExtensions.ShouldBe(result.TaskId, assignedTaskId);
-        ShouldBeStringTestExtensions.ShouldBe(result.Persona, assignedPersona);
-        ShouldBeStringTestExtensions.ShouldBe(result.Description, assignedDescription);
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(assignedTaskId);
+        result.Persona.ShouldBe(assignedPersona);
+        result.Description.ShouldBe(assignedDescription);
 
         // Verify the unassigned task is still unassigned and available for claiming
         using var scope = _scopeService.CreateReadScope();

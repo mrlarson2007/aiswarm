@@ -27,18 +27,16 @@ public class ProgramConfigurationTests
         var serviceProvider = builder.Services.BuildServiceProvider();
 
         // Act & Assert
-        using (var scope = serviceProvider.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<CoordinationDbContext>();
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CoordinationDbContext>();
 
-            // Verify database connection string points to correct SQLite file
-            var connection = dbContext.Database.GetDbConnection();
-            connection.ConnectionString.ShouldContain(expectedDbPath);
-            connection.ConnectionString.ShouldContain("Data Source=");
+        // Verify database connection string points to correct SQLite file
+        var connection = dbContext.Database.GetDbConnection();
+        connection.ConnectionString.ShouldContain(expectedDbPath);
+        connection.ConnectionString.ShouldContain("Data Source=");
 
-            // Verify .aiswarm directory was created during configuration
-            Directory.Exists(Path.Combine(workingDirectory, ".aiswarm")).ShouldBeTrue();
-        }
+        // Verify .aiswarm directory was created during configuration
+        Directory.Exists(Path.Combine(workingDirectory, ".aiswarm")).ShouldBeTrue();
     }
 
     private static void ConfigureDatabaseServices(

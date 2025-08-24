@@ -3,21 +3,18 @@ using System.Diagnostics;
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Service for terminating OS processes
+///     Service for terminating OS processes
 /// </summary>
 public class ProcessTerminationService : IProcessTerminationService
 {
     /// <summary>
-    /// Attempts to kill a process by its process ID
+    ///     Attempts to kill a process by its process ID
     /// </summary>
     /// <param name="processId">The process ID to terminate</param>
     /// <returns>True if the process was successfully terminated, false otherwise</returns>
     public async Task<bool> KillProcessAsync(string processId)
     {
-        if (string.IsNullOrWhiteSpace(processId) || !int.TryParse(processId, out var pid))
-        {
-            return false;
-        }
+        if (string.IsNullOrWhiteSpace(processId) || !int.TryParse(processId, out var pid)) return false;
 
         try
         {

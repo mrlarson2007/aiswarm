@@ -10,7 +10,6 @@ public class ListWorktreesCommandHandlerTests
     private readonly PassThroughProcessLauncher _process = new();
     private readonly FakeFileSystemService _fs = new();
     private readonly TestLogger _logger = new();
-    private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
 
     private ListWorktreesCommandHandler SystemUnderTest => new(
         new GitService(_process, _fs, _logger),

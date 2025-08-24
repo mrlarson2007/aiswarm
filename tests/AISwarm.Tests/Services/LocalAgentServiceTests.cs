@@ -6,27 +6,33 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shouldly;
 using AgentStatus = AISwarm.DataLayer.Entities.AgentStatus;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.Services;
 
 public class LocalAgentServiceTests : IDisposable
 {
-    private readonly LocalAgentService _systemUnderTest;
-    private readonly FakeTimeService _timeService;
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
+    private readonly LocalAgentService _systemUnderTest;
+    private readonly FakeTimeService _timeService;
 
     public LocalAgentServiceTests()
     {
         _timeService = new FakeTimeService();
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _dbContext = new CoordinationDbContext(options);
         _scopeService = new DatabaseScopeService(_dbContext);
 
         _systemUnderTest = new LocalAgentService(_timeService, _scopeService);
+    }
+
+    public void Dispose()
+    {
+        _dbContext.Dispose();
     }
 
     [Fact]
@@ -50,7 +56,7 @@ public class LocalAgentServiceTests : IDisposable
 
         var agentInDb = await _dbContext.Agents.FindAsync(agentId);
         agentInDb.ShouldNotBeNull();
-        ShouldBeStringTestExtensions.ShouldBe(agentInDb.Id, agentId);
+        agentInDb.Id.ShouldBe(agentId);
         agentInDb.PersonaId.ShouldBe("planner");
         agentInDb.AgentType.ShouldBe("planner");
         agentInDb.WorkingDirectory.ShouldBe("/test/path");
@@ -69,9 +75,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer",
-            AgentType = "implementer",
-            WorkingDirectory = "/test/path"
+            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 
@@ -82,7 +86,7 @@ public class LocalAgentServiceTests : IDisposable
         var success = await _systemUnderTest.UpdateHeartbeatAsync(agentId);
 
         // Assert - Check database directly for heartbeat update
-        ShouldBeBooleanExtensions.ShouldBeTrue(success);
+        success.ShouldBeTrue();
 
         var agentInDb = await _dbContext.Agents.FindAsync(agentId);
         agentInDb.ShouldNotBeNull();
@@ -95,9 +99,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester",
-            AgentType = "tester",
-            WorkingDirectory = "/test/path"
+            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         var processId = "12345";
@@ -110,8 +112,8 @@ public class LocalAgentServiceTests : IDisposable
 
         // Assert
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeTestExtensions.ShouldBe(agent!.Status, AgentStatus.Running);
-        ShouldBeStringTestExtensions.ShouldBe(agent.ProcessId, processId);
+        agent!.Status.ShouldBe(AgentStatus.Running);
+        agent.ProcessId.ShouldBe(processId);
         agent.StartedAt.ShouldBe(_timeService.UtcNow);
     }
 
@@ -121,9 +123,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "reviewer",
-            AgentType = "reviewer",
-            WorkingDirectory = "/test/path"
+            PersonaId = "reviewer", AgentType = "reviewer", WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "12345");
@@ -136,7 +136,7 @@ public class LocalAgentServiceTests : IDisposable
 
         // Assert
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeTestExtensions.ShouldBe(agent!.Status, AgentStatus.Stopped);
+        agent!.Status.ShouldBe(AgentStatus.Stopped);
         agent.StoppedAt.ShouldBe(_timeService.UtcNow);
     }
 
@@ -146,9 +146,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer",
-            AgentType = "implementer",
-            WorkingDirectory = "/test/path"
+            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "54321");
@@ -161,7 +159,7 @@ public class LocalAgentServiceTests : IDisposable
 
         // Assert
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeTestExtensions.ShouldBe(agent!.Status, AgentStatus.Killed);
+        agent!.Status.ShouldBe(AgentStatus.Killed);
         agent.StoppedAt.ShouldBe(_timeService.UtcNow);
     }
 
@@ -174,9 +172,7 @@ public class LocalAgentServiceTests : IDisposable
 
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester",
-            AgentType = "tester",
-            WorkingDirectory = "/kill/test"
+            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/kill/test"
         };
         var agentId = await serviceWithProcessKill.RegisterAgentAsync(request);
         await serviceWithProcessKill.MarkAgentRunningAsync(agentId, "98765");
@@ -198,24 +194,28 @@ public class LocalAgentServiceTests : IDisposable
         var agent = await _systemUnderTest.GetAgentAsync(unknownAgentId);
 
         // Assert
-        ShouldBeNullExtensions.ShouldBeNull<Agent>(agent);
+        agent.ShouldBeNull<Agent>();
     }
 
     [Fact]
     public async Task WhenRegisteringMultipleAgents_ShouldCreateUniqueIds()
     {
         // Arrange
-        var request1 = new AgentRegistrationRequest { PersonaId = "planner", AgentType = "planner", WorkingDirectory = "/path1" };
-        var request2 = new AgentRegistrationRequest { PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/path2" };
+        var request1 =
+            new AgentRegistrationRequest { PersonaId = "planner", AgentType = "planner", WorkingDirectory = "/path1" };
+        var request2 = new AgentRegistrationRequest
+        {
+            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/path2"
+        };
 
         // Act
         var agentId1 = await _systemUnderTest.RegisterAgentAsync(request1);
         var agentId2 = await _systemUnderTest.RegisterAgentAsync(request2);
 
         // Assert - Check database directly for both agents
-        ShouldBeTestExtensions.ShouldNotBe<string>(agentId1, agentId2);
-        ShouldBeStringTestExtensions.ShouldNotBeNullOrEmpty(agentId1);
-        ShouldBeStringTestExtensions.ShouldNotBeNullOrEmpty(agentId2);
+        agentId1.ShouldNotBe<string>(agentId2);
+        agentId1.ShouldNotBeNullOrEmpty();
+        agentId2.ShouldNotBeNullOrEmpty();
 
         var agent1InDb = await _dbContext.Agents.FindAsync(agentId1);
         var agent2InDb = await _dbContext.Agents.FindAsync(agentId2);
@@ -251,18 +251,18 @@ public class LocalAgentServiceTests : IDisposable
 
         // Assert
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeNullExtensions.ShouldNotBeNull<Agent>(agent);
-        ShouldBeStringTestExtensions.ShouldBe(agent.Id, agentId);
-        ShouldBeStringTestExtensions.ShouldBe(agent.PersonaId, "reviewer");
-        ShouldBeStringTestExtensions.ShouldBe(agent.AgentType, "reviewer");
-        ShouldBeStringTestExtensions.ShouldBe(agent.WorkingDirectory, "/test/review-path");
-        ShouldBeStringTestExtensions.ShouldBe(agent.Model, "gemini-1.5-flash");
-        ShouldBeStringTestExtensions.ShouldBe(agent.WorktreeName, "feature-branch");
-        ShouldBeTestExtensions.ShouldBe(agent.Status, AgentStatus.Starting);
+        agent.ShouldNotBeNull<Agent>();
+        agent.Id.ShouldBe(agentId);
+        agent.PersonaId.ShouldBe("reviewer");
+        agent.AgentType.ShouldBe("reviewer");
+        agent.WorkingDirectory.ShouldBe("/test/review-path");
+        agent.Model.ShouldBe("gemini-1.5-flash");
+        agent.WorktreeName.ShouldBe("feature-branch");
+        agent.Status.ShouldBe(AgentStatus.Starting);
         agent.RegisteredAt.ShouldBe(_timeService.UtcNow);
         agent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
-        ShouldBeNullExtensions.ShouldBeNull<string>(agent.ProcessId);
-        ShouldBeNullExtensions.ShouldBeNull<DateTime>(agent.StoppedAt);
+        agent.ProcessId.ShouldBeNull<string>();
+        agent.StoppedAt.ShouldBeNull();
     }
 
     [Fact]
@@ -271,9 +271,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester",
-            AgentType = "tester",
-            WorkingDirectory = "/test/minimal-path"
+            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/minimal-path"
             // Model and WorktreeName are null
         };
 
@@ -282,13 +280,13 @@ public class LocalAgentServiceTests : IDisposable
 
         // Assert
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeNullExtensions.ShouldNotBeNull<Agent>(agent);
-        ShouldBeStringTestExtensions.ShouldBe(agent.PersonaId, "tester");
-        ShouldBeStringTestExtensions.ShouldBe(agent.AgentType, "tester");
-        ShouldBeStringTestExtensions.ShouldBe(agent.WorkingDirectory, "/test/minimal-path");
-        ShouldBeNullExtensions.ShouldBeNull<string>(agent.Model);
-        ShouldBeNullExtensions.ShouldBeNull<string>(agent.WorktreeName);
-        ShouldBeTestExtensions.ShouldBe(agent.Status, AgentStatus.Starting);
+        agent.ShouldNotBeNull<Agent>();
+        agent.PersonaId.ShouldBe("tester");
+        agent.AgentType.ShouldBe("tester");
+        agent.WorkingDirectory.ShouldBe("/test/minimal-path");
+        agent.Model.ShouldBeNull<string>();
+        agent.WorktreeName.ShouldBeNull<string>();
+        agent.Status.ShouldBe(AgentStatus.Starting);
     }
 
     [Fact]
@@ -297,9 +295,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer",
-            AgentType = "implementer",
-            WorkingDirectory = "/lifecycle/test"
+            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/lifecycle/test"
         };
 
         var registrationTime = _timeService.UtcNow;
@@ -309,7 +305,7 @@ public class LocalAgentServiceTests : IDisposable
         var agent = await _systemUnderTest.GetAgentAsync(agentId);
         agent!.RegisteredAt.ShouldBe(registrationTime);
         agent.LastHeartbeat.ShouldBe(registrationTime);
-        ShouldBeTestExtensions.ShouldBe(agent.Status, AgentStatus.Starting);
+        agent.Status.ShouldBe(AgentStatus.Starting);
 
         // Act & Assert - Mark Running
         _timeService.AdvanceTime(TimeSpan.FromSeconds(5));
@@ -317,8 +313,8 @@ public class LocalAgentServiceTests : IDisposable
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "pid-12345");
 
         agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeTestExtensions.ShouldBe(agent!.Status, AgentStatus.Running);
-        ShouldBeStringTestExtensions.ShouldBe(agent.ProcessId, "pid-12345");
+        agent!.Status.ShouldBe(AgentStatus.Running);
+        agent.ProcessId.ShouldBe("pid-12345");
         agent.StartedAt.ShouldBe(startTime);
 
         // Act & Assert - Heartbeat Update
@@ -335,13 +331,13 @@ public class LocalAgentServiceTests : IDisposable
         await _systemUnderTest.StopAgentAsync(agentId);
 
         agent = await _systemUnderTest.GetAgentAsync(agentId);
-        ShouldBeTestExtensions.ShouldBe(agent!.Status, AgentStatus.Stopped);
+        agent!.Status.ShouldBe(AgentStatus.Stopped);
         agent.StoppedAt.ShouldBe(stopTime);
 
         // Verify all timestamps are different and in correct order
-        ShouldBeTestExtensions.ShouldBeLessThan<DateTime>(agent.RegisteredAt, agent.StartedAt);
-        ShouldBeTestExtensions.ShouldBeLessThan<DateTime>(agent.StartedAt, agent.LastHeartbeat);
-        ShouldBeTestExtensions.ShouldBeLessThan<DateTime>(agent.LastHeartbeat, agent.StoppedAt!.Value);
+        agent.RegisteredAt.ShouldBeLessThan(agent.StartedAt);
+        agent.StartedAt.ShouldBeLessThan(agent.LastHeartbeat);
+        agent.LastHeartbeat.ShouldBeLessThan(agent.StoppedAt!.Value);
     }
 
     [Fact]
@@ -350,9 +346,7 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer",
-            AgentType = "implementer",
-            WorkingDirectory = "/test/path"
+            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 
@@ -361,7 +355,7 @@ public class LocalAgentServiceTests : IDisposable
         {
             Id = "task-1",
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.InProgress,
+            Status = TaskStatus.InProgress,
             Persona = "implementer",
             Description = "Task 1 in progress",
             CreatedAt = _timeService.UtcNow,
@@ -372,7 +366,7 @@ public class LocalAgentServiceTests : IDisposable
         {
             Id = "task-2",
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = "implementer",
             Description = "Task 2 pending",
             CreatedAt = _timeService.UtcNow
@@ -382,7 +376,7 @@ public class LocalAgentServiceTests : IDisposable
         {
             Id = "task-3",
             AgentId = "other-agent",
-            Status = DataLayer.Entities.TaskStatus.InProgress,
+            Status = TaskStatus.InProgress,
             Persona = "implementer",
             Description = "Task 3 for different agent",
             CreatedAt = _timeService.UtcNow
@@ -400,24 +394,19 @@ public class LocalAgentServiceTests : IDisposable
         var updatedTask3 = await _dbContext.Tasks.FindAsync("task-3");
 
         // Task 1 was InProgress for this agent - should be Failed
-        updatedTask1!.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
+        updatedTask1!.Status.ShouldBe(TaskStatus.Failed);
         updatedTask1.Result.ShouldNotBeNull();
         updatedTask1.Result.ShouldContain("Agent terminated");
         updatedTask1.CompletedAt.ShouldBe(_timeService.UtcNow);
 
         // Task 2 was only Pending for this agent - should remain Pending
-        updatedTask2!.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
+        updatedTask2!.Status.ShouldBe(TaskStatus.Pending);
         updatedTask2.Result.ShouldBeNull();
         updatedTask2.CompletedAt.ShouldBeNull();
 
         // Task 3 belongs to different agent - should be unchanged
-        updatedTask3!.Status.ShouldBe(DataLayer.Entities.TaskStatus.InProgress);
+        updatedTask3!.Status.ShouldBe(TaskStatus.InProgress);
         updatedTask3.Result.ShouldBeNull();
         updatedTask3.CompletedAt.ShouldBeNull();
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
     }
 }

@@ -4,28 +4,28 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-/// Database scope service that provides reading and writing scopes using dispose pattern
+///     Database scope service that provides reading and writing scopes using dispose pattern
 /// </summary>
 public interface IDatabaseScopeService
 {
     /// <summary>
-    /// Creates a read-only scope for database operations
+    ///     Creates a read-only scope for database operations
     /// </summary>
     IReadScope CreateReadScope();
 
     /// <summary>
-    /// Creates a write scope with TransactionScope for automatic transaction handling
+    ///     Creates a write scope with TransactionScope for automatic transaction handling
     /// </summary>
     IWriteScope CreateWriteScope();
 }
 
 /// <summary>
-/// Read scope that provides access to database operations
+///     Read scope that provides access to database operations
 /// </summary>
 public interface IReadScope : IDisposable
 {
     /// <summary>
-    /// Database context for advanced operations
+    ///     Database context for advanced operations
     /// </summary>
     CoordinationDbContext Context
     {
@@ -33,7 +33,7 @@ public interface IReadScope : IDisposable
     }
 
     /// <summary>
-    /// Agents DbSet for direct access
+    ///     Agents DbSet for direct access
     /// </summary>
     DbSet<Agent> Agents
     {
@@ -41,7 +41,7 @@ public interface IReadScope : IDisposable
     }
 
     /// <summary>
-    /// Tasks DbSet for direct access
+    ///     Tasks DbSet for direct access
     /// </summary>
     DbSet<WorkItem> Tasks
     {
@@ -50,12 +50,12 @@ public interface IReadScope : IDisposable
 }
 
 /// <summary>
-/// Write scope that provides access to database operations with automatic transaction handling
+///     Write scope that provides access to database operations with automatic transaction handling
 /// </summary>
 public interface IWriteScope : IDisposable
 {
     /// <summary>
-    /// Database context for advanced operations
+    ///     Database context for advanced operations
     /// </summary>
     CoordinationDbContext Context
     {
@@ -63,7 +63,7 @@ public interface IWriteScope : IDisposable
     }
 
     /// <summary>
-    /// Agents DbSet for direct access
+    ///     Agents DbSet for direct access
     /// </summary>
     DbSet<Agent> Agents
     {
@@ -71,7 +71,7 @@ public interface IWriteScope : IDisposable
     }
 
     /// <summary>
-    /// Tasks DbSet for direct access
+    ///     Tasks DbSet for direct access
     /// </summary>
     DbSet<WorkItem> Tasks
     {
@@ -79,12 +79,12 @@ public interface IWriteScope : IDisposable
     }
 
     /// <summary>
-    /// Save changes to the database
+    ///     Save changes to the database
     /// </summary>
     Task<int> SaveChangesAsync();
 
     /// <summary>
-    /// Commits the transaction (call this before disposing to save changes)
+    ///     Commits the transaction (call this before disposing to save changes)
     /// </summary>
     void Complete();
 }

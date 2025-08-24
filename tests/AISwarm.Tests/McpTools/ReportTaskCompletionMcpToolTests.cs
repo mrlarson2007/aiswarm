@@ -6,7 +6,6 @@ using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
-using Xunit;
 
 namespace AISwarm.Tests.McpTools;
 
@@ -170,7 +169,7 @@ public class ReportTaskCompletionMcpToolTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        
+
         using var scope = _scopeService.CreateReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
         task.ShouldNotBeNull();
@@ -208,7 +207,7 @@ public class ReportTaskCompletionMcpToolTests
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        
+
         using var scope = _scopeService.CreateReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
         task.ShouldNotBeNull();

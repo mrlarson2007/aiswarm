@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Minimal application logging abstraction (decouples tests from Console redirection).
+///     Minimal application logging abstraction (decouples tests from Console redirection).
 /// </summary>
 public interface IAppLogger
 {

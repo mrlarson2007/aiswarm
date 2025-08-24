@@ -4,9 +4,19 @@ namespace AISwarm.Tests.TestDoubles;
 
 public class FakeContextService : IContextService
 {
-    public string FailureMessage { get; set; } = string.Empty;
+    public string FailureMessage
+    {
+        get;
+        set;
+    } = string.Empty;
+
     public bool ShouldFail => !string.IsNullOrEmpty(FailureMessage);
-    public string CreatedContextPath { get; set; } = "/test/context.md";
+
+    public string CreatedContextPath
+    {
+        get;
+        set;
+    } = "/test/context.md";
 
     public string GetAgentPrompt(string agentType)
     {
@@ -55,9 +65,7 @@ public class FakeContextService : IContextService
 
         return new Dictionary<string, string>
         {
-            { "implementer", "Embedded" },
-            { "reviewer", "Embedded" },
-            { "planner", "Embedded" }
+            { "implementer", "Embedded" }, { "reviewer", "Embedded" }, { "planner", "Embedded" }
         };
     }
 }

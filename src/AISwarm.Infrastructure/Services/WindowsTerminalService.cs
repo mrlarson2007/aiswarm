@@ -6,11 +6,15 @@ public class WindowsTerminalService(IProcessLauncher inner) : IInteractiveTermin
         string command,
         string workingDirectory,
         int? timeoutMs = null,
-        bool captureOutput = true) =>
-            await inner.RunAsync("pwsh.exe", command, workingDirectory, timeoutMs, captureOutput);
+        bool captureOutput = true)
+    {
+        return await inner.RunAsync("pwsh.exe", command, workingDirectory, timeoutMs, captureOutput);
+    }
 
     public bool LaunchTerminalInteractive(
         string command,
-        string workingDirectory) =>
-        inner.StartInteractive("pwsh.exe", $"-Command \"{command}\"", workingDirectory);
+        string workingDirectory)
+    {
+        return inner.StartInteractive("pwsh.exe", $"-Command \"{command}\"", workingDirectory);
+    }
 }

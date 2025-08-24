@@ -4,57 +4,86 @@ public class ListAgentsResult
 {
     public bool Success
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? ErrorMessage
     {
-        get; init;
+        get;
+        init;
     }
+
     public AgentInfo[]? Agents
     {
-        get; init;
+        get;
+        init;
     }
 
-    public static ListAgentsResult Failure(string message) => new()
+    public static ListAgentsResult Failure(string message)
     {
-        Success = false,
-        ErrorMessage = message
-    };
+        return new ListAgentsResult { Success = false, ErrorMessage = message };
+    }
 
-    public static ListAgentsResult SuccessWith(AgentInfo[] agents) => new()
+    public static ListAgentsResult SuccessWith(AgentInfo[] agents)
     {
-        Success = true,
-        Agents = agents
-    };
+        return new ListAgentsResult { Success = true, Agents = agents };
+    }
 }
 
 public class AgentInfo
 {
-    public string AgentId { get; init; } = string.Empty;
-    public string PersonaId { get; init; } = string.Empty;
-    public string Status { get; init; } = string.Empty;
+    public string AgentId
+    {
+        get;
+        init;
+    } = string.Empty;
+
+    public string PersonaId
+    {
+        get;
+        init;
+    } = string.Empty;
+
+    public string Status
+    {
+        get;
+        init;
+    } = string.Empty;
+
     public string? ProcessId
     {
-        get; init;
+        get;
+        init;
     }
+
     public DateTime RegisteredAt
     {
-        get; init;
+        get;
+        init;
     }
+
     public DateTime LastHeartbeat
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? WorkingDirectory
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? Model
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? WorktreeName
     {
-        get; init;
+        get;
+        init;
     }
 }

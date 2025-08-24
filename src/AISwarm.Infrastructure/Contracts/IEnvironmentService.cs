@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Abstraction over System.Environment to enable deterministic testing.
+///     Abstraction over System.Environment to enable deterministic testing.
 /// </summary>
 public interface IEnvironmentService
 {

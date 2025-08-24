@@ -79,11 +79,11 @@ public class CreateTaskMcpToolTests
         var result = await createTaskTool.CreateTaskAsync(nonExistentAgentId, persona, description);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeFalse(result.Success);
-        ShouldBeNullExtensions.ShouldBeNull<string>(result.TaskId);
-        ShouldBeNullExtensions.ShouldNotBeNull<string>(result.ErrorMessage);
-        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, "Agent not found");
-        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, nonExistentAgentId);
+        result.Success.ShouldBeFalse();
+        result.TaskId.ShouldBeNull();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Agent not found");
+        result.ErrorMessage.ShouldContain(nonExistentAgentId);
     }
 
     [Fact]
@@ -103,11 +103,11 @@ public class CreateTaskMcpToolTests
         var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
 
         // Assert
-        ShouldBeBooleanExtensions.ShouldBeFalse(result.Success);
-        ShouldBeNullExtensions.ShouldBeNull<string>(result.TaskId);
-        ShouldBeNullExtensions.ShouldNotBeNull<string>(result.ErrorMessage);
-        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, "Agent is not in a valid state to receive tasks");
-        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, agentId);
+        result.Success.ShouldBeFalse();
+        result.TaskId.ShouldBeNull();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Agent is not in a valid state to receive tasks");
+        result.ErrorMessage.ShouldContain(agentId);
     }
 
     [Fact]

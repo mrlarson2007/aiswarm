@@ -1,70 +1,75 @@
 namespace AISwarm.Server.Entities;
 
 /// <summary>
-/// Result of getting the next task via MCP tool
+///     Result of getting the next task via MCP tool
 /// </summary>
 public class GetNextTaskResult
 {
     /// <summary>
-    /// Whether the operation was successful
+    ///     Whether the operation was successful
     /// </summary>
     public bool Success
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// ID of the retrieved task (null if no tasks available)
+    ///     ID of the retrieved task (null if no tasks available)
     /// </summary>
     public string? TaskId
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// Persona content for the task (null if no tasks available)
+    ///     Persona content for the task (null if no tasks available)
     /// </summary>
     public string? Persona
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// Description of the task (null if no tasks available)
+    ///     Description of the task (null if no tasks available)
     /// </summary>
     public string? Description
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// Message with reinforcing prompt to call the tool again
+    ///     Message with reinforcing prompt to call the tool again
     /// </summary>
     public string? Message
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// Error message if operation failed
+    ///     Error message if operation failed
     /// </summary>
     public string? ErrorMessage
     {
-        get; set;
+        get;
+        set;
     }
 
 
     /// <summary>
-    /// Creates a failure result with error message
+    ///     Creates a failure result with error message
     /// </summary>
-    public static GetNextTaskResult Failure(string errorMessage) => new()
+    public static GetNextTaskResult Failure(string errorMessage)
     {
-        Success = false,
-        ErrorMessage = errorMessage
-    };
+        return new GetNextTaskResult { Success = false, ErrorMessage = errorMessage };
+    }
 
     /// <summary>
-    /// Creates a successful result indicating no tasks are available
+    ///     Creates a successful result indicating no tasks are available
     /// </summary>
     public static GetNextTaskResult NoTasksAvailable()
     {
@@ -72,24 +77,30 @@ public class GetNextTaskResult
         {
             Success = true,
             TaskId = $"system:requery:{Guid.NewGuid():N}",
-            Persona = "You are a cooperative agent. When you receive a system requery task, you must immediately re-invoke the get_next_task tool to check for work.",
-            Description = "No tasks available right now. Immediately call the get_next_task tool again to check for new tasks.",
+            Persona =
+                "You are a cooperative agent. When you receive a system requery task, you must immediately re-invoke the get_next_task tool to check for work.",
+            Description =
+                "No tasks available right now. Immediately call the get_next_task tool again to check for new tasks.",
             Message = "No tasks available. Please call this tool again to check for new tasks."
         };
     }
 
     /// <summary>
-    /// Creates a successful result with task information
+    ///     Creates a successful result with task information
     /// </summary>
     public static GetNextTaskResult SuccessWithTask(
         string taskId,
         string persona,
-        string description) => new()
+        string description)
+    {
+        return new GetNextTaskResult
         {
             Success = true,
             TaskId = taskId,
             Persona = persona,
             Description = description,
-            Message = "Task retrieved successfully. After completing this task, call this tool again to get the next task."
+            Message =
+                "Task retrieved successfully. After completing this task, call this tool again to get the next task."
         };
+    }
 }

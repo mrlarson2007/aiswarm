@@ -4,5 +4,9 @@ namespace AISwarm.Infrastructure;
 public class EnvironmentService : IEnvironmentService
 {
     public string CurrentDirectory => Environment.CurrentDirectory;
-    public string? GetEnvironmentVariable(string variable) => Environment.GetEnvironmentVariable(variable);
+
+    public string? GetEnvironmentVariable(string variable)
+    {
+        return Environment.GetEnvironmentVariable(variable);
+    }
 }

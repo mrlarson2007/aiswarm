@@ -29,7 +29,7 @@ public class GeminiService(
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
                 var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var versionLine = Enumerable.FirstOrDefault<string>(lines, line => !line.Contains("DeprecationWarning") && !line.Contains("trace-deprecation") && !string.IsNullOrWhiteSpace(line));
+                var versionLine = lines.FirstOrDefault<string>(line => !line.Contains("DeprecationWarning") && !line.Contains("trace-deprecation") && !string.IsNullOrWhiteSpace(line));
                 return versionLine?.Trim();
             }
             return null;

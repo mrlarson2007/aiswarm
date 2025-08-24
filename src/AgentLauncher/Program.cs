@@ -1,6 +1,6 @@
 using System.CommandLine;
-using Microsoft.Extensions.DependencyInjection;
 using AgentLauncher.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AgentLauncher;
 

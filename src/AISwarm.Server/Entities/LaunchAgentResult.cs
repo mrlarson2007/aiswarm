@@ -4,37 +4,40 @@ public class LaunchAgentResult
 {
     public bool Success
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? ErrorMessage
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? AgentId
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? ProcessId
     {
-        get; init;
+        get;
+        init;
     }
 
-    public static LaunchAgentResult Failure(string message) => new()
+    public static LaunchAgentResult Failure(string message)
     {
-        Success = false,
-        ErrorMessage = message
-    };
+        return new LaunchAgentResult { Success = false, ErrorMessage = message };
+    }
 
-    public static LaunchAgentResult SuccessWith(string agentId) => new()
+    public static LaunchAgentResult SuccessWith(string agentId)
     {
-        Success = true,
-        AgentId = agentId
-    };
+        return new LaunchAgentResult { Success = true, AgentId = agentId };
+    }
 
-    public static LaunchAgentResult SuccessWith(string agentId, string? processId) => new()
+    public static LaunchAgentResult SuccessWith(string agentId, string? processId)
     {
-        Success = true,
-        AgentId = agentId,
-        ProcessId = processId
-    };
+        return new LaunchAgentResult { Success = true, AgentId = agentId, ProcessId = processId };
+    }
 }

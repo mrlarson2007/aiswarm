@@ -1,14 +1,14 @@
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Abstraction for launching external processes in either captured (wait + collect output)
-/// or interactive (fire-and-forget) modes. Enables test substitution and centralizes
-/// process configuration.
+///     Abstraction for launching external processes in either captured (wait + collect output)
+///     or interactive (fire-and-forget) modes. Enables test substitution and centralizes
+///     process configuration.
 /// </summary>
 public interface IProcessLauncher
 {
     /// <summary>
-    /// Run a process to completion optionally capturing stdout/stderr.
+    ///     Run a process to completion optionally capturing stdout/stderr.
     /// </summary>
     /// <param name="fileName">Executable or shell.</param>
     /// <param name="arguments">Raw argument string.</param>
@@ -24,7 +24,7 @@ public interface IProcessLauncher
         bool captureOutput = true);
 
     /// <summary>
-    /// Start a process intended for interactive user session (non-blocking, no captured output).
+    ///     Start a process intended for interactive user session (non-blocking, no captured output).
     /// </summary>
     /// <returns><c>true</c> if process start was successful.</returns>
     bool StartInteractive(
@@ -34,7 +34,7 @@ public interface IProcessLauncher
 }
 
 /// <summary>
-/// Represents the outcome of a completed process execution.
+///     Represents the outcome of a completed process execution.
 /// </summary>
 /// <param name="IsSuccess">True if exit code == 0.</param>
 /// <param name="StandardOutput">Captured standard output (if requested).</param>
