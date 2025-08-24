@@ -17,16 +17,14 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-  <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+  <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\planner_prompt.md" />
-    <EmbeddedResource Include="Resources\implementer_prompt.md" />
-    <EmbeddedResource Include="Resources\reviewer_prompt.md" />
-    <EmbeddedResource Include="Resources\tester_prompt.md" />
-    <EmbeddedResource Include="Resources\template_prompt.md" />
+    <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
+    <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

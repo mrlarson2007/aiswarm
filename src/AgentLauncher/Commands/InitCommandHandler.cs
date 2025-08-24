@@ -1,11 +1,9 @@
-using System.Reflection;
-using AgentLauncher.Services.External;
-using AgentLauncher.Services.Logging;
+using AISwarm.Infrastructure;
 
 namespace AgentLauncher.Commands;
 
 /// <summary>
-/// Handles initialization of .aiswarm directory with template persona files.
+///     Handles initialization of .aiswarm directory with template persona files.
 /// </summary>
 public class InitCommandHandler(
     IAppLogger logger,
@@ -38,17 +36,18 @@ public class InitCommandHandler(
         logger.Info($"Initialized .aiswarm directory at: {aiswarmDir}");
         logger.Info($"Created personas directory: {personasDir}");
         logger.Info($"Created template persona file: {templateFile}");
-        logger.Info("You can now create custom persona files in .aiswarm/personas/ using the *_prompt.md naming convention.");
+        logger.Info(
+            "You can now create custom persona files in .aiswarm/personas/ using the *_prompt.md naming convention.");
 
         return true;
     }
 
     private static string GetTemplatePersonaContent()
     {
-        const string resourceName = "AgentLauncher.Resources.template_prompt.md";
-        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "AISwarm.Infrastructure.Resources.template_prompt.md";
+        var assembly = typeof(ContextService).Assembly; // Use Infrastructure assembly
         using var stream = assembly.GetManifestResourceStream(resourceName) ??
-            throw new InvalidOperationException($"Resource not found: {resourceName}");
+                           throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }

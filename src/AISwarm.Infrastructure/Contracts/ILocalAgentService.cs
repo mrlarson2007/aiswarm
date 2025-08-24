@@ -1,0 +1,16 @@
+using AISwarm.DataLayer.Entities;
+
+namespace AISwarm.Infrastructure;
+
+/// <summary>
+/// Interface for managing agent lifecycle with database persistence
+/// </summary>
+public interface ILocalAgentService
+{
+    Task<string> RegisterAgentAsync(AgentRegistrationRequest request);
+    Task<Agent?> GetAgentAsync(string agentId);
+    Task<bool> UpdateHeartbeatAsync(string agentId);
+    Task MarkAgentRunningAsync(string agentId, string processId);
+    Task StopAgentAsync(string agentId);
+    Task KillAgentAsync(string agentId);
+}
