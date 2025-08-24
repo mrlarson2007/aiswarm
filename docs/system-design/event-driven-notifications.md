@@ -29,30 +29,39 @@ flowchart LR
     AM[AgentManagementMcpTool]
 
     CT -->|insert Pending| DB
-    RC -->|update Completed/Failed| DB
-    AM -->|launch/kill/heartbeat| DB
+    RC -->|update Completed or Failed| DB
+    AM -->|launch / kill / heartbeat| DB
 
     CT -->|publish TaskCreated| EB
-    RC -->|publish TaskCompleted/Failed| EB
-    AM -->|publish AgentLaunched/Killed/Heartbeat| EB
+    RC -->|publish TaskCompleted or Failed| EB
+    AM -->|publish AgentLaunched / AgentKilled / Heartbeat| EB
 
     EB --> R
-
-    R -->|TaskCreated (agentId/persona)| NT
-    R -->|TaskCompleted/Failed (taskId)| Planner
-    R -->|LogEvent| FileSink
-    R -->|LogEvent| DbSink
   end
 
   subgraph Agents
-    AG[Agents (Implementer/Reviewer/...)]
+    AG[Agents (Implementer / Reviewer / ...)]
   end
 
+  %% External subscribers/sinks
+  Planner[[Planner Tool or Process]]
+  FileSink[(File Logger)]
+  DbSink[(DB Logger)]
+
+  %% Links from router to consumers
+  R -->|TaskCreated (agent or persona)| NT
+  R -->|TaskCompleted or Failed (task)| Planner
+  R -->|LogEvent| FileSink
+  R -->|LogEvent| DbSink
+
+  %% Agent interactions with tools
   AG <-->|MCP get_next_task| NT
-  AG -->|MCP report_task_completion/failure| RC
-  Planner[[Planner Tool/Process]] -. subscribes .-> R
-  FileSink[(File Logger)] -. sink .-> R
-  DbSink[(DB Logger)] -. sink .-> R
+  AG -->|MCP report task result| RC
+
+  %% Subscriptions from external consumers
+  Planner -. subscribes .-> R
+  FileSink -. sink .-> R
+  DbSink -. sink .-> R
 ```
 
 ## Event Model
