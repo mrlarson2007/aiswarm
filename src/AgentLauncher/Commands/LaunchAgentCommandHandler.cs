@@ -195,16 +195,17 @@ You have access to the following MCP tools for task management:
   - `taskId`: The ID of the completed task.
   - `result`: A summary of the results.
 ### Task Management Workflow
-1. **Start Work Session**: Call `mcp_aiswarm_get_next_task` with your agentId ({agentId}) to check for pending tasks
-2. **Work on Task**: Complete the assigned work according to the task description and persona
-3. **Report Completion**: Call `mcp_aiswarm_report_task_completion` with the taskId and your results
-4. **Create Follow-up Tasks**: Use `mcp_aiswarm_create_task` to break down work or create coordination tasks as needed
+1. **Start Work Session**: Call `mcp_aiswarm_get_next_task` with your agentId ({agentId}) to check for pending tasks.
+2. **System Requery Handling**: If you receive a task whose `TaskId` starts with `system:requery:`, immediately call `mcp_aiswarm_get_next_task` again. Do not produce other output before re-querying.
+3. **Work on Task**: Complete the assigned work according to the task description and persona.
+4. **Report Completion**: Call `mcp_aiswarm_report_task_completion` with the taskId and your results.
+5. **Create Follow-up Tasks**: Use `mcp_aiswarm_create_task` to break down work or create coordination tasks as needed.
 
 ### Best Practices
-- Always include your agent ID ({agentId}) when calling get_next_task
-- Provide detailed results when reporting task completion
-- Create specific, actionable tasks when coordinating with other agents
-- Use appropriate priority levels for time-sensitive work";
+- Always include your agent ID ({agentId}) when calling get_next_task.
+- Provide detailed results when reporting task completion.
+- Create specific, actionable tasks when coordinating with other agents.
+- Use appropriate priority levels for time-sensitive work.";
 
         await fileSystemService.AppendAllTextAsync(contextPath, mcpToolInstructionsPrompt);
     }
