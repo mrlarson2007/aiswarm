@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.McpTools;
 
-public class TaskMcpTool(IDatabaseScopeService scopeService)
+public class GetTaskMcpTool(IDatabaseScopeService scopeService)
 {
     [Description("Get tasks by status")]
     public async Task<GetTasksByStatusResult> GetTasksByStatusAsync(

@@ -10,13 +10,13 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class TaskMcpToolTests
+public class GetTaskMcpToolTests
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
 
-    public TaskMcpToolTests()
+    public GetTaskMcpToolTests()
     {
         var services = new ServiceCollection();
 
@@ -25,13 +25,13 @@ public class TaskMcpToolTests
         _timeService = new FakeTimeService();
         services.AddSingleton<ITimeService>(_timeService);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
-        services.AddSingleton<TaskMcpTool>();
+        services.AddSingleton<GetTaskMcpTool>();
 
         _serviceProvider = services.BuildServiceProvider();
         _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
     }
 
-    private TaskMcpTool SystemUnderTest => _serviceProvider.GetRequiredService<TaskMcpTool>();
+    private GetTaskMcpTool SystemUnderTest => _serviceProvider.GetRequiredService<GetTaskMcpTool>();
 
     // GetTasksByStatus Tests
     [Fact]
