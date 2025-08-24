@@ -29,7 +29,8 @@ public class ListWorktreesCommandHandler(
             }
 
             logger.Info("Worktrees:\n");
-            foreach (var wt in worktrees.OrderBy(w => w.Key)) logger.Info($" - {wt.Key} => {wt.Value}\n");
+            foreach (var wt in worktrees.OrderBy(w => w.Key))
+                logger.Info($" - {wt.Key} => {wt.Value}\n");
             logger.Info(
                 "\nTo create a new worktree:\n  aiswarm --agent <type> --worktree <name>\n\nTo remove a worktree:\n  git worktree remove <path>\n");
             return true;

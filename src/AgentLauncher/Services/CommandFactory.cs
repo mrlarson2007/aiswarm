@@ -11,48 +11,76 @@ public static class CommandFactory
     {
         var agentOption = new Option<string?>(
             "--agent",
-            "The type of agent to launch") { IsRequired = false };
+            "The type of agent to launch")
+        {
+            IsRequired = false
+        };
         agentOption.AddAlias("-a");
 
         var contextService = serviceProvider.GetRequiredService<IContextService>();
         var availableAgents = contextService.GetAvailableAgentTypes().ToArray();
-        if (availableAgents.Length > 0) agentOption.FromAmong(availableAgents);
+        if (availableAgents.Length > 0)
+            agentOption.FromAmong(availableAgents);
 
         var modelOption = new Option<string?>(
             "--model",
-            "The Gemini model to use (uses Gemini CLI default if not specified)") { IsRequired = false };
+            "The Gemini model to use (uses Gemini CLI default if not specified)")
+        {
+            IsRequired = false
+        };
         modelOption.AddAlias("-m");
 
         var worktreeOption = new Option<string?>(
             "--worktree",
-            "Create a git worktree with the specified name") { IsRequired = false };
+            "Create a git worktree with the specified name")
+        {
+            IsRequired = false
+        };
         worktreeOption.AddAlias("-w");
 
         var directoryOption = new Option<string?>(
             "--directory",
-            "The working directory for the agent (defaults to current directory)") { IsRequired = false };
+            "The working directory for the agent (defaults to current directory)")
+        {
+            IsRequired = false
+        };
         directoryOption.AddAlias("-d");
 
         var listOption = new Option<bool>(
             "--list",
-            "List available agent types") { IsRequired = false };
+            "List available agent types")
+        {
+            IsRequired = false
+        };
         listOption.AddAlias("-l");
 
         var listWorktreesOption = new Option<bool>(
             "--list-worktrees",
-            "List existing git worktrees") { IsRequired = false };
+            "List existing git worktrees")
+        {
+            IsRequired = false
+        };
 
         var dryRunOption = new Option<bool>(
             "--dry-run",
-            "Create context file but don't launch Gemini CLI") { IsRequired = false };
+            "Create context file but don't launch Gemini CLI")
+        {
+            IsRequired = false
+        };
 
         var initOption = new Option<bool>(
             "--init",
-            "Initialize .aiswarm directory with template persona files") { IsRequired = false };
+            "Initialize .aiswarm directory with template persona files")
+        {
+            IsRequired = false
+        };
 
         var monitorOption = new Option<bool>(
             "--monitor",
-            "Register agent in database and monitor its lifecycle") { IsRequired = false };
+            "Register agent in database and monitor its lifecycle")
+        {
+            IsRequired = false
+        };
 
         var rootCommand =
             new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");
@@ -97,7 +125,8 @@ public static class CommandFactory
             {
                 var initHandler = serviceProvider.GetRequiredService<InitCommandHandler>();
                 var initOk = await initHandler.RunAsync();
-                if (!initOk) Console.WriteLine("Initialization failed.");
+                if (!initOk)
+                    Console.WriteLine("Initialization failed.");
                 return;
             }
 
@@ -110,7 +139,8 @@ public static class CommandFactory
 
             var launcher = serviceProvider.GetRequiredService<LaunchAgentCommandHandler>();
             var ok = await launcher.RunAsync(agentType, model, worktree, directory, dryRun, monitor);
-            if (!ok) Console.WriteLine("Launch failed.");
+            if (!ok)
+                Console.WriteLine("Launch failed.");
         });
 
         return rootCommand;

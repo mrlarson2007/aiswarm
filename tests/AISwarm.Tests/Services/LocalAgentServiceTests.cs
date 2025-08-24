@@ -75,7 +75,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 
@@ -99,7 +101,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 
@@ -127,7 +131,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "12345");
@@ -156,7 +162,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         var processId = "12345";
@@ -180,7 +188,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "reviewer", AgentType = "reviewer", WorkingDirectory = "/test/path"
+            PersonaId = "reviewer",
+            AgentType = "reviewer",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "12345");
@@ -203,7 +213,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
         await _systemUnderTest.MarkAgentRunningAsync(agentId, "54321");
@@ -229,7 +241,9 @@ public class LocalAgentServiceTests : IDisposable
 
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/kill/test"
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/kill/test"
         };
         var agentId = await serviceWithProcessKill.RegisterAgentAsync(request);
         await serviceWithProcessKill.MarkAgentRunningAsync(agentId, "98765");
@@ -262,7 +276,9 @@ public class LocalAgentServiceTests : IDisposable
             new AgentRegistrationRequest { PersonaId = "planner", AgentType = "planner", WorkingDirectory = "/path1" };
         var request2 = new AgentRegistrationRequest
         {
-            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/path2"
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/path2"
         };
 
         // Act
@@ -328,7 +344,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/minimal-path"
+            PersonaId = "tester",
+            AgentType = "tester",
+            WorkingDirectory = "/test/minimal-path"
             // Model and WorktreeName are null
         };
 
@@ -352,7 +370,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/lifecycle/test"
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/lifecycle/test"
         };
 
         var registrationTime = _timeService.UtcNow;
@@ -403,7 +423,9 @@ public class LocalAgentServiceTests : IDisposable
         // Arrange
         var request = new AgentRegistrationRequest
         {
-            PersonaId = "implementer", AgentType = "implementer", WorkingDirectory = "/test/path"
+            PersonaId = "implementer",
+            AgentType = "implementer",
+            WorkingDirectory = "/test/path"
         };
         var agentId = await _systemUnderTest.RegisterAgentAsync(request);
 

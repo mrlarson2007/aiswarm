@@ -120,7 +120,8 @@ public class GetNextTaskMcpTool(
         // Re-fetch the task to ensure it's still unassigned (race condition protection)
         var task = await scope.Tasks.FindAsync(taskId);
 
-        if (task == null) return GetNextTaskResult.NoTasksAvailable();
+        if (task == null)
+            return GetNextTaskResult.NoTasksAvailable();
 
         // Verify task is still unassigned and pending
         if (!string.IsNullOrEmpty(task.AgentId) ||

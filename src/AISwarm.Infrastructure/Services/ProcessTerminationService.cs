@@ -14,7 +14,8 @@ public class ProcessTerminationService : IProcessTerminationService
     /// <returns>True if the process was successfully terminated, false otherwise</returns>
     public async Task<bool> KillProcessAsync(string processId)
     {
-        if (string.IsNullOrWhiteSpace(processId) || !int.TryParse(processId, out var pid)) return false;
+        if (string.IsNullOrWhiteSpace(processId) || !int.TryParse(processId, out var pid))
+            return false;
 
         try
         {

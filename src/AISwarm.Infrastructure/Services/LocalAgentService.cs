@@ -65,13 +65,13 @@ public class LocalAgentService(
         if (agent != null)
         {
             agent.UpdateHeartbeat(timeService.UtcNow);
-            
+
             // If agent is starting and actively polling for tasks, transition to running
             if (agent.Status == AgentStatus.Starting)
             {
                 agent.Status = AgentStatus.Running;
             }
-            
+
             await scope.SaveChangesAsync();
             scope.Complete();
             return true;

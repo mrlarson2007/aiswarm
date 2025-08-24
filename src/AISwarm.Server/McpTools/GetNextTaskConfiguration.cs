@@ -28,6 +28,7 @@ public class GetNextTaskConfiguration
     /// </summary>
     public static GetNextTaskConfiguration Production => new()
     {
-        TimeToWaitForTask = TimeSpan.FromMinutes(5), PollingInterval = TimeSpan.FromSeconds(1)
+        TimeToWaitForTask = TimeSpan.FromMinutes(5),
+        PollingInterval = TimeSpan.FromSeconds(1)
     };
 }

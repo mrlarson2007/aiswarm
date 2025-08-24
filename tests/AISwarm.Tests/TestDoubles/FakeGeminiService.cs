@@ -43,7 +43,8 @@ public class FakeGeminiService : IGeminiService
     {
         LastLaunchYoloParameter = yolo;
 
-        if (ShouldFail) throw new InvalidOperationException(FailureMessage);
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
 
         return Task.FromResult(LaunchResult);
     }
@@ -51,7 +52,8 @@ public class FakeGeminiService : IGeminiService
     public Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model,
         AgentSettings agentSettings, string? workingDirectory = null)
     {
-        if (ShouldFail) throw new InvalidOperationException(FailureMessage);
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
 
         return Task.FromResult(LaunchResult);
     }
