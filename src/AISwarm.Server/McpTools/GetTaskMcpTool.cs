@@ -1,6 +1,5 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using AISwarm.DataLayer;
-using AISwarm.DataLayer.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.McpTools;
@@ -11,26 +10,27 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
     public async Task<GetTasksByStatusResult> GetTasksByStatusAsync(
         [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")] string status)
     {
-        if (!Enum.TryParse<AISwarm.DataLayer.Entities.TaskStatus>(status, ignoreCase: true, out var taskStatus))
+        if (!Enum.TryParse<DataLayer.Entities.TaskStatus>(
+                status, ignoreCase: true, out var taskStatus))
         {
-            return GetTasksByStatusResult.Failure($"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
+            return GetTasksByStatusResult.Failure(
+                $"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
         }
 
         using var scope = scopeService.CreateReadScope();
+
         var tasks = await scope.Tasks
             .Where(t => t.Status == taskStatus)
-            .ToListAsync();
+            .Select(t => new TaskInfo
+            {
+                TaskId = t.Id,
+                Status = t.Status.ToString(),
+                AgentId = t.AgentId,
+                StartedAt = t.StartedAt,
+                CompletedAt = t.CompletedAt
+            }).ToArrayAsync();
 
-        var taskInfos = tasks.Select(t => new TaskInfo
-        {
-            TaskId = t.Id,
-            Status = t.Status.ToString(),
-            AgentId = t.AgentId,
-            StartedAt = t.StartedAt,
-            CompletedAt = t.CompletedAt
-        }).ToArray();
-
-        return GetTasksByStatusResult.SuccessWith(taskInfos);
+        return GetTasksByStatusResult.SuccessWith(tasks);
     }
 
     [Description("Get the status of a task by ID")]
@@ -65,18 +65,16 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         using var scope = scopeService.CreateReadScope();
         var tasks = await scope.Tasks
             .Where(t => t.AgentId == agentId)
-            .ToListAsync();
+            .Select(t => new TaskInfo
+            {
+                TaskId = t.Id,
+                Status = t.Status.ToString(),
+                AgentId = t.AgentId,
+                StartedAt = t.StartedAt,
+                CompletedAt = t.CompletedAt
+            }).ToArrayAsync();
 
-        var taskInfos = tasks.Select(t => new TaskInfo
-        {
-            TaskId = t.Id,
-            Status = t.Status.ToString(),
-            AgentId = t.AgentId,
-            StartedAt = t.StartedAt,
-            CompletedAt = t.CompletedAt
-        }).ToArray();
-
-        return GetTasksByStatusResult.SuccessWith(taskInfos);
+        return GetTasksByStatusResult.SuccessWith(tasks);
     }
 
     [Description("Get tasks by agent ID and status")]
@@ -84,7 +82,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         [Description("ID of the agent to query tasks for")] string agentId,
         [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")] string status)
     {
-        if (!Enum.TryParse<AISwarm.DataLayer.Entities.TaskStatus>(status, ignoreCase: true, out var taskStatus))
+        if (!Enum.TryParse<DataLayer.Entities.TaskStatus>(status, ignoreCase: true, out var taskStatus))
         {
             return GetTasksByStatusResult.Failure($"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
         }

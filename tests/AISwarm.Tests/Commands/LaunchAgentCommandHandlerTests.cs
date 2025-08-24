@@ -4,7 +4,6 @@ using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Tests.TestDoubles;
-using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shouldly;

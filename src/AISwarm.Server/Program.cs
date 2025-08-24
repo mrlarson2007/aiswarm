@@ -1,13 +1,10 @@
 using AISwarm.DataLayer;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using AISwarm.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using System.Net.Sockets;
 
 namespace AISwarm.Server;
 

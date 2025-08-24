@@ -1,4 +1,3 @@
-using AISwarm.DataLayer.Entities;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using AISwarm.DataLayer;

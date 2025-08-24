@@ -1,7 +1,5 @@
 using AISwarm.DataLayer;
-using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 

@@ -1,4 +1,4 @@
-﻿using AISwarm.DataLayer;
+using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
@@ -261,7 +261,7 @@ public class GetTaskMcpToolTests
         result.Tasks.ShouldNotBeNull();
         result.Tasks.Length.ShouldBe(2);
         result.Tasks.ShouldAllBe(t => t.AgentId == null);
-        
+
         // Verify specific tasks are included
         result.Tasks.Any(t => t.TaskId == "task1").ShouldBeTrue();
         result.Tasks.Any(t => t.TaskId == "task3").ShouldBeTrue();
@@ -385,7 +385,7 @@ public class GetTaskMcpToolTests
             StartedAt = _timeService.UtcNow.AddMinutes(1),
             CompletedAt = _timeService.UtcNow.AddMinutes(5)
         };
-        
+
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
         scope.Complete();
