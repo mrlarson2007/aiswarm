@@ -35,8 +35,4 @@
     <EmbeddedResource Include="Resources\template_prompt.md" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Models\" />
-  </ItemGroup>
-
 </Project>

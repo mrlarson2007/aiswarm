@@ -8,12 +8,10 @@ namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
 public class AgentManagementMcpTool(
-    IDatabaseScopeService scopeService, 
-    ITimeService timeService,
+    IDatabaseScopeService scopeService,
     IContextService contextService,
     IGitService gitService,
     IGeminiService geminiService,
-    IFileSystemService fileSystemService,
     ILocalAgentService localAgentService,
     IEnvironmentService environmentService,
     IAppLogger logger)
@@ -24,14 +22,14 @@ public class AgentManagementMcpTool(
         [Description("Optional persona filter (implementer, reviewer, planner, etc.)")] string? personaFilter = null)
     {
         using var scope = scopeService.CreateReadScope();
-        
+
         var query = scope.Agents.AsQueryable();
-        
+
         if (!string.IsNullOrEmpty(personaFilter))
         {
             query = query.Where(a => a.PersonaId == personaFilter);
         }
-        
+
         var agents = await query
             .Select(a => new AgentInfo
             {
@@ -45,7 +43,7 @@ public class AgentManagementMcpTool(
                 Model = a.Model,
                 WorktreeName = a.WorktreeName
             }).ToArrayAsync();
-        
+
         return ListAgentsResult.SuccessWith(agents);
     }
 
@@ -100,16 +98,19 @@ public class AgentManagementMcpTool(
                 WorktreeName = worktreeName
             };
 
-            var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
+            var agentId = await localAgentService.RegisterAgentAsync(
+                registrationRequest);
 
             // Create context file
-            var contextPath = await contextService.CreateContextFile(persona, workingDirectory);
+            var contextPath = await contextService.CreateContextFile(
+                persona, workingDirectory);
 
             // Launch Gemini with agent settings
             var agentSettings = new AgentSettings
             {
                 AgentId = agentId,
-                McpServerUrl = environmentService.GetEnvironmentVariable("MCP_SERVER_URL") ?? "http://localhost:5000/sse"
+                McpServerUrl = environmentService.GetEnvironmentVariable("MCP_SERVER_URL")
+                               ?? "http://localhost:5000/sse"
             };
 
             var success = await geminiService.LaunchInteractiveAsync(
@@ -123,9 +124,6 @@ public class AgentManagementMcpTool(
                 return LaunchAgentResult.Failure("Failed to launch Gemini interactive session");
             }
 
-            // TODO: Get real process ID from Gemini service
-            // Currently IGeminiService.LaunchInteractiveAsync only returns success boolean
-            // Need to modify service to return process information or track it separately
             return LaunchAgentResult.SuccessWith(agentId);
         }
         catch (Exception ex)
@@ -145,19 +143,25 @@ public class AgentManagementMcpTool(
             return KillAgentResult.Failure("Agent ID is required");
         }
 
-        using var scope = scopeService.CreateWriteScope();
-        var agent = await scope.Agents.FindAsync(agentId);
-        
-        if (agent == null)
+        try
         {
-            return KillAgentResult.Failure($"Agent not found: {agentId}");
-        }
-                                                                     
-        // Kill the agent and update the database
-        agent.Kill(timeService.UtcNow);
-        await scope.SaveChangesAsync();
-        scope.Complete();
+            // Check if agent exists first
+            using var scope = scopeService.CreateReadScope();
+            var agent = await scope.Agents.FindAsync(agentId);
+            if (agent == null)
+            {
+                return KillAgentResult.Failure($"Agent not found: {agentId}");
+            }
 
-        return KillAgentResult.SuccessWith(agentId);
+            // Use the local agent service to handle process termination and database updates
+            await localAgentService.KillAgentAsync(agentId);
+            
+            return KillAgentResult.SuccessWith(agentId);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Failed to kill agent {agentId}: {ex.Message}");
+            return KillAgentResult.Failure($"Failed to kill agent: {ex.Message}");
+        }
     }
 }

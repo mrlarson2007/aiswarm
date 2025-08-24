@@ -1,5 +1,4 @@
 using AgentLauncher.Commands;
-using AgentLauncher.Services;
 using AISwarm.Infrastructure;
 using AISwarm.Tests.TestDoubles;
 using Shouldly;
