@@ -309,63 +309,12 @@ The tool automatically:
 
 ## 🏗️ Architecture
 
-### Agent Launcher CLI
+The AI Swarm platform consists of four main components:
 
-```text
-src/AgentLauncher/
-├── Program.cs              # CLI entry point and command parsing
-├── Commands/              # Command handlers for CLI operations
-│   ├── LaunchAgentCommandHandler.cs  # Agent launching orchestration
-│   ├── ListAgentsCommandHandler.cs   # Agent listing functionality  
-│   └── InitCommandHandler.cs         # Project initialization
-├── Models/                # Domain models and configuration
-│   └── AgentSettings.cs   # Agent configuration model
-└── Resources/             # Embedded persona templates (moved to Infrastructure)
-```
-
-### MCP Coordination Server
-
-```text
-src/AISwarm.Server/
-├── Program.cs             # MCP server entry point with stdio transport
-├── McpTools/             # MCP protocol tool implementations
-│   ├── AgentManagementMcpTool.cs     # Agent lifecycle management
-│   ├── CreateTaskMcpTool.cs          # Task creation and assignment
-│   ├── GetTaskMcpTool.cs             # Task querying and status
-│   ├── GetNextTaskMcpTool.cs         # Agent task polling
-│   └── ReportTaskCompletionMcpTool.cs # Task completion reporting
-└── Models/               # Result DTOs for MCP responses
-```
-
-### Shared Infrastructure
-
-```text
-src/AISwarm.Infrastructure/
-├── Services/             # Core business logic services
-│   ├── ContextService.cs      # Agent context and persona management
-│   ├── GitService.cs          # Git worktree operations
-│   ├── GeminiService.cs       # Gemini CLI integration
-│   ├── LocalAgentService.cs   # Agent lifecycle and status management
-│   └── ProcessLauncher.cs     # Cross-platform process management
-├── Contracts/            # Service interfaces
-├── Models/              # Shared domain models
-└── Resources/           # Agent persona templates
-    ├── implementer_prompt.md
-    ├── planner_prompt.md
-    ├── reviewer_prompt.md
-    └── tester_prompt.md
-```
-
-### Data Layer
-
-```text
-src/AISwarm.DataLayer/
-├── CoordinationDbContext.cs  # Entity Framework database context
-├── Entities/                # Database entity models
-│   ├── Agent.cs             # Agent entity with status management
-│   └── WorkItem.cs          # Task/work item entity
-└── Models/                  # Database DTOs and enums
-```
+- **Agent Launcher CLI**: Command-line tool for launching specialized AI agents with isolated workspaces
+- **MCP Coordination Server**: Real-time task coordination and agent management via Model Context Protocol
+- **Shared Infrastructure**: Core business logic services, interfaces, and agent persona templates
+- **Data Layer**: Entity Framework database context with agent and task entities
 
 ## 🚀 Development
 
