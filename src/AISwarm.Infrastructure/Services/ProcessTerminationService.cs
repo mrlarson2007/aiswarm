@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Service for terminating OS processes

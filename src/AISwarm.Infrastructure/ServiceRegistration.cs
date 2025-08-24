@@ -7,6 +7,11 @@ public static class ServiceRegistration
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services)
     {
+        services.AddSingleton<IGitService, GitService>();
+        services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<ILocalAgentService, LocalAgentService>();
+        services.AddSingleton<IContextService, ContextService>();
+        services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
         services.AddSingleton<IProcessLauncher, ProcessLauncher>();
         services.AddSingleton<IAppLogger, ConsoleAppLogger>();
         services.AddSingleton<IEnvironmentService, EnvironmentService>();

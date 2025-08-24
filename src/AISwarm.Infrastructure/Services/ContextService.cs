@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
 public class ContextService : IContextService

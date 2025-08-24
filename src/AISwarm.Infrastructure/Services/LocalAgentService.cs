@@ -1,8 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
-using AISwarm.Infrastructure;
 
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Local agent service focused on launcher's specific needs:

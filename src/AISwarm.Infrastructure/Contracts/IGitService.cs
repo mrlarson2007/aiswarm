@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Service abstraction over git operations needed for the launcher (repository detection,

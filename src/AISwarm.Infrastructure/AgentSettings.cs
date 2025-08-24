@@ -1,4 +1,4 @@
-namespace AgentLauncher.Models;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Configuration settings for an agent, including agent ID and MCP server connection details

@@ -1,6 +1,4 @@
-using AgentLauncher.Models;
-
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Service responsible for interacting with the Gemini CLI: availability checks,

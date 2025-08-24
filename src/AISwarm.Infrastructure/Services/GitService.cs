@@ -1,7 +1,6 @@
-using AISwarm.Infrastructure;
 using System.Text.RegularExpressions;
 
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
 public partial class GitService(

@@ -1,4 +1,5 @@
 using System.CommandLine;
+using AISwarm.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AgentLauncher.Services;

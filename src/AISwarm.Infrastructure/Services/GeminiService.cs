@@ -1,7 +1,4 @@
-using AISwarm.Infrastructure;
-using AgentLauncher.Models;
-
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
 public class GeminiService(
@@ -32,7 +29,7 @@ public class GeminiService(
             if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
             {
                 var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var versionLine = lines.FirstOrDefault(line => !line.Contains("DeprecationWarning") && !line.Contains("trace-deprecation") && !string.IsNullOrWhiteSpace(line));
+                var versionLine = Enumerable.FirstOrDefault<string>(lines, line => !line.Contains("DeprecationWarning") && !line.Contains("trace-deprecation") && !string.IsNullOrWhiteSpace(line));
                 return versionLine?.Trim();
             }
             return null;

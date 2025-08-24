@@ -1,4 +1,4 @@
-namespace AgentLauncher.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Service responsible for discovering persona prompts and creating per-run context files.

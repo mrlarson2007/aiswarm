@@ -1,6 +1,5 @@
 using AgentLauncher.Services;
 using AISwarm.Infrastructure;
-using AgentLauncher.Models;
 
 namespace AgentLauncher.Commands;
 

@@ -12,17 +12,9 @@ public static class ServiceRegistration
         // External / infrastructure
         services.AddInfrastructureServices();
 
-        // Core services (placeholders until refactor complete)
-        services.AddSingleton<IContextService, ContextService>();
-        services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<IGeminiService, GeminiService>();
-
         // Use centralized data layer services with proper database initialization
         var configuration = new ConfigurationBuilder().Build();
         services.AddDataLayerServices(configuration);
-
-        services.AddSingleton<ILocalAgentService, LocalAgentService>();
-        services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
 
         // Background monitoring services
         services.AddSingleton<AgentMonitoringConfiguration>();
