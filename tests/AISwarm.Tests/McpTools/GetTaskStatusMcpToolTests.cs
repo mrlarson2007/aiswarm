@@ -42,7 +42,24 @@ public class GetTaskStatusMcpToolTests
         // Act
         var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
 
-        // Assert (RED - will fail until implemented)
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBeNull();
+        result.AgentId.ShouldBeNull();
+        result.StartedAt.ShouldBeNull();
+        result.CompletedAt.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("non-existent-task-id")]
+    public async Task WhenTaskIdIsInvalidOrNotFound_ShouldReturnNoPendingTasks(string taskId)
+    {
+        // Act
+        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
+
+        // Assert
         result.Success.ShouldBeTrue();
         result.TaskId.ShouldBeNull();
         result.AgentId.ShouldBeNull();
