@@ -38,10 +38,12 @@ public class GetTaskStatusMcpToolTests
     [InlineData("   ")]
     [InlineData("non-existent-task-id")]
     [InlineData("550e8400-e29b-41d4-a716-446655440000")] // Random GUID that doesn't exist
-    public async Task WhenTaskIdIsInvalidOrNotFound_ShouldReturnNoPendingTasks(string taskId)
+    public async Task WhenTaskIdIsInvalidOrNotFound_ShouldReturnNoPendingTasks(
+        string taskId)
     {
         // Act
-        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
+        var result = await SystemUnderTest.GetTaskStatusAsync(
+            taskId);
 
         // Assert
         result.Success.ShouldBeTrue();
@@ -56,13 +58,17 @@ public class GetTaskStatusMcpToolTests
     [InlineData("InProgress")]
     [InlineData("Completed")]
     [InlineData("Failed")]
-    public async Task WhenTaskExistsWithStatus_ShouldReturnTaskDetails(string statusName)
+    public async Task WhenTaskExistsWithStatus_ShouldReturnTaskDetails(
+        string statusName)
     {
         // Arrange
-        var taskId = await CreateTaskWithStatusAsync(statusName, "Test persona", "Test description");
+        var taskId = await CreateTaskWithStatusAsync(
+            statusName,
+            "Test persona", "Test description");
 
         // Act
-        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
+        var result = await SystemUnderTest.GetTaskStatusAsync(
+            taskId);
 
         // Assert (RED - will fail until implemented)
         result.Success.ShouldBeTrue();
@@ -73,11 +79,16 @@ public class GetTaskStatusMcpToolTests
         result.CompletedAt.ShouldBeNull();
     }
 
-    private async Task<string> CreateTaskWithStatusAsync(string statusName, string persona, string description)
+    private async Task<string> CreateTaskWithStatusAsync(
+        string statusName,
+        string persona,
+        string description)
     {
         using var scope = _scopeService.CreateWriteScope();
         var id = Guid.NewGuid().ToString();
-        var status = Enum.Parse<AISwarm.DataLayer.Entities.TaskStatus>(statusName);
+        var status = Enum.Parse<DataLayer.Entities.TaskStatus>(
+            statusName);
+
         var task = new WorkItem
         {
             Id = id,

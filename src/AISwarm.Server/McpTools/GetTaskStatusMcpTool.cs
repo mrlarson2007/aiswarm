@@ -12,7 +12,7 @@ public class GetTaskStatusMcpTool(IDatabaseScopeService scopeService)
     {
         using var scope = scopeService.CreateReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
-        
+
         if (task is null)
         {
             return GetTaskStatusResult.SuccessWith(
