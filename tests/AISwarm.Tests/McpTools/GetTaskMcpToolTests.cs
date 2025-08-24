@@ -324,6 +324,24 @@ public class GetTaskMcpToolTests
         completedTask.CompletedAt.ShouldBe(baseTime);
     }
 
+    // GetTasksByAgentIdAndStatus Tests  
+    [Fact]
+    public async Task GetTasksByAgentIdAndStatusAsync_WhenInvalidStatus_ShouldReturnFailure()
+    {
+        // Arrange
+        var agentId = "test-agent";
+        var invalidStatus = "InvalidStatus";
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAndStatusAsync(agentId, invalidStatus);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Invalid status");
+        result.Tasks.ShouldBeNull();
+    }
+
     private async Task<WorkItem> CreateTaskAsync(
         string taskId,
         TaskStatus status,
