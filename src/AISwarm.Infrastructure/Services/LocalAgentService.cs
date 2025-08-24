@@ -55,7 +55,7 @@ public class LocalAgentService(
     }
 
     /// <summary>
-    /// Update agent heartbeat
+    /// Update agent heartbeat and transition Starting agents to Running
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
@@ -65,6 +65,13 @@ public class LocalAgentService(
         if (agent != null)
         {
             agent.UpdateHeartbeat(timeService.UtcNow);
+            
+            // If agent is starting and actively polling for tasks, transition to running
+            if (agent.Status == AgentStatus.Starting)
+            {
+                agent.Status = AgentStatus.Running;
+            }
+            
             await scope.SaveChangesAsync();
             scope.Complete();
             return true;

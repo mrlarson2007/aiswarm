@@ -94,6 +94,63 @@ public class LocalAgentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task WhenUpdatingHeartbeatForStartingAgent_ShouldTransitionToRunning()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
+        };
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+
+        // Verify agent starts with Starting status
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.Status.ShouldBe(AgentStatus.Starting);
+
+        // Advance time
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
+
+        // Act - Update heartbeat should transition Starting agent to Running
+        var success = await _systemUnderTest.UpdateHeartbeatAsync(agentId);
+
+        // Assert
+        success.ShouldBeTrue();
+
+        var updatedAgent = await _systemUnderTest.GetAgentAsync(agentId);
+        updatedAgent!.Status.ShouldBe(AgentStatus.Running);
+        updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+    }
+
+    [Fact]
+    public async Task WhenUpdatingHeartbeatForRunningAgent_ShouldStayRunning()
+    {
+        // Arrange
+        var request = new AgentRegistrationRequest
+        {
+            PersonaId = "tester", AgentType = "tester", WorkingDirectory = "/test/path"
+        };
+        var agentId = await _systemUnderTest.RegisterAgentAsync(request);
+        await _systemUnderTest.MarkAgentRunningAsync(agentId, "12345");
+
+        // Verify agent is Running
+        var agent = await _systemUnderTest.GetAgentAsync(agentId);
+        agent!.Status.ShouldBe(AgentStatus.Running);
+
+        // Advance time
+        _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
+
+        // Act - Update heartbeat should keep Running agent as Running
+        var success = await _systemUnderTest.UpdateHeartbeatAsync(agentId);
+
+        // Assert
+        success.ShouldBeTrue();
+
+        var updatedAgent = await _systemUnderTest.GetAgentAsync(agentId);
+        updatedAgent!.Status.ShouldBe(AgentStatus.Running);
+        updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
+    }
+
+    [Fact]
     public async Task WhenMarkingAgentRunning_ShouldUpdateStatusAndStartTime()
     {
         // Arrange
