@@ -8,7 +8,7 @@ namespace AISwarm.Tests.TestDoubles;
 /// </summary>
 public class FakeTimeService : ITimeService
 {
-    public DateTime UtcNow { get; set; } = new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
+    public DateTime UtcNow { get; set; } = new(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
     /// Advances time by the specified amount

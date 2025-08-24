@@ -11,7 +11,7 @@ public class GitServiceTests
     private readonly FakeFileSystemService _fs = new();
     private readonly TestLogger _logger = new();
 
-    private GitService SystemUnderTest => new GitService(_process, _fs, _logger);
+    private GitService SystemUnderTest => new(_process, _fs, _logger);
 
     [Fact]
     public async Task CreateWorktree_ShouldFail_WhenDirectoryAlreadyExists()

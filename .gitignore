@@ -34,4 +34,4 @@ src/AISwarm.Server/.aiswarm/aiswarm.db
 .aiswarm/aiswarm.db-shm
 .aiswarm/aiswarm.db-wal
 .gemini/settings.json
-.refactor-mcp/tool-call-log-20250823165426.jsonl
+.refactor-mcp/*

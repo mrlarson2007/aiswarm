@@ -1,11 +1,11 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Server.McpTools;
 
-public class GetTasksByStatusMcpTool(IDatabaseScopeService scopeService)
+public class TaskMcpTool(IDatabaseScopeService scopeService)
 {
     [Description("Get tasks by status")]
     public async Task<GetTasksByStatusResult> GetTasksByStatusAsync(
@@ -19,7 +19,7 @@ public class GetTasksByStatusMcpTool(IDatabaseScopeService scopeService)
         using var scope = scopeService.CreateReadScope();
         var tasks = await scope.Tasks
             .Where(t => t.Status == taskStatus)
-            .ToArrayAsync();
+            .ToListAsync();
 
         var taskInfos = tasks.Select(t => new TaskInfo
         {
@@ -31,5 +31,30 @@ public class GetTasksByStatusMcpTool(IDatabaseScopeService scopeService)
         }).ToArray();
 
         return GetTasksByStatusResult.SuccessWith(taskInfos);
+    }
+
+    [Description("Get the status of a task by ID")]
+    public async Task<GetTaskStatusResult> GetTaskStatusAsync(
+        [Description("ID of the task to query")] string taskId)
+    {
+        using var scope = scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(taskId);
+
+        if (task is null)
+        {
+            return GetTaskStatusResult.SuccessWith(
+                taskId: null,
+                status: null,
+                agentId: null,
+                startedAt: null,
+                completedAt: null);
+        }
+
+        return GetTaskStatusResult.SuccessWith(
+            taskId: task.Id,
+            status: task.Status.ToString(),
+            agentId: task.AgentId,
+            startedAt: task.StartedAt,
+            completedAt: task.CompletedAt);
     }
 }

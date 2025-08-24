@@ -13,7 +13,7 @@ public class ListWorktreesCommandHandlerTests
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
 
-    private ListWorktreesCommandHandler SystemUnderTest => new ListWorktreesCommandHandler(
+    private ListWorktreesCommandHandler SystemUnderTest => new(
         new GitService(_process, _fs, _logger),
         _logger);
 
