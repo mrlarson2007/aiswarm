@@ -51,15 +51,35 @@ public class GetTaskStatusMcpToolTests
         result.CompletedAt.ShouldBeNull();
     }
 
-    private async Task<string> CreatePendingTaskAsync(string persona, string description)
+    [Theory]
+    [InlineData("Pending")]
+    public async Task WhenTaskExistsWithStatus_ShouldReturnTaskDetails(string statusName)
+    {
+        // Arrange
+        var taskId = await CreateTaskWithStatusAsync(statusName, "Test persona", "Test description");
+
+        // Act
+        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
+
+        // Assert (RED - will fail until implemented)
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldBe(taskId);
+        result.Status.ShouldBe(statusName);
+        result.AgentId.ShouldBeEmpty(); // Empty string for pending task
+        result.StartedAt.ShouldBeNull();
+        result.CompletedAt.ShouldBeNull();
+    }
+
+    private async Task<string> CreateTaskWithStatusAsync(string statusName, string persona, string description)
     {
         using var scope = _scopeService.CreateWriteScope();
         var id = Guid.NewGuid().ToString();
+        var status = Enum.Parse<AISwarm.DataLayer.Entities.TaskStatus>(statusName);
         var task = new WorkItem
         {
             Id = id,
             AgentId = string.Empty,
-            Status = AISwarm.DataLayer.Entities.TaskStatus.Pending,
+            Status = status,
             Persona = persona,
             Description = description,
             CreatedAt = _timeService.UtcNow
