@@ -126,7 +126,7 @@ public class AgentManagementMcpTool(
             // TODO: Get real process ID from Gemini service
             // Currently IGeminiService.LaunchInteractiveAsync only returns success boolean
             // Need to modify service to return process information or track it separately
-            return LaunchAgentResult.SuccessWith(agentId, null);
+            return LaunchAgentResult.SuccessWith(agentId);
         }
         catch (Exception ex)
         {

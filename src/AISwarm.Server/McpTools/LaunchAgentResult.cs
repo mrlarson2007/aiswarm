@@ -13,7 +13,13 @@ public class LaunchAgentResult
         ErrorMessage = message
     };
 
-    public static LaunchAgentResult SuccessWith(string agentId, string? processId = null) => new()
+    public static LaunchAgentResult SuccessWith(string agentId) => new()
+    {
+        Success = true,
+        AgentId = agentId
+    };
+
+    public static LaunchAgentResult SuccessWith(string agentId, string? processId) => new()
     {
         Success = true,
         AgentId = agentId,
