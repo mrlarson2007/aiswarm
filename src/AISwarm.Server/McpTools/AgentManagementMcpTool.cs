@@ -54,7 +54,7 @@ public class AgentManagementMcpTool(
     public async Task<LaunchAgentResult> LaunchAgentAsync(
         [Description("Agent persona (implementer, reviewer, planner, etc.)")] string persona,
         [Description("Description of what the agent should accomplish")] string description,
-        [Description("Optional model to use (default: gemini-1.5-flash)")] string? model = null,
+        [Description("Optional model to use")] string? model = null,
         [Description("Optional worktree name for the agent")] string? worktreeName = null)
     {
         if (string.IsNullOrWhiteSpace(persona))
@@ -96,7 +96,7 @@ public class AgentManagementMcpTool(
                 PersonaId = persona,
                 AgentType = persona,
                 WorkingDirectory = workingDirectory,
-                Model = model ?? "gemini-1.5-flash",
+                Model = model,
                 WorktreeName = worktreeName
             };
 
@@ -114,7 +114,7 @@ public class AgentManagementMcpTool(
 
             var success = await geminiService.LaunchInteractiveAsync(
                 contextPath,
-                model ?? "gemini-1.5-flash",
+                model,
                 workingDirectory,
                 agentSettings);
 
