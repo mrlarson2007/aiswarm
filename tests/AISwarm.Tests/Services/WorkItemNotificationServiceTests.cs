@@ -7,12 +7,16 @@ namespace AISwarm.Tests.Services;
 
 public class WorkItemNotificationServiceTests
 {
+    // Per-test-instance setup (xUnit creates a new class instance per test)
+    private readonly IEventBus _bus = new InMemoryEventBus();
+    private IWorkItemNotificationService? _sut;
+    private IWorkItemNotificationService SystemUnderTest => _sut ??= new WorkItemNotificationService(_bus);
+
     [Fact]
     public void WhenSubscribingWithNullAgentId_ShouldThrowArgumentException()
     {
         // Arrange
-        IEventBus bus = new InMemoryEventBus();
-        IWorkItemNotificationService service = new WorkItemNotificationService(bus);
+        var service = SystemUnderTest;
 
         // Act
         var act = () => service.SubscribeForAgent(null!);
@@ -29,9 +33,7 @@ public class WorkItemNotificationServiceTests
         var agentId = "agent-123";
         var taskId = "task-abc";
         var persona = "reviewer";
-
-        IEventBus bus = new InMemoryEventBus();
-        IWorkItemNotificationService service = new WorkItemNotificationService(bus);
+        var service = SystemUnderTest;
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
@@ -47,7 +49,7 @@ public class WorkItemNotificationServiceTests
         }, cts.Token);
 
         await Task.Delay(5, cts.Token); // give subscription a moment
-        await service.PublishTaskCreated(taskId, agentId, persona);
+    await service.PublishTaskCreated(taskId, agentId, persona);
 
         await readTask;
 
