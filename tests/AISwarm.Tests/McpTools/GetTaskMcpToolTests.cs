@@ -205,6 +205,23 @@ public class GetTaskMcpToolTests
         result.CompletedAt.ShouldBe(_timeService.UtcNow.AddMinutes(5));
     }
 
+    // GetTasksByAgentId Tests
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task GetTasksByAgentIdAsync_WhenAgentIdIsInvalidOrEmpty_ShouldReturnFailure(string? agentId)
+    {
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId!);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Agent ID cannot be null or empty");
+        result.Tasks.ShouldBeNull();
+    }
+
     private async Task<WorkItem> CreateTaskAsync(
         string taskId,
         TaskStatus status,

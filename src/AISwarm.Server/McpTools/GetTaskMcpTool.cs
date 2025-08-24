@@ -57,4 +57,30 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
             startedAt: task.StartedAt,
             completedAt: task.CompletedAt);
     }
+
+    [Description("Get tasks by agent ID")]
+    public async Task<GetTasksByStatusResult> GetTasksByAgentIdAsync(
+        [Description("ID of the agent to query tasks for")] string agentId)
+    {
+        if (string.IsNullOrWhiteSpace(agentId))
+        {
+            return GetTasksByStatusResult.Failure("Agent ID cannot be null or empty");
+        }
+
+        using var scope = scopeService.CreateReadScope();
+        var tasks = await scope.Tasks
+            .Where(t => t.AgentId == agentId)
+            .ToListAsync();
+
+        var taskInfos = tasks.Select(t => new TaskInfo
+        {
+            TaskId = t.Id,
+            Status = t.Status.ToString(),
+            AgentId = t.AgentId,
+            StartedAt = t.StartedAt,
+            CompletedAt = t.CompletedAt
+        }).ToArray();
+
+        return GetTasksByStatusResult.SuccessWith(taskInfos);
+    }
 }
