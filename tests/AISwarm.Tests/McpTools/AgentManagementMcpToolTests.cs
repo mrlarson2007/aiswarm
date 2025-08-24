@@ -100,6 +100,26 @@ public class AgentManagementMcpToolTests
         result.AgentId.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task LaunchAgentAsync_WhenNotInGitRepository_ShouldReturnFailure()
+    {
+        // Arrange
+        var persona = "implementer";
+        var description = "Test task description";
+        
+        var fakeGitService = _serviceProvider.GetRequiredService<IGitService>() as FakeGitService;
+        fakeGitService!.IsRepository = false; // Not in a git repository
+
+        // Act
+        var result = await SystemUnderTest.LaunchAgentAsync(persona, description);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("git repository");
+        result.AgentId.ShouldBeNull();
+    }
+
     // KillAgent Tests
     [Fact]
     public async Task KillAgentAsync_WhenAgentNotFound_ShouldReturnFailure()

@@ -51,7 +51,7 @@ public class AgentManagementMcpTool(
 
     [McpServerTool(Name = "launch_agent")]
     [Description("Launch a new agent with specified persona")]
-    public Task<LaunchAgentResult> LaunchAgentAsync(
+    public async Task<LaunchAgentResult> LaunchAgentAsync(
         [Description("Agent persona (implementer, reviewer, planner, etc.)")] string persona,
         [Description("Description of what the agent should accomplish")] string description,
         [Description("Optional model to use (default: gemini-1.5-flash)")] string? model = null,
@@ -59,18 +59,24 @@ public class AgentManagementMcpTool(
     {
         if (string.IsNullOrWhiteSpace(persona))
         {
-            return Task.FromResult(LaunchAgentResult.Failure("Persona is required"));
+            return LaunchAgentResult.Failure("Persona is required");
         }
 
         // Validate agent type using context service
         if (!contextService.IsValidAgentType(persona))
         {
-            return Task.FromResult(LaunchAgentResult.Failure($"Invalid agent type: {persona}"));
+            return LaunchAgentResult.Failure($"Invalid agent type: {persona}");
+        }
+
+        // Check if we're in a git repository
+        if (!await gitService.IsGitRepositoryAsync())
+        {
+            return LaunchAgentResult.Failure("Must be run from within a git repository");
         }
 
         // For now, return a simple success - full implementation will integrate with AgentLauncher
         var agentId = Guid.NewGuid().ToString();
-        return Task.FromResult(LaunchAgentResult.SuccessWith(agentId, "12345"));
+        return LaunchAgentResult.SuccessWith(agentId, "12345");
     }
 
     [McpServerTool(Name = "kill_agent")]
