@@ -74,9 +74,63 @@ public class AgentManagementMcpTool(
             return LaunchAgentResult.Failure("Must be run from within a git repository");
         }
 
-        // For now, return a simple success - full implementation will integrate with AgentLauncher
-        var agentId = Guid.NewGuid().ToString();
-        return LaunchAgentResult.SuccessWith(agentId, "12345");
+        try
+        {
+            // Get repository root
+            var repositoryRoot = await gitService.GetRepositoryRootAsync();
+            if (repositoryRoot == null)
+            {
+                return LaunchAgentResult.Failure("Could not determine repository root");
+            }
+
+            // Create worktree if specified
+            string workingDirectory = repositoryRoot;
+            if (!string.IsNullOrWhiteSpace(worktreeName))
+            {
+                workingDirectory = await gitService.CreateWorktreeAsync(worktreeName);
+            }
+
+            // Register agent in database
+            var registrationRequest = new AgentRegistrationRequest
+            {
+                PersonaId = persona,
+                AgentType = persona,
+                WorkingDirectory = workingDirectory,
+                Model = model ?? "gemini-1.5-flash",
+                WorktreeName = worktreeName
+            };
+
+            var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
+
+            // Create context file
+            var contextPath = await contextService.CreateContextFile(persona, workingDirectory);
+
+            // Launch Gemini with agent settings
+            var agentSettings = new AgentSettings
+            {
+                AgentId = agentId,
+                McpServerUrl = environmentService.GetEnvironmentVariable("MCP_SERVER_URL") ?? "http://localhost:5000/sse"
+            };
+
+            var success = await geminiService.LaunchInteractiveAsync(
+                contextPath,
+                model ?? "gemini-1.5-flash",
+                workingDirectory,
+                agentSettings);
+
+            if (!success)
+            {
+                return LaunchAgentResult.Failure("Failed to launch Gemini interactive session");
+            }
+
+            // For now, return placeholder process ID - in real implementation this would come from Gemini process
+            return LaunchAgentResult.SuccessWith(agentId, "12345");
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Failed to launch agent: {ex.Message}");
+            return LaunchAgentResult.Failure($"Failed to launch agent: {ex.Message}");
+        }
     }
 
     [McpServerTool(Name = "kill_agent")]

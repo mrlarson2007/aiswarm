@@ -120,6 +120,39 @@ public class AgentManagementMcpToolTests
         result.AgentId.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task LaunchAgentAsync_WhenValidParameters_ShouldCreateAgentAndLaunchGemini()
+    {
+        // Arrange
+        var persona = "implementer";
+        var description = "Test task description";
+        var model = "gemini-1.5-flash";
+        var worktreeName = "test-branch";
+
+        var fakeGitService = _serviceProvider.GetRequiredService<IGitService>() as FakeGitService;
+        fakeGitService!.IsRepository = true;
+        fakeGitService.RepositoryRoot = "/test/repo";
+        fakeGitService.CreatedWorktreePath = "/test/repo/test-branch";
+
+        var fakeContextService = _serviceProvider.GetRequiredService<IContextService>() as FakeContextService;
+        fakeContextService!.CreatedContextPath = "/test/repo/test-branch/implementer_context.md";
+
+        var fakeLocalAgentService = _serviceProvider.GetRequiredService<ILocalAgentService>() as FakeLocalAgentService;
+        fakeLocalAgentService!.RegisteredAgentId = "test-agent-123";
+
+        var fakeGeminiService = _serviceProvider.GetRequiredService<IGeminiService>() as FakeGeminiService;
+        fakeGeminiService!.LaunchResult = true;
+
+        // Act
+        var result = await SystemUnderTest.LaunchAgentAsync(persona, description, model, worktreeName);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.AgentId.ShouldBe("test-agent-123"); // Should be the registered agent ID from fake service, not random GUID
+        result.ProcessId.ShouldNotBeNull();
+        result.ErrorMessage.ShouldBeNull();
+    }
+
     // KillAgent Tests
     [Fact]
     public async Task KillAgentAsync_WhenAgentNotFound_ShouldReturnFailure()
