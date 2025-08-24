@@ -222,6 +222,79 @@ public class GetTaskMcpToolTests
         result.Tasks.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task GetTasksByAgentIdAsync_WhenNoTasksForAgent_ShouldReturnEmptyArray()
+    {
+        // Arrange
+        var agentId = "non-existent-agent";
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTasksByAgentIdAsync_WhenTasksExistForAgent_ShouldReturnFilteredTasks()
+    {
+        // Arrange
+        var targetAgentId = "agent-123";
+        var task1 = await CreateTaskAsync("task1", TaskStatus.Pending, targetAgentId);
+        var task2 = await CreateTaskAsync("task2", TaskStatus.InProgress, "other-agent");
+        var task3 = await CreateTaskAsync("task3", TaskStatus.Completed, targetAgentId);
+        var task4 = await CreateTaskAsync("task4", TaskStatus.Failed, "another-agent");
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(targetAgentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.Length.ShouldBe(2);
+
+        // Verify all returned tasks belong to the target agent
+        result.Tasks.ShouldAllBe(t => t.AgentId == targetAgentId);
+
+        // Verify specific tasks are included
+        var returnedTask1 = result.Tasks.Single(t => t.TaskId == "task1");
+        returnedTask1.Status.ShouldBe("Pending");
+        returnedTask1.AgentId.ShouldBe(targetAgentId);
+
+        var returnedTask3 = result.Tasks.Single(t => t.TaskId == "task3");
+        returnedTask3.Status.ShouldBe("Completed");
+        returnedTask3.AgentId.ShouldBe(targetAgentId);
+    }
+
+    [Fact]
+    public async Task GetTasksByAgentIdAsync_WhenTasksHaveTimestamps_ShouldReturnTimestampFields()
+    {
+        // Arrange
+        var agentId = "timestamp-agent";
+        var baseTime = _timeService.UtcNow;
+        var task1 = await CreateTaskAsync("inProgressTask", TaskStatus.InProgress, agentId);
+        var task2 = await CreateTaskAsync("completedTask", TaskStatus.Completed, agentId);
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAsync(agentId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.Length.ShouldBe(2);
+
+        var inProgressTask = result.Tasks.Single(t => t.TaskId == "inProgressTask");
+        inProgressTask.StartedAt.ShouldBe(baseTime);
+        inProgressTask.CompletedAt.ShouldBeNull();
+
+        var completedTask = result.Tasks.Single(t => t.TaskId == "completedTask");
+        completedTask.CompletedAt.ShouldBe(baseTime);
+    }
+
     private async Task<WorkItem> CreateTaskAsync(
         string taskId,
         TaskStatus status,
