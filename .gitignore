@@ -35,3 +35,7 @@ src/AISwarm.Server/.aiswarm/aiswarm.db
 .aiswarm/aiswarm.db-wal
 .gemini/settings.json
 .refactor-mcp/*
+
+# Agent Generated Review Files
+*_REVIEW.md
+*REVIEW.md
