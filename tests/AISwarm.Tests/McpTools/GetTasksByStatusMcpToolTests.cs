@@ -56,32 +56,75 @@ public class GetTasksByStatusMcpToolTests
         result.Tasks.ShouldBeEmpty();
     }
 
-    [Fact]
-    public async Task GetTasksByStatusAsync_WhenTasksExistWithStatus_ShouldReturnTasksArray()
+    [Theory]
+    [InlineData("Pending")]
+    [InlineData("InProgress")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
+    public async Task GetTasksByStatusAsync_WhenTasksExistWithStatus_ShouldReturnFilteredTasks(string statusFilter)
     {
         // Arrange
         var task1 = await CreateTaskAsync("task1", TaskStatus.Pending, "agent1");
-        var task2 = await CreateTaskAsync("task2", TaskStatus.Pending, "agent2");
-        var task3 = await CreateTaskAsync("task3", TaskStatus.InProgress, "agent1");
+        var task2 = await CreateTaskAsync("task2", TaskStatus.InProgress, "agent2");
+        var task3 = await CreateTaskAsync("task3", TaskStatus.Completed, "agent1");
+        var task4 = await CreateTaskAsync("task4", TaskStatus.Failed, "agent3");
+        var task5 = await CreateTaskAsync("task5", Enum.Parse<TaskStatus>(statusFilter), "agent4");
 
         var tool = new GetTasksByStatusMcpTool(_scopeService);
 
         // Act
-        var result = await tool.GetTasksByStatusAsync("Pending");
+        var result = await tool.GetTasksByStatusAsync(statusFilter);
 
         // Assert
         result.Success.ShouldBeTrue();
         result.ErrorMessage.ShouldBeNull();
         result.Tasks.ShouldNotBeNull();
-        result.Tasks.Length.ShouldBe(2);
         
-        var returnedTask1 = result.Tasks.Single(t => t.TaskId == "task1");
-        returnedTask1.Status.ShouldBe("Pending");
-        returnedTask1.AgentId.ShouldBe("agent1");
+        // Should return tasks that match the filter (task5 plus any others with same status)
+        var expectedTasks = result.Tasks.Where(t => t.Status == statusFilter);
+        expectedTasks.ShouldNotBeEmpty();
         
-        var returnedTask2 = result.Tasks.Single(t => t.TaskId == "task2");
-        returnedTask2.Status.ShouldBe("Pending");
-        returnedTask2.AgentId.ShouldBe("agent2");
+        // Verify all returned tasks have the correct status
+        result.Tasks.ShouldAllBe(t => t.Status == statusFilter);
+        
+        // Verify task5 is included
+        var task5Result = result.Tasks.Single(t => t.TaskId == "task5");
+        task5Result.Status.ShouldBe(statusFilter);
+        task5Result.AgentId.ShouldBe("agent4");
+    }
+
+    [Theory]
+    [InlineData("InProgress")]
+    [InlineData("Completed")]
+    public async Task GetTasksByStatusAsync_WhenTasksHaveTimestamps_ShouldReturnTimestampFields(string statusFilter)
+    {
+        // Arrange
+        var baseTime = _timeService.UtcNow;
+        var taskStatus = Enum.Parse<TaskStatus>(statusFilter);
+        var task = await CreateTaskAsync("timestampTask", taskStatus, "agent1");
+
+        var tool = new GetTasksByStatusMcpTool(_scopeService);
+
+        // Act
+        var result = await tool.GetTasksByStatusAsync(statusFilter);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.Length.ShouldBe(1);
+        
+        var returnedTask = result.Tasks[0];
+        returnedTask.TaskId.ShouldBe("timestampTask");
+        
+        if (taskStatus == TaskStatus.InProgress)
+        {
+            returnedTask.StartedAt.ShouldBe(baseTime);
+            returnedTask.CompletedAt.ShouldBeNull();
+        }
+        else if (taskStatus == TaskStatus.Completed)
+        {
+            returnedTask.CompletedAt.ShouldBe(baseTime);
+        }
     }
 
     private async Task<WorkItem> CreateTaskAsync(
