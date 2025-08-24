@@ -7,6 +7,21 @@ namespace AISwarm.Tests.Services;
 
 public class WorkItemNotificationServiceTests
 {
+    [Fact]
+    public void WhenSubscribingWithNullAgentId_ShouldThrowArgumentException()
+    {
+        // Arrange
+        IEventBus bus = new InMemoryEventBus();
+        IWorkItemNotificationService service = new WorkItemNotificationService(bus);
+
+        // Act
+        var act = () => service.SubscribeForAgent(null!);
+
+        // Assert
+        var ex = Should.Throw<ArgumentException>(() => act().GetAsyncEnumerator().MoveNextAsync().AsTask());
+        ex.Message.ShouldContain("agentId");
+    }
+
     [Fact(Timeout = 5000)]
     public async Task WhenPublishingTaskCreatedForAgent_ShouldDeliverToAgentSubscription()
     {

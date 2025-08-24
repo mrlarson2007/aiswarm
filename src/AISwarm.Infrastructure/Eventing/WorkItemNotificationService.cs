@@ -12,6 +12,8 @@ public class WorkItemNotificationService : IWorkItemNotificationService
 
     public IAsyncEnumerable<EventEnvelope> SubscribeForAgent(string agentId, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(agentId))
+            throw new ArgumentException("agentId must be provided", nameof(agentId));
         var filter = new EventFilter(
             Types: new[] { TaskCreatedType },
             Predicate: e => e.Payload is TaskCreatedPayload p && p.AgentId == agentId);
