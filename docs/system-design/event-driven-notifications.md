@@ -8,6 +8,7 @@ Date: 2025-08-24
 Replace periodic DB polling with an in-memory, event-driven notification subsystem to wake waiting operations (e.g., `get_next_task`) immediately when relevant state changes occur. Keep SQLite as the source of truth; events are non-durable hints and telemetry.
 
 Goals:
+
 - Lower latency and database load by eliminating fixed-interval polling
 - Support multiple event types (task lifecycle, agent lifecycle, logs)
 - Allow multiple independent subscribers (agents, planners, log sinks)
@@ -143,5 +144,5 @@ public interface IWorkItemNotificationService
 ## Open Questions
 
 - Do we want a dedicated `EventLog` table for durable audit? (separate from transient bus)
-- Should we expose a public MCP tool for subscribing to certain event classes (e.g., planner waiting on completion), or keep it server-internal and let planners poll `get_task_status`? 
+- Should we expose a public MCP tool for subscribing to certain event classes (e.g., planner waiting on completion), or keep it server-internal and let planners poll `get_task_status`?
 - Coalescing thresholds per event type? Configurable capacities?
