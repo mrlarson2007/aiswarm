@@ -53,6 +53,9 @@ public class GetTaskStatusMcpToolTests
 
     [Theory]
     [InlineData("Pending")]
+    [InlineData("InProgress")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
     public async Task WhenTaskExistsWithStatus_ShouldReturnTaskDetails(string statusName)
     {
         // Arrange
