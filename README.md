@@ -1,21 +1,41 @@
-# AI Swarm Agent Launcher
+# AI Swarm - Multi-Agent Coordination Platform
 
 [![Build and Test](https://github.com/mrlarson2007/aiswarm/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/build-and-test.yml)
 [![Code Quality](https://github.com/mrlarson2007/aiswarm/actions/workflows/code-quality.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/code-quality.yml)
 [![Security](https://github.com/mrlarson2007/aiswarm/actions/workflows/security.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/security.yml)
 [![Release](https://github.com/mrlarson2007/aiswarm/actions/workflows/release.yml/badge.svg)](https://github.com/mrlarson2007/aiswarm/actions/workflows/release.yml)
 
-A powerful CLI tool for launching and coordinating AI agents with specialized personas using git worktrees for isolated workspaces.
+A comprehensive multi-agent coordination platform featuring both CLI tools for launching specialized AI agents and an MCP (Model Context Protocol) server for real-time agent task coordination and management.
 
-## 🚀 Features
+## 🚀 Core Components
+
+### 1. Agent Launcher CLI
+
+A powerful command-line tool for launching specialized AI agents with isolated workspaces.
+
+### 2. MCP Coordination Server  
+
+A Model Context Protocol server providing real-time task coordination and agent management tools for VS Code and other MCP-compatible environments.
+
+## 🌟 Key Features
+
+### Agent Launcher
 
 - **Multi-Agent Coordination**: Launch specialized AI agents (planner, implementer, reviewer, tester) with distinct personas
 - **Git Worktree Integration**: Automatic isolation using git worktrees for conflict-free parallel work
 - **Embedded Personas**: Built-in agent templates with comprehensive instructions
 - **Custom Personas**: Support for external persona files via environment variables
 - **Gemini CLI Integration**: Seamless integration with Google's Gemini CLI
-- **Cross-Platform**: Designed for future cross-platform support
-- **Self-Contained**: No external dependencies beyond .NET and Gemini CLI
+- **Cross-Platform**: Windows, macOS, and Linux support
+
+### MCP Coordination Server
+
+- **Real-Time Task Management**: Create, assign, and track tasks across multiple agents
+- **Agent Lifecycle Management**: Launch, monitor, and terminate agents programmatically
+- **Task Coordination**: Distributed task queue with status tracking and completion reporting
+- **VS Code Integration**: Native MCP protocol support for seamless IDE integration
+- **Automatic Agent Status Management**: Dynamic status transitions and heartbeat monitoring
+- **Failure Recovery**: Comprehensive error handling and task failure reporting
 
 ## 📋 Prerequisites
 
@@ -23,11 +43,95 @@ A powerful CLI tool for launching and coordinating AI agents with specialized pe
 - [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed and configured
 - Git (for worktree management)
 - **Windows**: Fully supported
-- **Mac/Linux**: Coming soon (contributions welcome!)
+- **Mac/Linux**: Fully supported
+- **VS Code**: For MCP server integration (optional)
+
+## 🔧 MCP Server Setup
+
+The AI Swarm MCP server provides real-time task coordination and agent management tools that integrate directly with VS Code and other MCP-compatible environments.
+
+### VS Code Integration
+
+1. Add the following configuration to your VS Code workspace `.vscode/mcp.json`:
+
+```json
+{
+    "servers": {
+        "aiswarm": {
+            "type": "stdio",
+            "command": "dotnet",
+            "args": [
+                "run",
+                "--project",
+                "src/AISwarm.Server"
+            ],
+            "env": {
+                "WorkingDirectory": "${workspaceFolder}"
+            }
+        }
+    }
+}
+```
+
+2. The server will automatically start when VS Code loads and MCP tools are accessed.
+
+### Available MCP Tools
+
+The MCP server provides the following tools for agent coordination:
+
+#### Task Management
+
+- **`create_task`** - Create and assign tasks to agents
+- **`get_tasks_by_status`** - Retrieve tasks filtered by status (Pending, InProgress, Completed, Failed)
+- **`get_task_status`** - Get detailed status information for a specific task
+- **`get_tasks_by_agent_id`** - Retrieve all tasks assigned to a specific agent
+- **`get_tasks_by_agent_id_and_status`** - Get tasks for an agent filtered by status
+- **`get_next_task`** - Agent polling endpoint to retrieve next available task
+- **`report_task_completion`** - Mark tasks as completed with results
+- **`report_task_failure`** - Report task failures with error details
+
+#### Agent Management
+
+- **`list_agents`** - List all registered agents with status and heartbeat information
+- **`launch_agent`** - Launch new agents with specified personas and worktree isolation
+- **`kill_agent`** - Terminate running agents and clean up associated resources
+
+### MCP Tool Parameters
+
+#### Task Creation
+
+```typescript
+create_task(agentId?: string, persona: string, description: string, priority: "Low" | "Normal" | "High" | "Critical")
+```
+
+#### Agent Launch
+
+```typescript
+launch_agent(persona: string, description: string, worktreeName?: string, model?: string, yolo: boolean = false)
+```
+
+#### Task Querying
+
+```typescript
+get_tasks_by_status(status: "Pending" | "InProgress" | "Completed" | "Failed")
+get_tasks_by_agent_id_and_status(agentId: string, status: string)
+```
+
+### Key Features
+
+- **Real-Time Coordination**: Agents can poll for tasks and report status in real-time
+- **Automatic Status Management**: Agent status automatically transitions from Starting → Running during task polling
+- **Failure Recovery**: Comprehensive error handling with task failure reporting
+- **Heartbeat Monitoring**: Automatic agent heartbeat updates during task operations
+- **Worktree Isolation**: Each agent runs in isolated git worktrees to prevent conflicts
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Yolo Mode**: Bypass permission prompts for autonomous agent operation
 
 ## 🛠️ Installation
 
-### Option 1: Install as Global Tool (Recommended)
+### Agent Launcher CLI
+
+#### Option 1: Install as Global Tool (Recommended)
 
 ```bash
 # Install from NuGet (when published)
@@ -38,7 +142,7 @@ dotnet tool install --global AiSwarm.AgentLauncher
 # https://github.com/mrlarson2007/aiswarm/releases
 ```
 
-### Option 2: Build from Source
+#### Option 2: Build from Source
 
 ```bash
 # Clone the repository
@@ -53,13 +157,28 @@ dotnet tool install --global --add-source . AiSwarm.AgentLauncher
 aiswarm --list
 ```
 
-### Option 3: Run from Source
+#### Option 3: Run from Source
 
 ```bash
 # Clone and run directly
 git clone https://github.com/mrlarson2007/aiswarm.git
 cd aiswarm
 dotnet run --project src/AgentLauncher -- --list
+```
+
+### MCP Coordination Server
+
+The MCP server runs directly from source and integrates with VS Code:
+
+```bash
+# Clone the repository (if not already done)
+git clone https://github.com/mrlarson2007/aiswarm.git
+cd aiswarm
+
+# Test the server
+dotnet run --project src/AISwarm.Server
+
+# Configure VS Code integration (see MCP Server Setup section)
 ```
 
 ## 📖 Usage
@@ -190,20 +309,130 @@ The tool automatically:
 
 ## 🏗️ Architecture
 
-```
+### Agent Launcher CLI
+
+```text
 src/AgentLauncher/
 ├── Program.cs              # CLI entry point and command parsing
-├── ContextManager.cs       # Persona management and context file creation
-├── GitManager.cs          # Git worktree operations
-├── GeminiManager.cs       # Gemini CLI integration
-├── Resources/             # Embedded persona templates
-│   ├── planner_prompt.md
-│   ├── implementer_prompt.md
-│   └── reviewer_prompt.md
-└── AgentLauncher.csproj   # Project configuration
+├── Commands/              # Command handlers for CLI operations
+│   ├── LaunchAgentCommandHandler.cs  # Agent launching orchestration
+│   ├── ListAgentsCommandHandler.cs   # Agent listing functionality  
+│   └── InitCommandHandler.cs         # Project initialization
+├── Models/                # Domain models and configuration
+│   └── AgentSettings.cs   # Agent configuration model
+└── Resources/             # Embedded persona templates (moved to Infrastructure)
+```
+
+### MCP Coordination Server
+
+```text
+src/AISwarm.Server/
+├── Program.cs             # MCP server entry point with stdio transport
+├── McpTools/             # MCP protocol tool implementations
+│   ├── AgentManagementMcpTool.cs     # Agent lifecycle management
+│   ├── CreateTaskMcpTool.cs          # Task creation and assignment
+│   ├── GetTaskMcpTool.cs             # Task querying and status
+│   ├── GetNextTaskMcpTool.cs         # Agent task polling
+│   └── ReportTaskCompletionMcpTool.cs # Task completion reporting
+└── Models/               # Result DTOs for MCP responses
+```
+
+### Shared Infrastructure
+
+```text
+src/AISwarm.Infrastructure/
+├── Services/             # Core business logic services
+│   ├── ContextService.cs      # Agent context and persona management
+│   ├── GitService.cs          # Git worktree operations
+│   ├── GeminiService.cs       # Gemini CLI integration
+│   ├── LocalAgentService.cs   # Agent lifecycle and status management
+│   └── ProcessLauncher.cs     # Cross-platform process management
+├── Contracts/            # Service interfaces
+├── Models/              # Shared domain models
+└── Resources/           # Agent persona templates
+    ├── implementer_prompt.md
+    ├── planner_prompt.md
+    ├── reviewer_prompt.md
+    └── tester_prompt.md
+```
+
+### Data Layer
+
+```text
+src/AISwarm.DataLayer/
+├── CoordinationDbContext.cs  # Entity Framework database context
+├── Entities/                # Database entity models
+│   ├── Agent.cs             # Agent entity with status management
+│   └── WorkItem.cs          # Task/work item entity
+└── Models/                  # Database DTOs and enums
 ```
 
 ## 🚀 Development
+
+### Building from Source
+
+```bash
+# Build the entire solution
+dotnet build
+
+# Run all tests
+dotnet test
+
+# Build Agent Launcher CLI specifically
+dotnet build src/AgentLauncher
+
+# Build MCP Coordination Server specifically  
+dotnet build src/AISwarm.Server
+
+# Package Agent Launcher for distribution
+dotnet pack src/AgentLauncher --output dist/
+```
+
+### Testing
+
+The project includes comprehensive test coverage:
+
+```bash
+# Run all tests
+dotnet test
+
+# Run tests with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific test projects
+dotnet test tests/AISwarm.Tests
+```
+
+#### Test Categories
+
+- **MCP Tool Tests**: Comprehensive testing of all MCP server tools
+- **Service Layer Tests**: Business logic and integration testing  
+- **Database Tests**: Entity Framework and data layer testing
+- **CLI Tests**: Command handler and validation testing
+
+### MCP Server Development
+
+```bash
+# Start the MCP server in development mode
+dotnet run --project src/AISwarm.Server
+
+# The server runs on stdio transport for VS Code integration
+# Use VS Code with MCP configuration to test interactively
+```
+
+### Updating the Tool
+
+```bash
+# 1. Make your changes
+# 2. Build new package
+dotnet pack src/AgentLauncher --output .
+
+# 3. Uninstall old version
+dotnet tool uninstall --global AiSwarm.AgentLauncher
+
+# 4. Install new version
+dotnet tool install --global --add-source . AiSwarm.AgentLauncher
+```
 
 ### CI/CD Pipeline
 
@@ -228,37 +457,8 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### Platform Status
 
 - **Windows**: ✅ Fully supported and tested
-- **macOS**: 🔄 Coming soon - PowerShell integration needs adaptation
-- **Linux**: 🔄 Coming soon - PowerShell integration needs adaptation
-
-Contributions for Mac and Linux support are welcome! The main work needed is adapting the `GeminiManager.cs` class for different terminal/shell environments.
-
-### Building from Source
-
-```bash
-# Build the project
-dotnet build src/AgentLauncher
-
-# Run tests (if available)
-dotnet test
-
-# Package for distribution
-dotnet pack src/AgentLauncher --output dist/
-```
-
-### Updating the Tool
-
-```bash
-# 1. Make your changes
-# 2. Build new package
-dotnet pack src/AgentLauncher --output .
-
-# 3. Uninstall old version
-dotnet tool uninstall --global AiSwarm.AgentLauncher
-
-# 4. Install new version
-dotnet tool install --global --add-source . AiSwarm.AgentLauncher
-```
+- **macOS**: ✅ Fully supported and tested
+- **Linux**: ✅ Fully supported and tested
 
 ## 🤝 Contributing
 
@@ -286,4 +486,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ for AI-powered development workflows**
+Made with ❤️ for AI-powered development workflows
