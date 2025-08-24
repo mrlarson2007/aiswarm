@@ -1,11 +1,14 @@
 using System.ComponentModel;
 using AISwarm.DataLayer;
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol.Server;
 
 namespace AISwarm.Server.McpTools;
 
+[McpServerToolType]
 public class GetTaskMcpTool(IDatabaseScopeService scopeService)
 {
+    [McpServerTool(Name = "get_tasks_by_status")]
     [Description("Get tasks by status")]
     public async Task<GetTasksByStatusResult> GetTasksByStatusAsync(
         [Description("Status of tasks to query (Pending, InProgress, Completed, Failed)")] string status)
@@ -33,6 +36,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         return GetTasksByStatusResult.SuccessWith(tasks);
     }
 
+    [McpServerTool(Name = "get_task_status")]
     [Description("Get the status of a task by ID")]
     public async Task<GetTaskStatusResult> GetTaskStatusAsync(
         [Description("ID of the task to query")] string taskId)
@@ -58,6 +62,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
             completedAt: task.CompletedAt);
     }
 
+    [McpServerTool(Name = "get_tasks_by_agent_id")]
     [Description("Get tasks by agent ID")]
     public async Task<GetTasksByStatusResult> GetTasksByAgentIdAsync(
         [Description("ID of the agent to query tasks for")] string agentId)
@@ -77,6 +82,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         return GetTasksByStatusResult.SuccessWith(tasks);
     }
 
+    [McpServerTool(Name = "get_tasks_by_agent_id_and_status")]
     [Description("Get tasks by agent ID and status")]
     public async Task<GetTasksByStatusResult> GetTasksByAgentIdAndStatusAsync(
         [Description("ID of the agent to query tasks for")] string agentId,
