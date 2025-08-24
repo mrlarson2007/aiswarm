@@ -54,7 +54,8 @@ public class AgentManagementMcpTool(
         [Description("Agent persona (implementer, reviewer, planner, etc.)")] string persona,
         [Description("Description of what the agent should accomplish")] string description,
         [Description("Optional model to use")] string? model = null,
-        [Description("Optional worktree name for the agent")] string? worktreeName = null)
+        [Description("Optional worktree name for the agent")] string? worktreeName = null,
+        [Description("Bypass permission prompts (use --yolo flag)")] bool yolo = false)
     {
         logger.Info($"[MCP] LaunchAgentAsync started - persona: {persona}, model: {model}, worktree: {worktreeName}");
 
@@ -121,10 +122,10 @@ public class AgentManagementMcpTool(
             var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
             logger.Info($"[MCP] Agent registered with ID: {agentId}");
 
-            // Create context file
-            logger.Info("[MCP] Creating context file...");
-            var contextPath = await contextService.CreateContextFile(persona, workingDirectory);
-            logger.Info($"[MCP] Context file created: {contextPath}");
+            // Create context file with MCP tool instructions
+            logger.Info("[MCP] Creating context file with agent coordination instructions...");
+            var contextPath = await contextService.CreateContextFileWithAgentId(persona, workingDirectory, agentId);
+            logger.Info($"[MCP] Context file created with MCP tools: {contextPath}");
 
             // Launch Gemini with agent settings
             logger.Info("[MCP] Preparing to launch Gemini interactive session...");
@@ -141,7 +142,8 @@ public class AgentManagementMcpTool(
                 contextPath,
                 model,
                 workingDirectory,
-                agentSettings);
+                agentSettings,
+                yolo);
 
             if (!success)
             {

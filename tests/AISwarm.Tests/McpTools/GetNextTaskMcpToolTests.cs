@@ -5,6 +5,7 @@ using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Shouldly;
 
 namespace AISwarm.Tests.McpTools;
@@ -14,6 +15,7 @@ public class GetNextTaskMcpToolTests
     private readonly ServiceProvider _serviceProvider;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly Mock<ILocalAgentService> _mockLocalAgentService;
 
     public GetNextTaskMcpToolTests()
     {
@@ -25,6 +27,10 @@ public class GetNextTaskMcpToolTests
         _timeService = new FakeTimeService();
         services.AddSingleton<ITimeService>(_timeService);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
+
+        // Add mock for ILocalAgentService
+        _mockLocalAgentService = new Mock<ILocalAgentService>();
+        services.AddSingleton(_mockLocalAgentService.Object);
 
         // Add MCP tools
         services.AddSingleton<GetNextTaskMcpTool>();
@@ -530,5 +536,29 @@ public class GetNextTaskMcpToolTests
         var unassignedTask = await scope.Tasks.FindAsync(unassignedTaskId);
         unassignedTask.ShouldNotBeNull();
         unassignedTask.AgentId.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public async Task WhenGetNextTaskIsCalledWithValidAgentId_ShouldUpdateAgentHeartbeat()
+    {
+        // Arrange
+        var agentId = "agent-heartbeat-test";
+        await CreateRunningAgentAsync(agentId);
+
+        // Create a mock LocalAgentService to track heartbeat calls
+        var mockLocalAgentService = new Mock<ILocalAgentService>();
+        mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(agentId))
+            .ReturnsAsync(true);
+
+        var systemUnderTest = new GetNextTaskMcpTool(_scopeService, mockLocalAgentService.Object);
+        // Set fast test configuration to avoid long polling timeouts
+        systemUnderTest.Configuration = new GetNextTaskConfiguration();
+
+        // Act
+        var result = await systemUnderTest.GetNextTaskAsync(agentId);
+
+        // Assert
+        // Should call UpdateHeartbeatAsync exactly once
+        mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
     }
 }

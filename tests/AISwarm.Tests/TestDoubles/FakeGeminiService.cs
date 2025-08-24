@@ -7,7 +7,8 @@ public class FakeGeminiService : IGeminiService
     public string FailureMessage { get; set; } = string.Empty;
     public bool ShouldFail => !string.IsNullOrEmpty(FailureMessage);
     public bool LaunchResult { get; set; } = true;
-    
+    public bool? LastLaunchYoloParameter { get; private set; }
+
     public Task<bool> IsGeminiCliAvailableAsync()
     {
         return Task.FromResult(!ShouldFail);
@@ -22,13 +23,16 @@ public class FakeGeminiService : IGeminiService
         string contextFilePath,
         string? model = null,
         string? workingDirectory = null,
-        AgentSettings? agentSettings = null)
+        AgentSettings? agentSettings = null,
+        bool yolo = false)
     {
+        LastLaunchYoloParameter = yolo;
+        
         if (ShouldFail)
         {
             throw new InvalidOperationException(FailureMessage);
         }
-        
+
         return Task.FromResult(LaunchResult);
     }
 
@@ -38,7 +42,7 @@ public class FakeGeminiService : IGeminiService
         {
             throw new InvalidOperationException(FailureMessage);
         }
-        
+
         return Task.FromResult(LaunchResult);
     }
 }

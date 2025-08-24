@@ -12,7 +12,7 @@ public class FakeContextService : IContextService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return $"Fake prompt for {agentType}";
     }
 
@@ -20,7 +20,15 @@ public class FakeContextService : IContextService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
+        return Task.FromResult(CreatedContextPath);
+    }
+
+    public Task<string> CreateContextFileWithAgentId(string agentType, string workingDirectory, string? agentId)
+    {
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
+
         return Task.FromResult(CreatedContextPath);
     }
 
@@ -28,7 +36,7 @@ public class FakeContextService : IContextService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return new[] { "implementer", "reviewer", "planner" };
     }
 
@@ -36,7 +44,7 @@ public class FakeContextService : IContextService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return GetAvailableAgentTypes().Contains(agentType);
     }
 
@@ -44,7 +52,7 @@ public class FakeContextService : IContextService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return new Dictionary<string, string>
         {
             { "implementer", "Embedded" },

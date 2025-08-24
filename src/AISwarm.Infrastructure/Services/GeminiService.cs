@@ -42,7 +42,8 @@ public class GeminiService(
         string contextFilePath,
         string? model = null,
         string? workingDirectory = null,
-        AgentSettings? agentSettings = null)
+        AgentSettings? agentSettings = null,
+        bool yolo = false)
     {
         if (!fileSystem.FileExists(contextFilePath))
         {
@@ -60,7 +61,7 @@ public class GeminiService(
                 await CreateGeminiConfigurationAsync(workDir, agentSettings);
             }
 
-            var arguments = BuildGeminiArguments(contextFilePath, model);
+            var arguments = BuildGeminiArguments(contextFilePath, model, yolo);
             logger.Info("Launching Gemini CLI...");
             logger.Info($"Command: {GeminiProcessName} {arguments}");
             logger.Info($"Working Directory: {workDir}");
@@ -145,11 +146,17 @@ public class GeminiService(
         logger.Info($"MCP Server: {agentSettings.McpServerUrl}");
     }
 
-    private static string BuildGeminiArguments(string contextFilePath, string? model)
+    private static string BuildGeminiArguments(
+        string contextFilePath,
+        string? model,
+        bool yolo = false)
     {
         var args = new List<string>();
         if (!string.IsNullOrEmpty(model))
             args.Add($"-m \"{model}\"");
+
+        if (yolo)
+            args.Add("--yolo");
 
         // Tell Gemini that we just created the file and to read it for instructions
         var prompt = $"I've just created \"{contextFilePath}\". Please read it for your instructions.";

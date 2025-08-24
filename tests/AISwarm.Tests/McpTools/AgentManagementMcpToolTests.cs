@@ -27,7 +27,7 @@ public class AgentManagementMcpToolTests
         services.AddSingleton<ITimeService>(_timeService);
         services.AddSingleton<IAppLogger>(_logger);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
-        
+
         // Add mock services for agent launching
         services.AddSingleton<IContextService, FakeContextService>();
         services.AddSingleton<IGitService, FakeGitService>();
@@ -35,7 +35,7 @@ public class AgentManagementMcpToolTests
         services.AddSingleton<IFileSystemService, FakeFileSystemService>();
         services.AddSingleton<ILocalAgentService, FakeLocalAgentService>();
         services.AddSingleton<IEnvironmentService, TestEnvironmentService>();
-        
+
         services.AddSingleton<AgentManagementMcpTool>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -86,7 +86,7 @@ public class AgentManagementMcpToolTests
         // Arrange
         var invalidPersona = "invalid-agent-type";
         var description = "Test task description";
-        
+
         var fakeContextService = _serviceProvider.GetRequiredService<IContextService>() as FakeContextService;
         fakeContextService!.FailureMessage = string.Empty; // Reset any previous failure state
 
@@ -106,7 +106,7 @@ public class AgentManagementMcpToolTests
         // Arrange
         var persona = "implementer";
         var description = "Test task description";
-        
+
         var fakeGitService = _serviceProvider.GetRequiredService<IGitService>() as FakeGitService;
         fakeGitService!.IsRepository = false; // Not in a git repository
 
@@ -167,6 +167,27 @@ public class AgentManagementMcpToolTests
         result.Success.ShouldBeFalse();
         result.ErrorMessage.ShouldNotBeNull();
         result.ErrorMessage.ShouldContain("Agent not found");
+    }
+
+    [Fact]
+    public async Task LaunchAgentAsync_WhenYoloIsTrue_ShouldPassYoloToGeminiService()
+    {
+        // Arrange
+        var fakeGeminiService = _serviceProvider.GetRequiredService<IGeminiService>() as FakeGeminiService;
+        fakeGeminiService.ShouldNotBeNull();
+
+        // Act
+        var result = await SystemUnderTest.LaunchAgentAsync(
+            persona: "implementer",
+            description: "Test task",
+            model: null,
+            worktreeName: null,
+            yolo: true);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        fakeGeminiService.LastLaunchYoloParameter.ShouldNotBeNull();
+        fakeGeminiService.LastLaunchYoloParameter.Value.ShouldBeTrue();
     }
 
     private async Task<Agent> CreateAgentAsync(

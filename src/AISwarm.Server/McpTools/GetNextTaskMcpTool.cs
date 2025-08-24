@@ -3,6 +3,7 @@ using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
+using AISwarm.Infrastructure;
 
 namespace AISwarm.Server.McpTools;
 
@@ -10,7 +11,9 @@ namespace AISwarm.Server.McpTools;
 /// MCP tool implementation for agents to request their next task
 /// </summary>
 [McpServerToolType]
-public class GetNextTaskMcpTool(IDatabaseScopeService scopeService)
+public class GetNextTaskMcpTool(
+    IDatabaseScopeService scopeService,
+    ILocalAgentService localAgentService)
 {
     public GetNextTaskConfiguration Configuration
     {
@@ -51,6 +54,9 @@ public class GetNextTaskMcpTool(IDatabaseScopeService scopeService)
                     .Failure($"Agent not found: {agentId}");
             }
         }
+
+        // Update agent heartbeat since the agent is actively requesting tasks
+        await localAgentService.UpdateHeartbeatAsync(agentId);
 
         var startTime = DateTime.UtcNow;
         var endTime = startTime.Add(configuration.TimeToWaitForTask);

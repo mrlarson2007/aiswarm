@@ -391,4 +391,24 @@ public class GetTaskMcpToolTests
         scope.Complete();
         return id;
     }
+
+    [Theory]
+    [InlineData("agent-1", "Pending")]
+    [InlineData("agent-2", "InProgress")]
+    [InlineData("non-existent-agent", "Completed")]
+    public async Task GetTasksByAgentIdAndStatusAsync_WhenNoTasksMatch_ShouldReturnEmptyArray(string agentId, string status)
+    {
+        // Arrange
+        await CreateTaskAsync("task1", TaskStatus.Pending, "agent-x");
+        await CreateTaskAsync("task2", TaskStatus.InProgress, "agent-y");
+
+        // Act
+        var result = await SystemUnderTest.GetTasksByAgentIdAndStatusAsync(agentId, status);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+        result.Tasks.ShouldNotBeNull();
+        result.Tasks.ShouldBeEmpty();
+    }
 }

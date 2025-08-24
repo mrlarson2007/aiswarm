@@ -8,13 +8,16 @@ public class FakeLocalAgentService : ILocalAgentService
     public string FailureMessage { get; set; } = string.Empty;
     public bool ShouldFail => !string.IsNullOrEmpty(FailureMessage);
     public string RegisteredAgentId { get; set; } = "test-agent-123";
-    public Agent? RetrievedAgent { get; set; }
+    public Agent? RetrievedAgent
+    {
+        get; set;
+    }
 
     public Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(RegisteredAgentId);
     }
 
@@ -22,7 +25,7 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(RetrievedAgent);
     }
 
@@ -30,7 +33,7 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(true);
     }
 
@@ -38,7 +41,7 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.CompletedTask;
     }
 
@@ -46,7 +49,7 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.CompletedTask;
     }
 
@@ -54,7 +57,7 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.CompletedTask;
     }
 }

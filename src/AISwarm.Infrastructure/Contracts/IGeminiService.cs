@@ -23,8 +23,14 @@ public interface IGeminiService
     /// <param name="model">Optional model name override.</param>
     /// <param name="workingDirectory">Optional working directory.</param>
     /// <param name="agentSettings">Optional agent configuration including ID and MCP server URL.</param>
+    /// <param name="yolo">Optional flag to bypass permission prompts (use --yolo flag).</param>
     /// <returns>True if launch initiated successfully.</returns>
-    Task<bool> LaunchInteractiveAsync(string contextFilePath, string? model = null, string? workingDirectory = null, AgentSettings? agentSettings = null);
+    Task<bool> LaunchInteractiveAsync(
+        string contextFilePath, 
+        string? model = null, 
+        string? workingDirectory = null, 
+        AgentSettings? agentSettings = null, 
+        bool yolo = false);
 
     /// <summary>
     /// Launch an interactive Gemini CLI session with agent settings including MCP server configuration.

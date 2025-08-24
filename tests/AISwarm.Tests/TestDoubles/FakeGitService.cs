@@ -15,7 +15,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(IsRepository);
     }
 
@@ -23,7 +23,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(RepositoryRoot);
     }
 
@@ -31,7 +31,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return !string.IsNullOrWhiteSpace(name) && !name.Contains(' ');
     }
 
@@ -39,7 +39,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(ExistingWorktrees);
     }
 
@@ -47,7 +47,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(CreatedWorktreePath);
     }
 
@@ -55,7 +55,7 @@ public class FakeGitService : IGitService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        
+
         return Task.FromResult(true);
     }
 }

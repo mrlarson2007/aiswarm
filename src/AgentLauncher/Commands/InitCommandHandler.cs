@@ -44,8 +44,8 @@ public class InitCommandHandler(
 
     private static string GetTemplatePersonaContent()
     {
-        const string resourceName = "AgentLauncher.Resources.template_prompt.md";
-        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "AISwarm.Infrastructure.Resources.template_prompt.md";
+        var assembly = typeof(ContextService).Assembly; // Use Infrastructure assembly
         using var stream = assembly.GetManifestResourceStream(resourceName) ??
             throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);

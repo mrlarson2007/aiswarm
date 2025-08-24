@@ -23,6 +23,17 @@ public interface IContextService
     Task<string> CreateContextFile(string agentType, string workingDirectory);
 
     /// <summary>
+    /// Create a context markdown file for the given agent type inside the specified directory,
+    /// optionally appending MCP tool instructions if an agent ID is provided.
+    /// File name convention: <c>{agentType}_context.md</c>.
+    /// </summary>
+    /// <param name="agentType">Agent type to generate context for.</param>
+    /// <param name="workingDirectory">Target directory (created if missing).</param>
+    /// <param name="agentId">Optional agent ID to append MCP tool instructions. If null, behaves like CreateContextFile.</param>
+    /// <returns>Full path to the created context file.</returns>
+    Task<string> CreateContextFileWithAgentId(string agentType, string workingDirectory, string? agentId);
+
+    /// <summary>
     /// Enumerate all available agent types combining embedded and external persona files.
     /// </summary>
     IEnumerable<string> GetAvailableAgentTypes();
