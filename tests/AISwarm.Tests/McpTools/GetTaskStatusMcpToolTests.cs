@@ -33,27 +33,11 @@ public class GetTaskStatusMcpToolTests
 
     private GetTaskStatusMcpTool SystemUnderTest => _serviceProvider.GetRequiredService<GetTaskStatusMcpTool>();
 
-    [Fact]
-    public async Task WhenTaskDoesNotExists_ShouldReturnNoPendingTasks()
-    {
-        // Arrange
-        var taskId = Guid.NewGuid().ToString();
-
-        // Act
-        var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
-
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldBeNull();
-        result.AgentId.ShouldBeNull();
-        result.StartedAt.ShouldBeNull();
-        result.CompletedAt.ShouldBeNull();
-    }
-
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("non-existent-task-id")]
+    [InlineData("550e8400-e29b-41d4-a716-446655440000")] // Random GUID that doesn't exist
     public async Task WhenTaskIdIsInvalidOrNotFound_ShouldReturnNoPendingTasks(string taskId)
     {
         // Act
