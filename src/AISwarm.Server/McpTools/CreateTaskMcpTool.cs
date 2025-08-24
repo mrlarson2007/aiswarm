@@ -44,12 +44,12 @@ public class CreateTaskMcpTool(
                     .Failure($"Agent not found: {agentId}");
             }
 
-            // Validate that the agent is running
-            if (agent.Status != AgentStatus.Running)
+            // Validate that the agent is in a valid state to receive tasks
+            if (agent.Status != AgentStatus.Running && agent.Status != AgentStatus.Starting)
             {
                 return CreateTaskResult
-                    .Failure($"Agent is not running: {agentId}. " +
-                        $"Current status: {agent.Status}");
+                    .Failure($"Agent is not in a valid state to receive tasks: {agentId}. " +
+                        $"Current status: {agent.Status}. Agent must be Running or Starting.");
             }
         }
 

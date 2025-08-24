@@ -52,7 +52,7 @@ public class CreateTaskMcpToolTests
         result.TaskId.ShouldNotBeNull();
 
         using var scope = _scopeService.CreateReadScope();
-        var tasks = Queryable.Where(scope.Tasks, t => t.Id == result.TaskId)
+        var tasks = scope.Tasks.Where(t => t.Id == result.TaskId)
             .Where(t => t.AgentId == agentId)
             .ToList();
 
@@ -106,8 +106,37 @@ public class CreateTaskMcpToolTests
         ShouldBeBooleanExtensions.ShouldBeFalse(result.Success);
         ShouldBeNullExtensions.ShouldBeNull<string>(result.TaskId);
         ShouldBeNullExtensions.ShouldNotBeNull<string>(result.ErrorMessage);
-        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, "Agent is not running");
+        ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, "Agent is not in a valid state to receive tasks");
         ShouldBeStringTestExtensions.ShouldContain(result.ErrorMessage, agentId);
+    }
+
+    [Fact]
+    public async Task WhenCreatingTaskForStartingAgent_ShouldCreateTaskSuccessfully()
+    {
+        // Arrange
+        var agentId = "starting-agent-123";
+        var persona = "You are a code reviewer. Review code for quality and security.";
+        var description = "Review code while agent is starting up";
+
+        // Create a starting agent first
+        await CreateStartingAgentAsync(agentId);
+
+        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
+
+        // Act
+        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.TaskId.ShouldNotBeNull();
+
+        using var scope = _scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(result.TaskId);
+        task.ShouldNotBeNull();
+        task.AgentId.ShouldBe(agentId);
+        task.Persona.ShouldBe(persona);
+        task.Description.ShouldBe(description);
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
     }
 
     [Fact]
@@ -145,6 +174,23 @@ public class CreateTaskMcpToolTests
             AgentType = "test",
             WorkingDirectory = "/test",
             Status = DataLayer.Entities.AgentStatus.Running,
+            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateStartingAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var agent = new DataLayer.Entities.Agent
+        {
+            Id = agentId,
+            PersonaId = "test-persona",
+            AgentType = "test",
+            WorkingDirectory = "/test",
+            Status = DataLayer.Entities.AgentStatus.Starting,
             LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
         };
         scope.Agents.Add(agent);

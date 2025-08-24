@@ -27,7 +27,7 @@ public class ProgramConfigurationTests
         var serviceProvider = builder.Services.BuildServiceProvider();
 
         // Act & Assert
-        using (var scope = ServiceProviderServiceExtensions.CreateScope(serviceProvider))
+        using (var scope = serviceProvider.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<CoordinationDbContext>();
 
