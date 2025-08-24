@@ -78,8 +78,25 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
                 return new ProcessResult(process.ExitCode == 0, "", "", process.ExitCode);
             }
         }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            // Common when the executable is not found or is not executable
+            logger.Error($"Win32Exception launching '{fileName} {arguments}': {ex.Message}");
+            return new ProcessResult(false, "", $"Win32Error: {ex.Message}", -1);
+        }
+        catch (FileNotFoundException ex)
+        {
+            logger.Error($"File not found for process start '{fileName}': {ex.Message}");
+            return new ProcessResult(false, "", $"FileNotFound: {ex.Message}", -1);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Error($"Invalid operation starting process '{fileName} {arguments}': {ex.Message}");
+            return new ProcessResult(false, "", $"InvalidOperation: {ex.Message}", -1);
+        }
         catch (Exception ex)
         {
+            logger.Error($"Unexpected exception starting process '{fileName} {arguments}': {ex.Message}");
             return new ProcessResult(false, "", ex.Message, -1);
         }
     }

@@ -127,10 +127,15 @@ public class LocalAgentService(
 
             agent.Kill(timeService.UtcNow);
 
-            // TODO: Update any pending tasks assigned to this agent once task infrastructure is implemented
-            // - Mark tasks as failed/cancelled due to agent termination
-            // - Potentially reassign tasks to other available agents
-            // - Update task status and add termination reason
+            // TODO (MCP: Agent Termination Handling)
+            // We need explicit task-state handling when an agent is forcibly killed.
+            // This will be implemented when the MCP task management tools are in place.
+            // Acceptance criteria for the future implementation:
+            //  - Find any tasks assigned to this agent and update their status appropriately
+            //    (e.g., Failed or ReturnedToQueue) with a reason like "Agent terminated".
+            //  - Consider reassigning or making the tasks available for reassignment.
+            //  - Ensure idempotency if KillAgentAsync is called multiple times.
+            // NOTE: Do not implement here yet — blocked on task/MCP coordination APIs.
 
             await scope.SaveChangesAsync();
             scope.Complete();
