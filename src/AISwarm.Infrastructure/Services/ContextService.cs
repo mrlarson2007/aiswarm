@@ -7,10 +7,10 @@ public class ContextService : IContextService
 {
     private static readonly Dictionary<string, string> AgentResources = new()
     {
-        { "planner", "AgentLauncher.Resources.planner_prompt.md" },
-        { "implementer", "AgentLauncher.Resources.implementer_prompt.md" },
-        { "reviewer", "AgentLauncher.Resources.reviewer_prompt.md" },
-        { "tester", "AgentLauncher.Resources.tester_prompt.md" }
+        { "planner", "AISwarm.Infrastructure.Resources.planner_prompt.md" },
+        { "implementer", "AISwarm.Infrastructure.Resources.implementer_prompt.md" },
+        { "reviewer", "AISwarm.Infrastructure.Resources.reviewer_prompt.md" },
+        { "tester", "AISwarm.Infrastructure.Resources.tester_prompt.md" }
     };
 
     private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split

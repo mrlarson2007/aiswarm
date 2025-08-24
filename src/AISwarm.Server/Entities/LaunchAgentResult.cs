@@ -2,10 +2,22 @@ namespace AISwarm.Server.Entities;
 
 public class LaunchAgentResult
 {
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
-    public string? AgentId { get; init; }
-    public string? ProcessId { get; init; }
+    public bool Success
+    {
+        get; init;
+    }
+    public string? ErrorMessage
+    {
+        get; init;
+    }
+    public string? AgentId
+    {
+        get; init;
+    }
+    public string? ProcessId
+    {
+        get; init;
+    }
 
     public static LaunchAgentResult Failure(string message) => new()
     {

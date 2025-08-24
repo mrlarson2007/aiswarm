@@ -2,9 +2,18 @@ namespace AISwarm.Server.Entities;
 
 public class KillAgentResult
 {
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
-    public string? AgentId { get; init; }
+    public bool Success
+    {
+        get; init;
+    }
+    public string? ErrorMessage
+    {
+        get; init;
+    }
+    public string? AgentId
+    {
+        get; init;
+    }
 
     public static KillAgentResult Failure(string message) => new()
     {

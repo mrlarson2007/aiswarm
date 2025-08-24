@@ -19,6 +19,7 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
             Arguments = arguments,
             WorkingDirectory = workingDirectory,
             UseShellExecute = !captureOutput,
+            RedirectStandardInput = captureOutput,
             RedirectStandardOutput = captureOutput,
             RedirectStandardError = captureOutput,
             CreateNoWindow = captureOutput

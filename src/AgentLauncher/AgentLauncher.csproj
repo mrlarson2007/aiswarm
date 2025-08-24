@@ -27,12 +27,4 @@
     <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\planner_prompt.md" />
-    <EmbeddedResource Include="Resources\implementer_prompt.md" />
-    <EmbeddedResource Include="Resources\reviewer_prompt.md" />
-    <EmbeddedResource Include="Resources\tester_prompt.md" />
-    <EmbeddedResource Include="Resources\template_prompt.md" />
-  </ItemGroup>
-
 </Project>

@@ -56,40 +56,59 @@ public class AgentManagementMcpTool(
         [Description("Optional model to use")] string? model = null,
         [Description("Optional worktree name for the agent")] string? worktreeName = null)
     {
+        logger.Info($"[MCP] LaunchAgentAsync started - persona: {persona}, model: {model}, worktree: {worktreeName}");
+
         if (string.IsNullOrWhiteSpace(persona))
         {
+            logger.Warn("[MCP] LaunchAgentAsync failed - persona is required");
             return LaunchAgentResult.Failure("Persona is required");
-        }
-
-        // Validate agent type using context service
-        if (!contextService.IsValidAgentType(persona))
-        {
-            return LaunchAgentResult.Failure($"Invalid agent type: {persona}");
-        }
-
-        // Check if we're in a git repository
-        if (!await gitService.IsGitRepositoryAsync())
-        {
-            return LaunchAgentResult.Failure("Must be run from within a git repository");
         }
 
         try
         {
+            // Validate agent type using context service
+            logger.Info("[MCP] Validating agent type...");
+            if (!contextService.IsValidAgentType(persona))
+            {
+                logger.Warn($"[MCP] LaunchAgentAsync failed - invalid agent type: {persona}");
+                return LaunchAgentResult.Failure($"Invalid agent type: {persona}");
+            }
+            logger.Info("[MCP] Agent type validation passed");
+
+            // Check if we're in a git repository
+            logger.Info("[MCP] Checking git repository...");
+            if (!await gitService.IsGitRepositoryAsync())
+            {
+                logger.Warn("[MCP] LaunchAgentAsync failed - not in git repository");
+                return LaunchAgentResult.Failure("Must be run from within a git repository");
+            }
+            logger.Info("[MCP] Git repository check passed");
+
             // Get repository root
+            logger.Info("[MCP] Getting repository root...");
             var repositoryRoot = await gitService.GetRepositoryRootAsync();
             if (repositoryRoot == null)
             {
+                logger.Warn("[MCP] LaunchAgentAsync failed - could not determine repository root");
                 return LaunchAgentResult.Failure("Could not determine repository root");
             }
+            logger.Info($"[MCP] Repository root: {repositoryRoot}");
 
             // Create worktree if specified
             string workingDirectory = repositoryRoot;
             if (!string.IsNullOrWhiteSpace(worktreeName))
             {
+                logger.Info($"[MCP] Creating worktree: {worktreeName}...");
                 workingDirectory = await gitService.CreateWorktreeAsync(worktreeName);
+                logger.Info($"[MCP] Worktree created: {workingDirectory}");
+            }
+            else
+            {
+                logger.Info("[MCP] No worktree specified, using repository root");
             }
 
             // Register agent in database
+            logger.Info("[MCP] Registering agent in database...");
             var registrationRequest = new AgentRegistrationRequest
             {
                 PersonaId = persona,
@@ -99,21 +118,25 @@ public class AgentManagementMcpTool(
                 WorktreeName = worktreeName
             };
 
-            var agentId = await localAgentService.RegisterAgentAsync(
-                registrationRequest);
+            var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
+            logger.Info($"[MCP] Agent registered with ID: {agentId}");
 
             // Create context file
-            var contextPath = await contextService.CreateContextFile(
-                persona, workingDirectory);
+            logger.Info("[MCP] Creating context file...");
+            var contextPath = await contextService.CreateContextFile(persona, workingDirectory);
+            logger.Info($"[MCP] Context file created: {contextPath}");
 
             // Launch Gemini with agent settings
+            logger.Info("[MCP] Preparing to launch Gemini interactive session...");
             var agentSettings = new AgentSettings
             {
                 AgentId = agentId,
                 McpServerUrl = environmentService.GetEnvironmentVariable("MCP_SERVER_URL")
                                ?? "http://localhost:5000/sse"
             };
+            logger.Info($"[MCP] Agent settings - ID: {agentSettings.AgentId}, MCP URL: {agentSettings.McpServerUrl}");
 
+            logger.Info("[MCP] Launching Gemini interactive session...");
             var success = await geminiService.LaunchInteractiveAsync(
                 contextPath,
                 model,
@@ -122,14 +145,17 @@ public class AgentManagementMcpTool(
 
             if (!success)
             {
+                logger.Error("[MCP] Failed to launch Gemini interactive session");
                 return LaunchAgentResult.Failure("Failed to launch Gemini interactive session");
             }
 
+            logger.Info($"[MCP] LaunchAgentAsync completed successfully - agent ID: {agentId}");
             return LaunchAgentResult.SuccessWith(agentId);
         }
         catch (Exception ex)
         {
-            logger.Error($"Failed to launch agent: {ex.Message}");
+            logger.Error($"[MCP] LaunchAgentAsync failed with exception: {ex.Message}");
+            logger.Error($"[MCP] Exception details: {ex}");
             return LaunchAgentResult.Failure($"Failed to launch agent: {ex.Message}");
         }
     }
