@@ -123,8 +123,10 @@ public class AgentManagementMcpTool(
                 return LaunchAgentResult.Failure("Failed to launch Gemini interactive session");
             }
 
-            // For now, return placeholder process ID - in real implementation this would come from Gemini process
-            return LaunchAgentResult.SuccessWith(agentId, "12345");
+            // TODO: Get real process ID from Gemini service
+            // Currently IGeminiService.LaunchInteractiveAsync only returns success boolean
+            // Need to modify service to return process information or track it separately
+            return LaunchAgentResult.SuccessWith(agentId, null);
         }
         catch (Exception ex)
         {
@@ -150,7 +152,7 @@ public class AgentManagementMcpTool(
         {
             return KillAgentResult.Failure($"Agent not found: {agentId}");
         }
-
+                                                                     
         // Kill the agent and update the database
         agent.Kill(timeService.UtcNow);
         await scope.SaveChangesAsync();
