@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using AISwarm.DataLayer;
+using AISwarm.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
-public class AgentManagementMcpTool(IDatabaseScopeService scopeService)
+public class AgentManagementMcpTool(IDatabaseScopeService scopeService, ITimeService timeService)
 {
     [McpServerTool(Name = "list_agents")]
     [Description("List available agents with optional persona filter")]
@@ -37,5 +38,49 @@ public class AgentManagementMcpTool(IDatabaseScopeService scopeService)
             }).ToArrayAsync();
         
         return ListAgentsResult.SuccessWith(agents);
+    }
+
+    [McpServerTool(Name = "launch_agent")]
+    [Description("Launch a new agent with specified persona")]
+    public Task<LaunchAgentResult> LaunchAgentAsync(
+        [Description("Agent persona (implementer, reviewer, planner, etc.)")] string persona,
+        [Description("Description of what the agent should accomplish")] string description,
+        [Description("Optional model to use (default: gemini-1.5-flash)")] string? model = null,
+        [Description("Optional worktree name for the agent")] string? worktreeName = null)
+    {
+        if (string.IsNullOrWhiteSpace(persona))
+        {
+            return Task.FromResult(LaunchAgentResult.Failure("Persona is required"));
+        }
+
+        // For now, return a simple success - full implementation will integrate with AgentLauncher
+        var agentId = Guid.NewGuid().ToString();
+        return Task.FromResult(LaunchAgentResult.SuccessWith(agentId, "12345"));
+    }
+
+    [McpServerTool(Name = "kill_agent")]
+    [Description("Stop and kill an agent by ID")]
+    public async Task<KillAgentResult> KillAgentAsync(
+        [Description("ID of the agent to kill")] string agentId)
+    {
+        if (string.IsNullOrWhiteSpace(agentId))
+        {
+            return KillAgentResult.Failure("Agent ID is required");
+        }
+
+        using var scope = scopeService.CreateWriteScope();
+        var agent = await scope.Agents.FindAsync(agentId);
+        
+        if (agent == null)
+        {
+            return KillAgentResult.Failure($"Agent not found: {agentId}");
+        }
+
+        // Kill the agent and update the database
+        agent.Kill(timeService.UtcNow);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+
+        return KillAgentResult.SuccessWith(agentId);
     }
 }

@@ -50,6 +50,40 @@ public class AgentManagementMcpToolTests
         result.Agents.ShouldBeEmpty();
     }
 
+    // LaunchAgent Tests
+    [Fact]
+    public async Task LaunchAgentAsync_WhenInvalidPersona_ShouldReturnFailure()
+    {
+        // Arrange
+        var invalidPersona = "";
+        var description = "Test task description";
+
+        // Act
+        var result = await SystemUnderTest.LaunchAgentAsync(invalidPersona, description);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Persona is required");
+        result.AgentId.ShouldBeNull();
+    }
+
+    // KillAgent Tests
+    [Fact]
+    public async Task KillAgentAsync_WhenAgentNotFound_ShouldReturnFailure()
+    {
+        // Arrange
+        var nonExistentAgentId = "non-existent-agent";
+
+        // Act
+        var result = await SystemUnderTest.KillAgentAsync(nonExistentAgentId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Agent not found");
+    }
+
     private async Task<Agent> CreateAgentAsync(
         string agentId,
         string personaId,
