@@ -6,6 +6,7 @@ using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
+using Xunit;
 
 namespace AISwarm.Tests.McpTools;
 
@@ -13,6 +14,8 @@ public class ReportTaskCompletionMcpToolTests
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly IDatabaseScopeService _scopeService;
+
+    private ReportTaskCompletionMcpTool SystemUnderTest => _serviceProvider.GetRequiredService<ReportTaskCompletionMcpTool>();
 
     public ReportTaskCompletionMcpToolTests()
     {
@@ -133,6 +136,84 @@ public class ReportTaskCompletionMcpToolTests
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
         scope.Complete();
+    }
+
+    private async Task CreateInProgressTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = DataLayer.Entities.TaskStatus.InProgress,
+            Persona = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    [Fact]
+    public async Task ReportTaskFailureAsync_WhenTaskExists_ShouldMarkTaskAsFailed()
+    {
+        // Arrange
+        var taskId = "test-task-failure";
+        var agentId = "test-agent";
+        var errorMessage = "Unable to find yolo parameter in codebase";
+        await CreateInProgressTaskAsync(taskId, agentId);
+
+        // Act
+        var result = await SystemUnderTest.ReportTaskFailureAsync(taskId, errorMessage);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        
+        using var scope = _scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(taskId);
+        task.ShouldNotBeNull();
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
+        task.Result.ShouldBe(errorMessage);
+        task.CompletedAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task ReportTaskFailureAsync_WhenTaskNotFound_ShouldReturnFailure()
+    {
+        // Arrange
+        var nonExistentTaskId = "non-existent-task";
+        var errorMessage = "Task failed due to missing dependency";
+
+        // Act
+        var result = await SystemUnderTest.ReportTaskFailureAsync(nonExistentTaskId, errorMessage);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Message.ShouldBe($"Task not found: {nonExistentTaskId}");
+    }
+
+    [Fact]
+    public async Task ReportTaskFailureAsync_WhenTaskAlreadyCompleted_ShouldStillMarkAsFailed()
+    {
+        // Arrange
+        var taskId = "completed-task";
+        var agentId = "test-agent";
+        var errorMessage = "Task failed after completion";
+        await CreateCompletedTaskAsync(taskId, agentId);
+
+        // Act
+        var result = await SystemUnderTest.ReportTaskFailureAsync(taskId, errorMessage);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        
+        using var scope = _scopeService.CreateReadScope();
+        var task = await scope.Tasks.FindAsync(taskId);
+        task.ShouldNotBeNull();
+        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
+        task.Result.ShouldBe(errorMessage);
     }
 
     private async Task CreateCompletedTaskAsync(string taskId, string agentId)

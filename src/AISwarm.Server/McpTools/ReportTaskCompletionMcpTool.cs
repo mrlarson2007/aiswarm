@@ -41,4 +41,29 @@ public class ReportTaskCompletionMcpTool(
 
         return ReportTaskCompletionResult.Success(taskId);
     }
+
+    [McpServerTool(Name = "report_task_failure")]
+    [Description("Reports failure of a task with error message")]
+    public async Task<ReportTaskCompletionResult> ReportTaskFailureAsync(
+        [Description("ID of the task to mark as failed")] string taskId,
+        [Description("Error message for the failed task")] string errorMessage)
+    {
+        using var scope = databaseScopeService.CreateWriteScope();
+
+        var task = await scope.Tasks.FindAsync(taskId);
+        if (task == null)
+        {
+            return ReportTaskCompletionResult
+                .Failure($"Task not found: {taskId}");
+        }
+
+        task.Status = DataLayer.Entities.TaskStatus.Failed;
+        task.Result = errorMessage;
+        task.CompletedAt = timeService.UtcNow;
+
+        await scope.SaveChangesAsync();
+        scope.Complete();
+
+        return ReportTaskCompletionResult.Success(taskId);
+    }
 }
