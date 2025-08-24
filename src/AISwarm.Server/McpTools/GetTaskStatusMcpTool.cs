@@ -27,7 +27,7 @@ public class GetTaskStatusMcpTool(IDatabaseScopeService scopeService)
             taskId: task.Id,
             status: task.Status.ToString(),
             agentId: task.AgentId,
-            startedAt: null,
-            completedAt: null);
+            startedAt: task.StartedAt,
+            completedAt: task.CompletedAt);
     }
 }

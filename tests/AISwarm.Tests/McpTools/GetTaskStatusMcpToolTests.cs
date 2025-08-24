@@ -70,13 +70,13 @@ public class GetTaskStatusMcpToolTests
         var result = await SystemUnderTest.GetTaskStatusAsync(
             taskId);
 
-        // Assert (RED - will fail until implemented)
+        // Assert
         result.Success.ShouldBeTrue();
         result.TaskId.ShouldBe(taskId);
         result.Status.ShouldBe(statusName);
-        result.AgentId.ShouldBeEmpty(); // Empty string for pending task
-        result.StartedAt.ShouldBeNull();
-        result.CompletedAt.ShouldBeNull();
+        result.AgentId.ShouldBeEmpty();
+        result.StartedAt.ShouldBe(_timeService.UtcNow.AddMinutes(1));
+        result.CompletedAt.ShouldBe(_timeService.UtcNow.AddMinutes(5));
     }
 
     private async Task<string> CreateTaskWithStatusAsync(
@@ -96,8 +96,11 @@ public class GetTaskStatusMcpToolTests
             Status = status,
             Persona = persona,
             Description = description,
-            CreatedAt = _timeService.UtcNow
+            CreatedAt = _timeService.UtcNow,
+            StartedAt = _timeService.UtcNow.AddMinutes(1),
+            CompletedAt = _timeService.UtcNow.AddMinutes(5)
         };
+        
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
         scope.Complete();
