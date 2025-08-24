@@ -13,8 +13,8 @@ public class Program
         services.AddAgentLauncherServices();
         var serviceProvider = services.BuildServiceProvider();
 
-    var rootCommand = CommandFactory.CreateRootCommand(serviceProvider);
-    return await rootCommand.InvokeAsync(args);
+        var rootCommand = CommandFactory.CreateRootCommand(serviceProvider);
+        return await rootCommand.InvokeAsync(args);
     }
 
     // ListAgentTypes and ListWorktrees moved into dedicated command handlers

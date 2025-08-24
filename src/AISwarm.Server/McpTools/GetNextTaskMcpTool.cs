@@ -12,7 +12,8 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class GetNextTaskMcpTool(IDatabaseScopeService scopeService)
 {
-    public GetNextTaskConfiguration Configuration {
+    public GetNextTaskConfiguration Configuration
+    {
         get;
         set;
     } = GetNextTaskConfiguration.Production;
