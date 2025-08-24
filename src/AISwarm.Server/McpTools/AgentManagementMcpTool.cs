@@ -7,7 +7,16 @@ using ModelContextProtocol.Server;
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
-public class AgentManagementMcpTool(IDatabaseScopeService scopeService, ITimeService timeService)
+public class AgentManagementMcpTool(
+    IDatabaseScopeService scopeService, 
+    ITimeService timeService,
+    IContextService contextService,
+    IGitService gitService,
+    IGeminiService geminiService,
+    IFileSystemService fileSystemService,
+    ILocalAgentService localAgentService,
+    IEnvironmentService environmentService,
+    IAppLogger logger)
 {
     [McpServerTool(Name = "list_agents")]
     [Description("List available agents with optional persona filter")]
@@ -51,6 +60,12 @@ public class AgentManagementMcpTool(IDatabaseScopeService scopeService, ITimeSer
         if (string.IsNullOrWhiteSpace(persona))
         {
             return Task.FromResult(LaunchAgentResult.Failure("Persona is required"));
+        }
+
+        // Validate agent type using context service
+        if (!contextService.IsValidAgentType(persona))
+        {
+            return Task.FromResult(LaunchAgentResult.Failure($"Invalid agent type: {persona}"));
         }
 
         // For now, return a simple success - full implementation will integrate with AgentLauncher

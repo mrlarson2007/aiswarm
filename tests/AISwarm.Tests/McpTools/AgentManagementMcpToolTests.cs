@@ -14,6 +14,7 @@ public class AgentManagementMcpToolTests
     private readonly ServiceProvider _serviceProvider;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly TestLogger _logger;
 
     public AgentManagementMcpToolTests()
     {
@@ -22,8 +23,19 @@ public class AgentManagementMcpToolTests
         services.AddDbContext<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
         _timeService = new FakeTimeService();
+        _logger = new TestLogger();
         services.AddSingleton<ITimeService>(_timeService);
+        services.AddSingleton<IAppLogger>(_logger);
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
+        
+        // Add mock services for agent launching
+        services.AddSingleton<IContextService, FakeContextService>();
+        services.AddSingleton<IGitService, FakeGitService>();
+        services.AddSingleton<IGeminiService, FakeGeminiService>();
+        services.AddSingleton<IFileSystemService, FakeFileSystemService>();
+        services.AddSingleton<ILocalAgentService, FakeLocalAgentService>();
+        services.AddSingleton<IEnvironmentService, TestEnvironmentService>();
+        
         services.AddSingleton<AgentManagementMcpTool>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -65,6 +77,26 @@ public class AgentManagementMcpToolTests
         result.Success.ShouldBeFalse();
         result.ErrorMessage.ShouldNotBeNull();
         result.ErrorMessage.ShouldContain("Persona is required");
+        result.AgentId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task LaunchAgentAsync_WhenInvalidAgentType_ShouldReturnFailure()
+    {
+        // Arrange
+        var invalidPersona = "invalid-agent-type";
+        var description = "Test task description";
+        
+        var fakeContextService = _serviceProvider.GetRequiredService<IContextService>() as FakeContextService;
+        fakeContextService!.FailureMessage = string.Empty; // Reset any previous failure state
+
+        // Act
+        var result = await SystemUnderTest.LaunchAgentAsync(invalidPersona, description);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
+        result.ErrorMessage.ShouldContain("Invalid agent type");
         result.AgentId.ShouldBeNull();
     }
 
