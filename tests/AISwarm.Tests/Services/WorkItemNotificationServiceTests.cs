@@ -9,8 +9,21 @@ public class WorkItemNotificationServiceTests
 {
     // Per-test-instance setup (xUnit creates a new class instance per test)
     private readonly IEventBus _bus = new InMemoryEventBus();
-    private IWorkItemNotificationService? _sut;
-    private IWorkItemNotificationService SystemUnderTest => _sut ??= new WorkItemNotificationService(_bus);
+    private IWorkItemNotificationService SystemUnderTest => new WorkItemNotificationService(_bus);
+
+    [Fact]
+    public void WhenSubscribingWithNullPersona_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+
+        // Act
+        var act = () => service.SubscribeForPersona(null!);
+
+        // Assert
+        var ex = Should.Throw<ArgumentException>(() => act().GetAsyncEnumerator().MoveNextAsync().AsTask());
+        ex.Message.ShouldContain("persona");
+    }
 
     [Fact]
     public void WhenSubscribingWithNullAgentId_ShouldThrowArgumentException()
