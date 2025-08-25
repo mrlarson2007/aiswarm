@@ -322,6 +322,33 @@ public class GetNextTaskMcpToolTests
                 task!.AgentId.ShouldBe(string.Empty);
             }
         }
+
+        [Fact]
+        public async Task WhenUnassignedTaskPersonaMatchesAgent_ShouldBeClaimedByThatAgent()
+        {
+            // Arrange
+            var agentId = "agent-persona-match";
+            await CreateRunningAgentAsync(agentId, "planner");
+
+            var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+            var expectedDescription = "Plan the roadmap";
+            var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription, "planner");
+
+            // Act
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId);
+
+            // Assert - should claim and return the matching task
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldBe(unassignedTaskId);
+            result.Persona.ShouldBe(expectedPersona);
+            result.Description.ShouldBe(expectedDescription);
+
+            // Verify in DB that the task is now assigned to the agent
+            using var scope = _scopeService.CreateReadScope();
+            var claimed = await scope.Tasks.FindAsync(unassignedTaskId);
+            claimed.ShouldNotBeNull();
+            claimed!.AgentId.ShouldBe(agentId);
+        }
     }
 
     public class TaskRetrievalWithReinforcingPromptTests : GetNextTaskMcpToolTests

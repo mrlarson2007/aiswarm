@@ -191,3 +191,9 @@ Decision lean: start with the await tool (Gemini-friendly), keep resource subscr
 - Decide and implement the first MCP bridge (await tool) behind a thin DI-registered handler.
 - Document the chosen path and revisit broker/stdin approach if we need direct push control.
 
+## Persona Routing (Task Assignment)
+
+- Work items carry a `PersonaId` used only for routing/assignment; the full `Persona` text is still returned to the agent for now.
+- Unassigned tasks with a `PersonaId` are claimable only by agents with matching `Agent.PersonaId`.
+- Unassigned tasks with no `PersonaId` remain claimable by any agent.
+

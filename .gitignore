@@ -39,3 +39,8 @@ src/AISwarm.Server/.aiswarm/aiswarm.db
 # Agent Generated Review Files
 *_REVIEW.md
 *REVIEW.md
+
+# Test results and coverage
+**/TestResults/
+**/*.trx
+**/coverage/
