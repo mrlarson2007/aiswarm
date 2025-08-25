@@ -31,12 +31,150 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 - **Test Doubles**: Dedicated `TestDoubles/` folder with `TestLogger`, `FakeFileSystemService`, `PassThroughProcessLauncher`, `FakeTimeService`
 - **System Under Test**: Use `SystemUnderTest` property pattern for clean test setup
 
+### Test Class Organization Patterns
+
+- **Nested Test Classes**: Group related tests using nested classes that inherit from the parent test class
+  ```csharp
+  public class ServiceTests : IDisposable, ISystemUnderTest<Service>
+  {
+      public class RegistrationTests : ServiceTests { }
+      public class ValidationTests : ServiceTests { }
+      public class DeletionTests : ServiceTests { }
+  }
+  ```
+
+- **Database Test Setup**: Use in-memory database with unique names for test isolation
+  ```csharp
+  var options = new DbContextOptionsBuilder<DbContext>()
+      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+      .Options;
+  ```
+
+- **Test Data Setup**: Use `using` scopes for database operations in Arrange sections
+  ```csharp
+  using (var scope = _scopeService.CreateWriteScope())
+  {
+      scope.Entities.Add(new Entity { /* test data */ });
+      await scope.SaveChangesAsync();
+  }
+  ```
+
+- **Time-based Testing**: Use `FakeTimeService` for predictable time-dependent behavior
+  ```csharp
+  _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
+  entity.Timestamp.ShouldBe(_timeService.UtcNow);
+  ```
+
+- **Direct Database Verification**: Assert against database state directly rather than service APIs
+  ```csharp
+  // Assert - Check database directly instead of using service API
+  var entityInDb = await _dbContext.Entities.FindAsync(entityId);
+  entityInDb.ShouldNotBeNull();
+  entityInDb.Property.ShouldBe(expectedValue);
+  ```
+
+- **Mock Verification**: Verify external service interactions using Moq
+  ```csharp
+  _mockService.Verify(s => s.MethodAsync(expectedParameter), Times.Once);
+  ```
+
+- **Comprehensive State Verification**: Test all relevant entity properties after operations
+  ```csharp
+  entity.Id.ShouldBe(expectedId);
+  entity.Status.ShouldBe(ExpectedStatus.Value);
+  entity.CreatedAt.ShouldBe(_timeService.UtcNow);
+  entity.UpdatedAt.ShouldBe(_timeService.UtcNow);
+  ```
+
+- **Assertion Comments**: Add clarifying comments to explain complex assertion logic
+  ```csharp
+  // Assert - Check database directly instead of using service API
+  var entityInDb = await _dbContext.Entities.FindAsync(entityId);
+  
+  // Task 1 was InProgress for this agent - should be Failed
+  updatedTask1!.Status.ShouldBe(TaskStatus.Failed);
+  
+  // Task 2 was only Pending for this agent - should remain Pending
+  updatedTask2!.Status.ShouldBe(TaskStatus.Pending);
+  ```
+
+- **Edge Case Documentation**: Include descriptive test method names that explain edge cases
+  ```csharp
+  WhenRegisteringAgentWithMinimalFields_ShouldSetRequiredPropertiesOnly()
+  WhenAgentDoesNotExist_ShouldDoNothing()
+  WhenKillingAgentWithInProgressTasks_ShouldFailDanglingTasks()
+  ```
+
+- **Test Isolation Verification**: Ensure tests don't affect each other's data
+  ```csharp
+  // Verify database contains exactly 2 agents
+  var totalAgents = await _dbContext.Agents.CountAsync();
+  totalAgents.ShouldBe(2);
+  ```
+
 ## Composition and Dependency Injection
 
 - **Constructor Injection**: Services injected via constructor for testability
 - **Interface Segregation**: Small, focused interfaces (`IContextService`, `IFileSystemService`, `IGeminiService`)
 - **Composition Root**: DI container setup in `Program.cs` via `services.AddAgentLauncherServices()`
 - **Test Isolation**: Mock external dependencies, if the mocks are getting complicated, use a fake instead to simplify test setup.
+
+## Entity Framework and Database Testing Patterns
+
+- **In-Memory Database Isolation**: Each test class gets unique database instance
+  ```csharp
+  var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+      .UseInMemoryDatabase(Guid.NewGuid().ToString())
+      .Options;
+  ```
+
+- **Database Scope Pattern**: Use scoped operations for data setup and teardown
+  ```csharp
+  using (var scope = _scopeService.CreateWriteScope())
+  {
+      scope.Entities.Add(testEntity);
+      await scope.SaveChangesAsync();
+  }
+  ```
+
+- **Direct Database Assertions**: Verify state changes directly in database, not through service layer
+  ```csharp
+  // Assert - Check database directly instead of using service API
+  var entityInDb = await _dbContext.Entities.FindAsync(entityId);
+  entityInDb.ShouldNotBeNull();
+  entityInDb.Status.ShouldBe(ExpectedStatus.Active);
+  ```
+
+- **Entity Builder Pattern**: Create complete test entities with all required properties
+  ```csharp
+  var testEntity = new Entity
+  {
+      Id = Guid.NewGuid().ToString(),
+      RequiredProperty = "test-value",
+      CreatedAt = _timeService.UtcNow,
+      Status = EntityStatus.Active
+  };
+  ```
+
+- **Time-Dependent Testing**: Use `FakeTimeService` for predictable temporal behavior
+  ```csharp
+  // Arrange with initial time
+  entity.CreatedAt = _timeService.UtcNow.AddMinutes(-5);
+  
+  // Act with time advancement
+  _timeService.AdvanceTime(TimeSpan.FromMinutes(1));
+  
+  // Assert with current time
+  entity.UpdatedAt.ShouldBe(_timeService.UtcNow);
+  ```
+
+- **Multi-Entity Testing**: Test complex scenarios with multiple related entities
+  ```csharp
+  // Create related entities to test cascade behaviors
+  var agent = new Agent { Id = agentId, Status = AgentStatus.Running };
+  var task1 = new WorkItem { Id = "task-1", AgentId = agentId, Status = TaskStatus.InProgress };
+  var task2 = new WorkItem { Id = "task-2", AgentId = agentId, Status = TaskStatus.Pending };
+  ```
 
 ## Clean Code Principles (Kent Beck & Kevlin Henney)
 

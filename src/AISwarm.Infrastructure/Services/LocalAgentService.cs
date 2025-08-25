@@ -12,7 +12,7 @@ namespace AISwarm.Infrastructure;
 public class LocalAgentService(
     ITimeService timeService,
     IDatabaseScopeService scopeService,
-    IProcessTerminationService? processTerminationService = null)
+    IProcessTerminationService processTerminationService)
     : ILocalAgentService
 {
     /// <summary>
@@ -46,15 +46,6 @@ public class LocalAgentService(
     }
 
     /// <summary>
-    /// Get agent information by ID
-    /// </summary>
-    public async Task<Agent?> GetAgentAsync(string agentId)
-    {
-        using var scope = scopeService.CreateReadScope();
-        return await scope.Agents.FindAsync(agentId);
-    }
-
-    /// <summary>
     /// Update agent heartbeat and transition Starting agents to Running
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
@@ -77,42 +68,6 @@ public class LocalAgentService(
             return true;
         }
         return false;
-    }
-
-    /// <summary>
-    /// Mark agent as running with process ID
-    /// </summary>
-    public async Task MarkAgentRunningAsync(
-        string agentId,
-        string processId)
-    {
-        using var scope = scopeService.CreateWriteScope();
-
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent != null)
-        {
-            agent.Status = AgentStatus.Running;
-            agent.ProcessId = processId;
-            agent.StartedAt = timeService.UtcNow;
-            await scope.SaveChangesAsync();
-            scope.Complete();
-        }
-    }
-
-    /// <summary>
-    /// Stop agent and update status
-    /// </summary>
-    public async Task StopAgentAsync(string agentId)
-    {
-        using var scope = scopeService.CreateWriteScope();
-
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent != null)
-        {
-            agent.Stop(timeService.UtcNow);
-            await scope.SaveChangesAsync();
-            scope.Complete();
-        }
     }
 
     /// <summary>

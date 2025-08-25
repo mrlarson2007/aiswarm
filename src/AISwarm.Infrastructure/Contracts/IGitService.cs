@@ -18,13 +18,6 @@ public interface IGitService
     Task<string?> GetRepositoryRootAsync();
 
     /// <summary>
-    /// Validate a proposed worktree name against naming and reserved word rules.
-    /// </summary>
-    /// <param name="name">Candidate worktree name.</param>
-    /// <returns><c>true</c> if valid.</returns>
-    bool IsValidWorktreeName(string name);
-
-    /// <summary>
     /// Retrieve existing worktrees keyed by their directory name.
     /// </summary>
     /// <returns>Dictionary of worktree name to absolute path.</returns>
@@ -37,11 +30,4 @@ public interface IGitService
     /// <param name="baseBranch">Optional branch to base the worktree on (defaults to current HEAD).</param>
     /// <returns>Full path to the created worktree.</returns>
     Task<string> CreateWorktreeAsync(string name, string? baseBranch = null);
-
-    /// <summary>
-    /// Remove an existing worktree by name.
-    /// </summary>
-    /// <param name="name">Worktree name.</param>
-    /// <returns><c>true</c> if removal succeeded.</returns>
-    Task<bool> RemoveWorktreeAsync(string name);
 }

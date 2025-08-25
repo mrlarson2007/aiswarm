@@ -15,6 +15,7 @@ public class LaunchAgentCommandHandlerTests : IDisposable
     private readonly PassThroughProcessLauncher _process = new();
     private readonly FakeFileSystemService _fs = new();
     private readonly IGeminiService _gemini;
+    private readonly Mock<IProcessTerminationService> _mockProcessTerminationService;
     private readonly ILocalAgentService _localAgentService;
     private readonly TestLogger _logger = new();
     private readonly TestEnvironmentService _env = new() { CurrentDirectory = "/repo" };
@@ -40,8 +41,12 @@ public class LaunchAgentCommandHandlerTests : IDisposable
         var terminalService = new WindowsTerminalService(_process);
         _gemini = new GeminiService(terminalService, _logger, _fs);
 
+        _mockProcessTerminationService = new Mock<IProcessTerminationService>();
         // Create real LocalAgentService with test doubles for dependencies
-        _localAgentService = new LocalAgentService(_timeService, scopeService);
+        _localAgentService = new LocalAgentService(
+            _timeService,
+            scopeService,
+            _mockProcessTerminationService.Object);
     }
 
     private LaunchAgentCommandHandler SystemUnderTest => new(
