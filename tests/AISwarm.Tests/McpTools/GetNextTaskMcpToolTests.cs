@@ -10,7 +10,8 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class GetNextTaskMcpToolTests : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
+public class GetNextTaskMcpToolTests 
+    : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
 {
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
@@ -370,7 +371,7 @@ public class GetNextTaskMcpToolTests : IDisposable, ISystemUnderTest<GetNextTask
         result.TaskId.ShouldBe(unassignedTaskId);
         result.Persona.ShouldBe(expectedPersona);
         result.Description.ShouldBe(expectedDescription);
-        result.Message.ShouldNotBeNull<string>();
+        result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("call this tool again");
 
         // Verify the task is now assigned to the requesting agent
@@ -471,7 +472,7 @@ public class GetNextTaskMcpToolTests : IDisposable, ISystemUnderTest<GetNextTask
         result.TaskId!.ShouldStartWith("system:");
         result.Persona.ShouldNotBeNull();
         result.Description.ShouldNotBeNull();
-        result.Message.ShouldNotBeNull<string>();
+        result.Message.ShouldNotBeNull();
         result.Message.ShouldContain("No tasks available");
         result.Message.ShouldContain("call this tool again");
 
@@ -559,7 +560,7 @@ public class GetNextTaskMcpToolTests : IDisposable, ISystemUnderTest<GetNextTask
         await CreateRunningAgentAsync(agentId);
 
         // Create low priority assigned task first (older timestamp)
-        var lowPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
+        _ = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
 
         // Advance time to ensure different timestamps
         _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
