@@ -4,194 +4,291 @@ using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Shouldly;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class GetNextTaskMcpToolTests
+public class GetNextTaskMcpToolTests : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
 {
-    private readonly ServiceProvider _serviceProvider;
+    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly Mock<ILocalAgentService> _mockLocalAgentService;
+    private GetNextTaskMcpTool? _systemUnderTest;
+
+    public GetNextTaskMcpTool SystemUnderTest =>
+        _systemUnderTest ??= CreateSystemUnderTest();
+
+    private GetNextTaskMcpTool CreateSystemUnderTest()
+    {
+        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object);
+        tool.Configuration = new GetNextTaskConfiguration();
+        return tool;
+    }
 
     public GetNextTaskMcpToolTests()
     {
-        var services = new ServiceCollection();
-
-        // Add database services
-        services.AddDbContext<CoordinationDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
         _timeService = new FakeTimeService();
-        services.AddSingleton<ITimeService>(_timeService);
-        services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
 
-        // Add mock for ILocalAgentService
+        var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new CoordinationDbContext(options);
+        _scopeService = new DatabaseScopeService(_dbContext);
+
         _mockLocalAgentService = new Mock<ILocalAgentService>();
-        services.AddSingleton(_mockLocalAgentService.Object);
-
-        // Add MCP tools
-        services.AddSingleton<GetNextTaskMcpTool>();
-
-        _serviceProvider = services.BuildServiceProvider();
-        _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
+        _mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(It.IsAny<string>()))
+            .ReturnsAsync(true);
     }
 
-    private GetNextTaskMcpTool SystemUnderTest
+    public void Dispose()
     {
-        get
+        _dbContext.Dispose();
+    }
+
+    public class TaskRetrievalFailureTests : GetNextTaskMcpToolTests
+    {
+        [Fact]
+        public async Task WhenNonExistentAgent_ShouldReturnFailureResult()
         {
-            var tool = _serviceProvider.GetRequiredService<GetNextTaskMcpTool>();
-            tool.Configuration = new GetNextTaskConfiguration();
-            return tool;
+            // Arrange
+            var nonExistentAgentId = "non-existent-agent";
+
+            // Act
+            var result = await SystemUnderTest.GetNextTaskAsync(nonExistentAgentId);
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("Agent not found");
+            result.ErrorMessage.ShouldContain(nonExistentAgentId);
+
+            // Assert - No heartbeat update should be attempted for non-existent agent
+            _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(It.IsAny<string>()), Times.Never);
         }
     }
 
-    [Fact]
-    public async Task WhenNonExistentAgent_ShouldReturnFailureResult()
+    public class TaskRetrievalSuccessTests : GetNextTaskMcpToolTests
     {
-        // Arrange
-        var nonExistentAgentId = "non-existent-agent";
-
-        // Act
-        var result = await SystemUnderTest.GetNextTaskAsync(nonExistentAgentId);
-
-        // Assert
-        result.Success.ShouldBeFalse();
-        result.ErrorMessage.ShouldNotBeNull();
-        result.ErrorMessage.ShouldContain("Agent not found");
-        result.ErrorMessage.ShouldContain(nonExistentAgentId);
-    }
-
-    [Fact]
-    public async Task WhenAgentHasNoTasks_ShouldReturnNoTasksWithReinforcingPrompt()
-    {
-        // Arrange
-        var agentId = "agent-no-tasks";
-
-        // Create a running agent with no tasks
-        await CreateRunningAgentAsync(agentId);
-
-        // Act
-        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
-
-        // Assert: return a default synthetic task instructing the agent to re-query
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldNotBeNull();
-        result.TaskId.ShouldStartWith("system:");
-        result.Persona.ShouldNotBeNull();
-        result.Description.ShouldNotBeNull();
-        result.Message.ShouldNotBeNull();
-        result.Message.ShouldContain("No tasks available");
-        result.Message.ShouldContain("call this tool again");
-    }
-
-    [Fact]
-    public async Task WhenAgentHasPendingTask_ShouldReturnTaskWithReinforcingPrompt()
-    {
-        // Arrange
-        var agentId = "agent-123";
-        var expectedPersona = "You are a code reviewer. Review code for quality and security.";
-        var expectedDescription = "Review the authentication module for security vulnerabilities";
-
-        // Create a running agent first
-        await CreateRunningAgentAsync(agentId);
-
-        // Create a pending task for the agent
-        var taskId = await CreatePendingTaskAsync(agentId, expectedPersona, expectedDescription);
-
-        // Act
-        var result = await SystemUnderTest.GetNextTaskAsync(agentId);
-
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldBe(taskId);
-        result.Persona.ShouldBe(expectedPersona);
-        result.Description.ShouldBe(expectedDescription);
-        result.Message.ShouldNotBeNull();
-        result.Message.ShouldContain("call this tool again");
-        result.Message.ShouldContain("get the next task");
-    }
-
-    [Fact]
-    public async Task WhenAgentHasNoTasksAndPollingTimeoutExpires_ShouldReturnNoTasksAfterWaiting()
-    {
-        // Arrange
-        var agentId = "agent-polling-timeout";
-
-        // Create a running agent with no tasks
-        await CreateRunningAgentAsync(agentId);
-
-        // Configure very short polling timeout and interval for fast test
-        var configuration = new GetNextTaskConfiguration
+        [Fact]
+        public async Task WhenAgentHasNoTasks_ShouldReturnNoTasksWithReinforcingPrompt()
         {
-            TimeToWaitForTask = TimeSpan.FromMilliseconds(50),  // Very short timeout
-            PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
-        };
+            // Arrange
+            var agentId = "agent-no-tasks";
 
-        // Act
-        var startTime = DateTime.UtcNow;
-        var result = await SystemUnderTest.GetNextTaskAsync(agentId, configuration);
-        var elapsed = DateTime.UtcNow - startTime;
+            // Create a running agent with no tasks
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
 
-        // Assert - returns a synthetic default task instructing a re-query
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldNotBeNull();
-        result.TaskId!.ShouldStartWith("system:");
-        result.Persona.ShouldNotBeNull();
-        result.Description.ShouldNotBeNull();
-        result.Message.ShouldNotBeNull();
-        result.Message.ShouldContain("No tasks available");
-        result.Message.ShouldContain("call this tool again");
+            // Act
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId);
 
-        // Should have waited at least the configured timeout duration
-        elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(40));
-        // But not too much longer (allowing for test execution overhead)
-        elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(200));
+            // Assert - return a default synthetic task instructing the agent to re-query
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+            result.TaskId.ShouldStartWith("system:");
+            result.Persona.ShouldNotBeNull();
+            result.Description.ShouldNotBeNull();
+            result.Message.ShouldNotBeNull();
+            result.Message.ShouldContain("No tasks available");
+            result.Message.ShouldContain("call this tool again");
+
+            // Assert - Should update agent heartbeat when requesting tasks
+            _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
+        }
+
+        [Fact]
+        public async Task WhenAgentHasPendingTask_ShouldReturnTaskWithReinforcingPrompt()
+        {
+            // Arrange
+            var agentId = "agent-123";
+            var expectedPersona = "You are a code reviewer. Review code for quality and security.";
+            var expectedDescription = "Review the authentication module for security vulnerabilities";
+
+            // Create a running agent first
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Create a pending task for the agent
+            var taskId = await CreatePendingTaskAsync(agentId, expectedPersona, expectedDescription);
+
+            // Act
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldBe(taskId);
+            result.Persona.ShouldBe(expectedPersona);
+            result.Description.ShouldBe(expectedDescription);
+            result.Message.ShouldNotBeNull();
+            result.Message.ShouldContain("call this tool again");
+            result.Message.ShouldContain("get the next task");
+
+            // Assert - Should update agent heartbeat when requesting tasks
+            _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
+        }
+
+        [Fact]
+        public async Task WhenGetNextTaskIsCalledWithValidAgentId_ShouldUpdateAgentHeartbeat()
+        {
+            // Arrange
+            var agentId = "agent-heartbeat-test";
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId);
+
+            // Assert - Should call UpdateHeartbeatAsync exactly once
+            _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
+            result.Success.ShouldBeTrue();
+        }
     }
 
-    [Fact]
-    public async Task WhenTaskArrivesWhilePolling_ShouldReturnTaskImmediately()
+    public class TaskPollingTests : GetNextTaskMcpToolTests
     {
-        // Arrange
-        var agentId = "agent-polling-success";
-        var expectedPersona = "You are a code reviewer. Review code for quality and security.";
-        var expectedDescription = "Review the authentication module for security vulnerabilities";
-
-        // Create a running agent with no initial tasks
-        await CreateRunningAgentAsync(agentId);
-
-        // Configure longer polling timeout so we can simulate task arriving
-        var configuration = new GetNextTaskConfiguration
+        [Fact]
+        public async Task WhenAgentHasNoTasksAndPollingTimeoutExpires_ShouldReturnNoTasksAfterWaiting()
         {
-            TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
-            PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
-        };
+            // Arrange
+            var agentId = "agent-polling-timeout";
 
-        // Act - Start polling in background and add task after delay
-        var pollingTask = SystemUnderTest.GetNextTaskAsync(agentId, configuration);
+            // Create a running agent with no tasks
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
 
-        // Advance time to simulate task arriving during polling
-        _timeService.AdvanceTime(TimeSpan.FromMilliseconds(200));
-        var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
+            // Configure very short polling timeout and interval for fast test
+            var configuration = new GetNextTaskConfiguration
+            {
+                TimeToWaitForTask = TimeSpan.FromMilliseconds(50),  // Very short timeout
+                PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
+            };
 
-        var startTime = DateTime.UtcNow;
-        var result = await pollingTask;
-        var elapsed = DateTime.UtcNow - startTime;
+            // Act
+            var startTime = DateTime.UtcNow;
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId, configuration);
+            var elapsed = DateTime.UtcNow - startTime;
 
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldBe(taskId);
-        result.Persona.ShouldBe(expectedPersona);
-        result.Description.ShouldBe(expectedDescription);
-        result.Message.ShouldNotBeNull<string>();
-        result.Message.ShouldContain("call this tool again");
-        result.Message.ShouldContain("get the next task");
+            // Assert - returns a synthetic default task instructing a re-query
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+            result.TaskId!.ShouldStartWith("system:");
+            result.Persona.ShouldNotBeNull();
+            result.Description.ShouldNotBeNull();
+            result.Message.ShouldNotBeNull();
+            result.Message.ShouldContain("No tasks available");
+            result.Message.ShouldContain("call this tool again");
 
-        // Should have returned quickly once task was available, not waited full timeout
-        elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
+            // Should have waited at least the configured timeout duration
+            elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(40));
+            // But not too much longer (allowing for test execution overhead)
+            elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(200));
+        }
+
+        [Fact]
+        public async Task WhenTaskArrivesWhilePolling_ShouldReturnTaskImmediately()
+        {
+            // Arrange
+            var agentId = "agent-polling-success";
+            var expectedPersona = "You are a code reviewer. Review code for quality and security.";
+            var expectedDescription = "Review the authentication module for security vulnerabilities";
+
+            // Create a running agent with no initial tasks
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Configure longer polling timeout so we can simulate task arriving
+            var configuration = new GetNextTaskConfiguration
+            {
+                TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
+                PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
+            };
+
+            // Act - Start polling in background and add task after delay
+            var pollingTask = SystemUnderTest.GetNextTaskAsync(agentId, configuration);
+
+            // Advance time to simulate task arriving during polling
+            _timeService.AdvanceTime(TimeSpan.FromMilliseconds(200));
+            var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
+
+            var startTime = DateTime.UtcNow;
+            var result = await pollingTask;
+            var elapsed = DateTime.UtcNow - startTime;
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldBe(taskId);
+            result.Persona.ShouldBe(expectedPersona);
+            result.Description.ShouldBe(expectedDescription);
+            result.Message.ShouldNotBeNull();
+            result.Message.ShouldContain("call this tool again");
+            result.Message.ShouldContain("get the next task");
+
+            // Should have returned quickly once task was available, not waited full timeout
+            elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
+        }
     }
 
     private async Task CreateRunningAgentAsync(string agentId)
@@ -204,7 +301,8 @@ public class GetNextTaskMcpToolTests
             AgentType = "test",
             WorkingDirectory = "/test",
             Status = AgentStatus.Running,
-            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            RegisteredAt = _timeService.UtcNow,
+            LastHeartbeat = _timeService.UtcNow
         };
         scope.Agents.Add(agent);
         await scope.SaveChangesAsync();
@@ -219,10 +317,10 @@ public class GetNextTaskMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
-            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
@@ -233,17 +331,16 @@ public class GetNextTaskMcpToolTests
     private async Task<string> CreatePendingTaskUsingNewScopeAsync(string agentId, string persona, string description)
     {
         // Create a completely new scope service to simulate external process
-        var newScopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
-        using var scope = newScopeService.CreateWriteScope();
+        using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
-            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
@@ -291,10 +388,10 @@ public class GetNextTaskMcpToolTests
         {
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
-            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
@@ -436,11 +533,11 @@ public class GetNextTaskMcpToolTests
         {
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,
-            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
@@ -488,11 +585,11 @@ public class GetNextTaskMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
             Priority = priority,
-            CreatedAt = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
+            CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
         await scope.SaveChangesAsync();
@@ -536,29 +633,5 @@ public class GetNextTaskMcpToolTests
         var unassignedTask = await scope.Tasks.FindAsync(unassignedTaskId);
         unassignedTask.ShouldNotBeNull();
         unassignedTask.AgentId.ShouldBe(string.Empty);
-    }
-
-    [Fact]
-    public async Task WhenGetNextTaskIsCalledWithValidAgentId_ShouldUpdateAgentHeartbeat()
-    {
-        // Arrange
-        var agentId = "agent-heartbeat-test";
-        await CreateRunningAgentAsync(agentId);
-
-        // Create a mock LocalAgentService to track heartbeat calls
-        var mockLocalAgentService = new Mock<ILocalAgentService>();
-        mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(agentId))
-            .ReturnsAsync(true);
-
-        var systemUnderTest = new GetNextTaskMcpTool(_scopeService, mockLocalAgentService.Object);
-        // Set fast test configuration to avoid long polling timeouts
-        systemUnderTest.Configuration = new GetNextTaskConfiguration();
-
-        // Act
-        var result = await systemUnderTest.GetNextTaskAsync(agentId);
-
-        // Assert
-        // Should call UpdateHeartbeatAsync exactly once
-        mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
     }
 }
