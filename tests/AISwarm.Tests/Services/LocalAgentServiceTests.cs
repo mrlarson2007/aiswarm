@@ -150,7 +150,7 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
         {
             var agentId = Guid.NewGuid().ToString();
             // Arrange
-            using(var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.CreateWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -184,7 +184,7 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
         {
             var agentId = Guid.NewGuid().ToString();
 
-            using(var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.CreateWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {

@@ -10,7 +10,7 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class GetNextTaskMcpToolTests 
+public class GetNextTaskMcpToolTests
     : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
 {
     private readonly CoordinationDbContext _dbContext;
