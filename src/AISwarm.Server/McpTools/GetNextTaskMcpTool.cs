@@ -31,9 +31,18 @@ public class GetNextTaskMcpTool(
     [Description("Gets the next pending task for the specified agent")]
     public async Task<GetNextTaskResult> GetNextTaskAsync(
         [Description("ID of the agent requesting a task")]
-        string agentId)
+        string agentId,
+        [Description("Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result")]
+        int? timeoutMs = null)
     {
-        return await GetNextTaskAsync(agentId, Configuration);
+        var effective = new GetNextTaskConfiguration
+        {
+            TimeToWaitForTask = timeoutMs.HasValue && timeoutMs.Value > 0
+                ? TimeSpan.FromMilliseconds(timeoutMs.Value)
+                : Configuration.TimeToWaitForTask,
+            PollingInterval = Configuration.PollingInterval
+        };
+        return await GetNextTaskAsync(agentId, effective);
     }
 
     /// <summary>
@@ -67,6 +76,9 @@ public class GetNextTaskMcpTool(
             // Create a fresh scope for each poll to see new tasks
             using (var scope = scopeService.CreateReadScope())
             {
+                // Fetch agent persona for routing decisions
+                var agent = await scope.Agents.FindAsync(agentId);
+
                 // Look for the next pending task for this agent
                 var pendingTask = await scope.Tasks
                     .Where(t => t.AgentId == agentId)
@@ -83,12 +95,16 @@ public class GetNextTaskMcpTool(
                         pendingTask.Description);
 
                 // No assigned tasks found, look for unassigned tasks to claim
-                var unassignedTask = await scope.Tasks
+                var unassignedQuery = scope.Tasks
                     .Where(t => t.AgentId == null || t.AgentId == string.Empty)
                     .Where(t => t.Status == TaskStatus.Pending)
+                    // If work item has a PersonaId, require match with the requesting agent's PersonaId
+                    .Where(t => string.IsNullOrEmpty(t.PersonaId) || t.PersonaId == agent!.PersonaId)
                     .OrderByDescending(t => t.Priority)
                     .ThenBy(t => t.CreatedAt)
-                    .FirstOrDefaultAsync();
+                    .AsQueryable();
+
+                var unassignedTask = await unassignedQuery.FirstOrDefaultAsync();
 
                 if (unassignedTask != null)
                     // Claim the unassigned task by setting the AgentId

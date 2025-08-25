@@ -139,3 +139,55 @@
 ---
 
 Work through each phase sequentially, ensuring each piece is working before moving to the next. Adjust priorities and add features as needed based on feedback and usage.
+
+---
+
+## Event Bus & MCP Notifications Plan (Current Status)
+
+## Where We Are (feature/event-bus-tdd)
+
+- Minimal in-memory event bus + service:
+  - `InMemoryEventBus`, `EventEnvelope`, `EventFilter`, `IEventBus`.
+  - `WorkItemNotificationService` with `SubscribeForAgent`, `SubscribeForPersona`, `PublishTaskCreated`.
+- Tests (green):
+  - Happy path: agent subscription receives `TaskCreated`.
+  - Input validation: throws on null/whitespace `agentId` and `persona`.
+- Branch: `feature/event-bus-tdd` with incremental TDD commits.
+
+## Next Tests (TDD – one at a time)
+
+- Persona delivery: case-insensitive persona subscription receives `TaskCreated`.
+- Cancellation: subscription cancels promptly on `CancellationToken`.
+- Dual delivery: publish with both `agentId` and `persona` delivers to both streams.
+- Poison resilience: non-`TaskCreated` payload doesn’t break enumerators.
+- Publish watchdog: warn/track when publish exceeds threshold (introduce timing hook/logging).
+- Backpressure/coalescing: introduce bounded channels and simple coalescing (after tests justify).
+
+## MCP Integration Options
+
+- Resource subscription (native):
+  - Expose resources: `aiswarm://work-items/agents/{agentId}` and `aiswarm://work-items/personas/{persona}`.
+  - Implement `SubscribeToResources`/`UnsubscribeFromResources`; emit `resources/updated` on events.
+- Await tool (explicit wait):
+  - Tool `await_next_work_item_event(agentId?, persona?, timeoutMs=30000)`.
+  - Subscribes internally and returns first event or null on timeout.
+  - Exactly one of `agentId` or `persona` required; persona case-insensitive.
+
+Decision lean: start with the await tool (Gemini-friendly), keep resource subscription on deck.
+
+## Future: Gemini StdIn/Broker Control
+
+- Keep stdin open:
+  - If we spawn Gemini ourselves, keep the redirected stdin handle open to push prompts/commands on demand.
+  - Caveat: once all copies of stdin are closed, it cannot be reattached; must respawn process.
+- Lightweight broker:
+  - Run a small named-pipe or TCP broker that holds Gemini’s stdin; multiple senders connect to the broker which forwards lines to Gemini.
+  - Pros: decouples producers, supports out-of-band triggers (e.g., event notifications prompting checks).
+  - Consider simple auth (token/ACL) and backpressure (bounded queue, drop/oldest).
+
+## Short-Term Actions
+
+- Add TDD tests listed above, one per cycle, with minimal changes to pass.
+- Decide and implement the first MCP bridge (await tool) behind a thin DI-registered handler.
+- Document the chosen path and revisit broker/stdin approach if we need direct push control.
+

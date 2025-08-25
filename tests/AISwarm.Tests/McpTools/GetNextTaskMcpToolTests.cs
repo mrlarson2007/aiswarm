@@ -114,6 +114,36 @@ public class GetNextTaskMcpToolTests
             claimedTask.ShouldNotBeNull();
             claimedTask.AgentId.ShouldBe(otherAgentId);
         }
+
+        [Fact]
+        public async Task WhenTimeoutMsProvided_ShouldReturnAfterApproximatelyTimeoutWithNoTasks()
+        {
+            // Arrange
+            var agentId = "agent-timeout-param";
+            await CreateRunningAgentAsync(agentId);
+
+            var tool = SystemUnderTest;
+            // Ensure default config has long timeout, so param takes effect
+            tool.Configuration = new GetNextTaskConfiguration
+            {
+                TimeToWaitForTask = TimeSpan.FromSeconds(10),
+                PollingInterval = TimeSpan.FromMilliseconds(5)
+            };
+
+            // Act
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var result = await tool.GetNextTaskAsync(agentId, timeoutMs: 50);
+            sw.Stop();
+
+            // Assert synthetic no-task result
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+            result.TaskId!.ShouldStartWith("system:");
+
+            // Timing assertions with slack
+            sw.Elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(30));
+            sw.Elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(300));
+        }
     }
 
     public class TaskRetrievalWithMultipleTasksTests : GetNextTaskMcpToolTests
@@ -261,6 +291,36 @@ public class GetNextTaskMcpToolTests
             var claimedTask = await scope.Tasks.FindAsync(unassignedTaskId);
             claimedTask.ShouldNotBeNull();
             claimedTask.AgentId.ShouldBe(agentId);
+        }
+
+        [Fact]
+        public async Task WhenUnassignedTaskForDifferentPersona_ShouldNotBeClaimedByNonMatchingAgent()
+        {
+            // Arrange
+            var reviewerAgentId = "agent-reviewer";
+            var plannerAgentId = "agent-planner";
+            await CreateRunningAgentAsync(reviewerAgentId, "reviewer");
+            await CreateRunningAgentAsync(plannerAgentId, "planner");
+
+            var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+            var expectedDescription = "Plan the authentication feature implementation";
+            var taskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription, "planner");
+
+            // Act - non-matching agent tries to get task
+            var nonMatchingResult = await SystemUnderTest.GetNextTaskAsync(reviewerAgentId);
+
+            // Assert - reviewer should not claim planner task
+            nonMatchingResult.Success.ShouldBeTrue();
+            nonMatchingResult.TaskId.ShouldNotBeNull();
+            nonMatchingResult.TaskId!.ShouldStartWith("system:");
+
+            // Verify task remains unassigned
+            using (var readScope = _scopeService.CreateReadScope())
+            {
+                var task = await readScope.Tasks.FindAsync(taskId);
+                task.ShouldNotBeNull();
+                task!.AgentId.ShouldBe(string.Empty);
+            }
         }
     }
 
@@ -501,6 +561,23 @@ public class GetNextTaskMcpToolTests
         scope.Complete();
     }
 
+    private async Task CreateRunningAgentAsync(string agentId, string personaId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var agent = new Agent
+        {
+            Id = agentId,
+            PersonaId = personaId,
+            AgentType = "test",
+            WorkingDirectory = "/test",
+            Status = AgentStatus.Running,
+            LastHeartbeat = _timeService.UtcNow,
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
     private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
     {
         using var scope = _scopeService.CreateWriteScope();
@@ -540,7 +617,7 @@ public class GetNextTaskMcpToolTests
         return taskId;
     }
 
-    private async Task<string> CreateUnassignedTaskAsync(string persona, string description)
+    private async Task<string> CreateUnassignedTaskAsync(string persona, string description, string? personaId = null)
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
@@ -551,6 +628,7 @@ public class GetNextTaskMcpToolTests
             Status = TaskStatus.Pending,
             Persona = persona,
             Description = description,
+            PersonaId = personaId,
             CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
