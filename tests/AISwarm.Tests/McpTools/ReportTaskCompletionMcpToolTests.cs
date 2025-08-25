@@ -7,7 +7,7 @@ using Shouldly;
 
 namespace AISwarm.Tests.McpTools;
 
-public class ReportTaskCompletionMcpToolTests 
+public class ReportTaskCompletionMcpToolTests
     : IDisposable, ISystemUnderTest<ReportTaskCompletionMcpTool>
 {
     private readonly CoordinationDbContext _dbContext;
@@ -34,7 +34,7 @@ public class ReportTaskCompletionMcpToolTests
         _dbContext.Dispose();
     }
 
-    public class TaskCompletionSuccessTests : ReportTaskCompletionMcpToolTests
+    public class TaskReportCompletionTests : ReportTaskCompletionMcpToolTests
     {
         [Fact]
         public async Task WhenReportingTaskCompletion_ShouldUpdateTaskStatusToCompleted()
@@ -62,10 +62,7 @@ public class ReportTaskCompletionMcpToolTests
             task.Result.ShouldBe(completionResult);
             task.CompletedAt.ShouldNotBeNull();
         }
-    }
 
-    public class TaskCompletionFailureTests : ReportTaskCompletionMcpToolTests
-    {
         [Fact]
         public async Task WhenReportingCompletionForNonExistentTask_ShouldReturnFailureResult()
         {
@@ -101,9 +98,32 @@ public class ReportTaskCompletionMcpToolTests
             result.Message.ShouldContain("already completed");
             result.Message.ShouldContain(taskId);
         }
+    
+        [Fact]
+        public async Task WhenReportingCompletionForFailedTask_ShouldUpdateStatusToCompleted()
+        {
+            // Arrange
+            var taskId = "failed-task";
+            var agentId = "test-agent";
+            var errorMessage = "Task failed due to some error";
+            await CreateFailedTaskAsync(taskId, agentId);
+
+            // Act
+            var result = await SystemUnderTest.ReportTaskCompletionAsync(taskId, errorMessage);
+
+            // Assert
+            result.IsSuccess.ShouldBeTrue();
+
+            using var scope = _scopeService.CreateReadScope();
+            var task = await scope.Tasks.FindAsync(taskId);
+            task.ShouldNotBeNull();
+            task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Completed);
+            task.Result.ShouldBe(errorMessage);
+            task.CompletedAt.ShouldNotBeNull();
+        }
     }
 
-    public class TaskFailureReportingTests : ReportTaskCompletionMcpToolTests
+    public class TaskReportFailureTests : ReportTaskCompletionMcpToolTests
     {
         [Fact]
         public async Task WhenTaskExists_ShouldMarkTaskAsFailed()
@@ -223,66 +243,6 @@ public class ReportTaskCompletionMcpToolTests
         scope.Complete();
     }
 
-    [Fact]
-    public async Task ReportTaskFailureAsync_WhenTaskExists_ShouldMarkTaskAsFailed()
-    {
-        // Arrange
-        var taskId = "test-task-failure";
-        var agentId = "test-agent";
-        var errorMessage = "Unable to find yolo parameter in codebase";
-        await CreateInProgressTaskAsync(taskId, agentId);
-
-        // Act
-        var result = await SystemUnderTest.ReportTaskFailureAsync(taskId, errorMessage);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-
-        using var scope = _scopeService.CreateReadScope();
-        var task = await scope.Tasks.FindAsync(taskId);
-        task.ShouldNotBeNull();
-        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
-        task.Result.ShouldBe(errorMessage);
-        task.CompletedAt.ShouldNotBeNull();
-    }
-
-    [Fact]
-    public async Task ReportTaskFailureAsync_WhenTaskNotFound_ShouldReturnFailure()
-    {
-        // Arrange
-        var nonExistentTaskId = "non-existent-task";
-        var errorMessage = "Task failed due to missing dependency";
-
-        // Act
-        var result = await SystemUnderTest.ReportTaskFailureAsync(nonExistentTaskId, errorMessage);
-
-        // Assert
-        result.IsSuccess.ShouldBeFalse();
-        result.Message.ShouldBe($"Task not found: {nonExistentTaskId}");
-    }
-
-    [Fact]
-    public async Task ReportTaskFailureAsync_WhenTaskAlreadyCompleted_ShouldStillMarkAsFailed()
-    {
-        // Arrange
-        var taskId = "completed-task";
-        var agentId = "test-agent";
-        var errorMessage = "Task failed after completion";
-        await CreateCompletedTaskAsync(taskId, agentId);
-
-        // Act
-        var result = await SystemUnderTest.ReportTaskFailureAsync(taskId, errorMessage);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-
-        using var scope = _scopeService.CreateReadScope();
-        var task = await scope.Tasks.FindAsync(taskId);
-        task.ShouldNotBeNull();
-        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
-        task.Result.ShouldBe(errorMessage);
-    }
-
     private async Task CreateCompletedTaskAsync(string taskId, string agentId)
     {
         using var scope = _scopeService.CreateWriteScope();
@@ -291,6 +251,26 @@ public class ReportTaskCompletionMcpToolTests
             Id = taskId,
             AgentId = agentId,
             Status = DataLayer.Entities.TaskStatus.Completed,
+            Persona = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _timeService.UtcNow,
+            CompletedAt = _timeService.UtcNow,
+            Result = "Previously completed"
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateFailedTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.CreateWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = DataLayer.Entities.TaskStatus.Failed,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
