@@ -25,20 +25,25 @@ public class InMemoryEventBus : IEventBus, IDisposable
             {
                 lock (_gate)
                 {
-                    for (int i = _subs.Count - 1; i >= 0; i--)
-                    {
-                        if (ReferenceEquals(_subs[i].Channel, channel))
-                        {
-                            _subs.RemoveAt(i);
-                            break;
-                        }
-                    }
+                    ClearSubscriptions(channel);
                 }
                 channel.Writer.TryComplete();
             });
         }
 
         return ReadAll(channel, ct);
+    }
+
+    private void ClearSubscriptions(Channel<EventEnvelope> channel)
+    {
+        for (int i = _subs.Count - 1; i >= 0; i--)
+        {
+            if (ReferenceEquals(_subs[i].Channel, channel))
+            {
+                _subs.RemoveAt(i);
+                break;
+            }
+        }
     }
 
     private static async IAsyncEnumerable<EventEnvelope> ReadAll(Channel<EventEnvelope> ch, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)

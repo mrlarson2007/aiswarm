@@ -11,6 +11,15 @@ public class WorkItemNotificationServiceTests
     private readonly IEventBus _bus = new InMemoryEventBus();
     private IWorkItemNotificationService SystemUnderTest => new WorkItemNotificationService(_bus);
 
+    private static async Task WaitForCountAsync(List<EventEnvelope> list, int expected, CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500))
+        {
+            await Task.Delay(5, ct);
+        }
+    }
+
     [Fact]
     public void WhenSubscribingWithNullPersona_ShouldThrowArgumentException()
     {
@@ -32,6 +41,7 @@ public class WorkItemNotificationServiceTests
         var agentId = "agent-dispose";
         var service = SystemUnderTest;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
 
         var completed = false;
 
@@ -40,23 +50,27 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var _ in service.SubscribeForAgent(agentId, cts.Token).WithCancellation(cts.Token))
+                await foreach (var _ in service.SubscribeForAgent(agentId, token))
                 {
                     // consume until completion
                 }
                 completed = true;
             }
             catch (OperationCanceledException) { }
-        }, cts.Token);
+        }, token);
 
         await Task.Delay(5, cts.Token);
 
         // Dispose bus via cast (test-only): InMemoryEventBus implements IDisposable in next step
-        ( _bus as IDisposable )?.Dispose();
+        (_bus as IDisposable)?.Dispose();
 
         await Task.Delay(20);
         cts.Cancel();
-        try { await readTask; } catch (OperationCanceledException) { }
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
 
         completed.ShouldBeTrue();
 
@@ -91,17 +105,18 @@ public class WorkItemNotificationServiceTests
         var service = SystemUnderTest;
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
 
         // Act
         var received = new List<EventEnvelope>();
         var readTask = Task.Run(async () =>
         {
-            await foreach (var evt in service.SubscribeForAgent(agentId, cts.Token).WithCancellation(cts.Token))
+            await foreach (var evt in service.SubscribeForAgent(agentId, token))
             {
                 received.Add(evt);
                 break; // we only need the first event
             }
-        }, cts.Token);
+        }, token);
 
         await Task.Delay(5, cts.Token); // give subscription a moment
         await service.PublishTaskCreated(taskId, agentId, persona);
@@ -123,6 +138,7 @@ public class WorkItemNotificationServiceTests
         var agentId = "agent-cancel";
         var service = SystemUnderTest;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
 
         var received = new List<EventEnvelope>();
 
@@ -131,7 +147,7 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, cts.Token))
+                await foreach (var evt in service.SubscribeForAgent(agentId, token))
                 {
                     received.Add(evt);
                 }
@@ -147,11 +163,7 @@ public class WorkItemNotificationServiceTests
 
         // Publish first event (should be received)
         await service.PublishTaskCreated(taskId: "t1", agentId: agentId, persona: "reviewer", CancellationToken.None);
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
-        {
-            await Task.Delay(5, cts.Token);
-        }
+        await WaitForCountAsync(received, 1, cts.Token);
 
         // Cancel subscription and then publish another event (should NOT be received)
         cts.Cancel();
@@ -159,7 +171,11 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskCreated(taskId: "t2", agentId: agentId, persona: "reviewer", CancellationToken.None);
 
         // Wait for reader to finish
-        try { await readTask; } catch (OperationCanceledException) { }
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
 
         // Assert
         received.Count.ShouldBe(1);
@@ -174,18 +190,20 @@ public class WorkItemNotificationServiceTests
         var persona = "reviewer";
         var service = SystemUnderTest;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
 
         var received = new List<EventEnvelope>();
 
         // Act: subscribe to persona, then publish one agent-assigned and one unassigned event
         var readTask = Task.Run(async () =>
         {
-            await foreach (var evt in service.SubscribeForPersona(persona, cts.Token).WithCancellation(cts.Token))
+            await foreach (var evt in service.SubscribeForPersona(persona, token))
             {
                 received.Add(evt);
-                if (received.Count >= 2) break; // safety
+                if (received.Count >= 2)
+                    break; // safety
             }
-        }, cts.Token);
+        }, token);
 
         await Task.Delay(5, cts.Token);
 
@@ -196,14 +214,14 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskCreated(taskId: "t-unassigned", agentId: null, persona: persona);
 
         // Wait briefly for deliveries
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
-        {
-            await Task.Delay(5, cts.Token);
-        }
+        await WaitForCountAsync(received, 1, cts.Token);
 
         cts.Cancel();
-        try { await readTask; } catch (OperationCanceledException) { }
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
 
         // Assert: only the unassigned task should be received
         received.Count.ShouldBe(1);
@@ -234,6 +252,7 @@ public class WorkItemNotificationServiceTests
         var agentId = "agent-cancel-graceful";
         var service = SystemUnderTest;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
 
         var received = new List<EventEnvelope>();
         bool completed = false;
@@ -244,7 +263,7 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, cts.Token))
+                await foreach (var evt in service.SubscribeForAgent(agentId, token))
                 {
                     received.Add(evt);
                 }
@@ -259,21 +278,21 @@ public class WorkItemNotificationServiceTests
         await Task.Delay(5, cts.Token);
         await service.PublishTaskCreated("t1", agentId, persona: null);
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
-        {
-            await Task.Delay(5, cts.Token);
-        }
+        await WaitForCountAsync(received, 1, cts.Token);
 
         // Cancel and ensure enumeration completes without OCE
         cts.Cancel();
-        try { await readTask; } catch (OperationCanceledException) { }
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
 
         // Assert
         completed.ShouldBeTrue();
         captured.ShouldBeNull();
     }
 
-    
+
 
 }
