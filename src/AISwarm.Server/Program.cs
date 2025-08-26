@@ -27,7 +27,7 @@ internal static class Program
 
         // Configure MCP server with BOTH stdio and HTTP transports
         builder.Services
-            .AddInfrastructureServices()
+            .AddInfrastructureServices(builder.Configuration)
             .AddMcpServer()
             .WithStdioServerTransport() // For VS Code
             .WithHttpTransport() // For Gemini CLI

@@ -9,11 +9,11 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddAgentLauncherServices(this IServiceCollection services)
     {
-        // External / infrastructure
-        services.AddInfrastructureServices();
+    // External / infrastructure
+    var configuration = new ConfigurationBuilder().Build();
+    services.AddInfrastructureServices(configuration);
 
-        // Use centralized data layer services with proper database initialization
-        var configuration = new ConfigurationBuilder().Build();
+    // Use centralized data layer services with proper database initialization
         services.AddDataLayerServices(configuration);
 
         // Command handlers
