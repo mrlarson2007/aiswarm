@@ -4,16 +4,16 @@ using Shouldly;
 
 namespace AISwarm.Tests.Services;
 
-public class GitServiceTests
+public class CreateWorkTreeTests : ISystemUnderTest<GitService>
 {
     private readonly FakeFileSystemService _fs = new();
     private readonly TestLogger _logger = new();
     private readonly PassThroughProcessLauncher _process = new();
 
-    private GitService SystemUnderTest => new(_process, _fs, _logger);
+    public GitService SystemUnderTest => new(_process, _fs, _logger);
 
     [Fact]
-    public async Task CreateWorktree_ShouldFail_WhenDirectoryAlreadyExists()
+    public async Task ShouldFail_WhenDirectoryAlreadyExists()
     {
         _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
             new ProcessResult(true, ".git", string.Empty, 0));
@@ -29,7 +29,7 @@ public class GitServiceTests
     }
 
     [Fact]
-    public async Task CreateWorktree_ShouldFail_WhenWorktreeAlreadyListed()
+    public async Task ShouldFail_WhenWorktreeAlreadyListed()
     {
         var worktreeListOutput = "worktree /repo/worktrees/feature_a\nbranch refs/heads/feature_a\n";
         _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),

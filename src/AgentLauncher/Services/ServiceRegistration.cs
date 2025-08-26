@@ -16,10 +16,6 @@ public static class ServiceRegistration
         var configuration = new ConfigurationBuilder().Build();
         services.AddDataLayerServices(configuration);
 
-        // Background monitoring services
-        services.AddSingleton<AgentMonitoringConfiguration>();
-        services.AddHostedService<AgentMonitoringService>();
-
         // Command handlers
         services.AddTransient<Commands.LaunchAgentCommandHandler>();
         services.AddTransient<Commands.ListAgentsCommandHandler>();

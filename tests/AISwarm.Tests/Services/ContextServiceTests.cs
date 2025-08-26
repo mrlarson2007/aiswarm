@@ -3,17 +3,15 @@ using Shouldly;
 
 namespace AISwarm.Tests.Services;
 
-public class ContextServiceTests
+public class ContextServiceTests : ISystemUnderTest<ContextService>
 {
-    private readonly ContextService _systemUnderTest;
+    private ContextService? _systemUnderTest;
 
-    public ContextServiceTests()
-    {
-        _systemUnderTest = new ContextService();
-    }
+    public ContextService SystemUnderTest => 
+        _systemUnderTest ??= new ContextService();
 
     [Fact]
-    public async Task WhenCreateContextFileWithAgentIdIsCalledWithNullAgentId_ShouldBehaveLikeNormalCreateContextFile()
+    public async Task WhenCreateContextFileWithNoAgentIdI_ShouldBehaveLikeNormalCreateContextFile()
     {
         // Arrange
         var agentType = "implementer";
@@ -24,7 +22,11 @@ public class ContextServiceTests
         try
         {
             // Act
-            var contextPath = await _systemUnderTest.CreateContextFileWithAgentId(agentType, tempDir, null);
+            var contextPath = await SystemUnderTest
+                .CreateContextFileWithAgentId(
+                    agentType,
+                    tempDir,
+                    null);
 
             // Assert
             contextPath.ShouldNotBeNullOrEmpty();
@@ -41,7 +43,7 @@ public class ContextServiceTests
     }
 
     [Fact]
-    public async Task WhenCreateContextFileWithAgentIdIsCalledWithValidAgentId_ShouldAppendMcpToolInstructions()
+    public async Task WhenCreateContextFileWithAgentId_ShouldAppendMcpToolInstructions()
     {
         // Arrange
         var agentType = "implementer";
@@ -53,7 +55,10 @@ public class ContextServiceTests
         try
         {
             // Act
-            var contextPath = await _systemUnderTest.CreateContextFileWithAgentId(agentType, tempDir, agentId);
+            var contextPath = await SystemUnderTest.CreateContextFileWithAgentId(
+                agentType,
+                tempDir,
+                agentId);
 
             // Assert
             contextPath.ShouldNotBeNullOrEmpty();
