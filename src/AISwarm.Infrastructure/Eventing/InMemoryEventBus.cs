@@ -19,12 +19,31 @@ public class InMemoryEventBus : IEventBus, IDisposable
             _subs.Add((filter, channel));
         }
 
+        if (ct.CanBeCanceled)
+        {
+            ct.Register(() =>
+            {
+                lock (_gate)
+                {
+                    for (int i = _subs.Count - 1; i >= 0; i--)
+                    {
+                        if (ReferenceEquals(_subs[i].Channel, channel))
+                        {
+                            _subs.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+                channel.Writer.TryComplete();
+            });
+        }
+
         return ReadAll(channel, ct);
     }
 
     private static async IAsyncEnumerable<EventEnvelope> ReadAll(Channel<EventEnvelope> ch, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
-        while (await ch.Reader.WaitToReadAsync(ct))
+        while (await ch.Reader.WaitToReadAsync())
         {
             while (ch.Reader.TryRead(out var item))
             {

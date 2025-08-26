@@ -227,6 +227,53 @@ public class WorkItemNotificationServiceTests
         ex.Message.ShouldContain("taskId");
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task WhenCancellingSubscription_ShouldCompleteEnumerationWithoutException()
+    {
+        // Arrange
+        var agentId = "agent-cancel-graceful";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var received = new List<EventEnvelope>();
+        bool completed = false;
+        Exception? captured = null;
+
+        // Act
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in service.SubscribeForAgent(agentId, cts.Token))
+                {
+                    received.Add(evt);
+                }
+                completed = true;
+            }
+            catch (OperationCanceledException ex)
+            {
+                captured = ex;
+            }
+        });
+
+        await Task.Delay(5, cts.Token);
+        await service.PublishTaskCreated("t1", agentId, persona: null);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
+        {
+            await Task.Delay(5, cts.Token);
+        }
+
+        // Cancel and ensure enumeration completes without OCE
+        cts.Cancel();
+        try { await readTask; } catch (OperationCanceledException) { }
+
+        // Assert
+        completed.ShouldBeTrue();
+        captured.ShouldBeNull();
+    }
+
     
 
 }
