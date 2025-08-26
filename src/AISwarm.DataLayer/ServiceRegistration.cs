@@ -11,7 +11,6 @@ public static class ServiceRegistration
         this IServiceCollection services,
         IConfiguration? configuration = null)
     {
-        services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         var workingDirectory = configuration?["WorkingDirectory"] ?? Environment.CurrentDirectory;
         var aiswarmDirectory = Path.Combine(workingDirectory, ".aiswarm");
 
@@ -19,15 +18,57 @@ public static class ServiceRegistration
         Directory.CreateDirectory(aiswarmDirectory);
 
         var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
-        services.AddDbContext<CoordinationDbContext>(options =>
+        services.AddDbContextFactory<CoordinationDbContext>(options =>
             options.UseSqlite($"Data Source={databasePath}")
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));
+
+        // Register scope service explicitly using the factory-based constructor to avoid ambiguity
+        services.AddSingleton<IDatabaseScopeService>(sp =>
+            new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
 
         // Initialize database after registration
         using var tempServiceProvider = services.BuildServiceProvider();
         using var scope = tempServiceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<CoordinationDbContext>();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<CoordinationDbContext>>();
+        using var context = factory.CreateDbContext();
         context.Database.EnsureCreated();
+
+        // Lightweight SQLite schema upgrade: add missing Tasks.PersonaId if upgrading from older DB
+        try
+        {
+            var provider = context.Database.ProviderName ?? string.Empty;
+            if (provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+            {
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                    conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "PRAGMA table_info('Tasks')";
+                using var reader = cmd.ExecuteReader();
+                var hasPersonaId = false;
+                while (reader.Read())
+                {
+                    // PRAGMA table_info columns: cid(0), name(1), type(2), ...
+                    var name = reader.GetString(1);
+                    if (string.Equals(name, "PersonaId", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasPersonaId = true;
+                        break;
+                    }
+                }
+                reader.Close();
+                if (!hasPersonaId)
+                {
+                    using var alter = conn.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Tasks ADD COLUMN PersonaId TEXT NULL";
+                    alter.ExecuteNonQuery();
+                }
+            }
+        }
+        catch
+        {
+            // Best-effort upgrade; ignore if unavailable.
+        }
 
         return services;
     }

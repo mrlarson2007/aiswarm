@@ -11,7 +11,9 @@ public class InMemoryEventBus : IEventBus, IDisposable
     public IAsyncEnumerable<EventEnvelope> Subscribe(EventFilter filter, CancellationToken ct = default)
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(InMemoryEventBus));
+        {
+            return Empty<EventEnvelope>();
+        }
 
         var channel = Channel.CreateUnbounded<EventEnvelope>();
         lock (_gate)
@@ -31,7 +33,13 @@ public class InMemoryEventBus : IEventBus, IDisposable
             });
         }
 
-        return ReadAll(channel, ct);
+        return ReadAll(channel);
+    }
+
+    private static async IAsyncEnumerable<T> Empty<T>()
+    {
+    await Task.CompletedTask;
+        yield break;
     }
 
     private void ClearSubscriptions(Channel<EventEnvelope> channel)
@@ -46,7 +54,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
         }
     }
 
-    private static async IAsyncEnumerable<EventEnvelope> ReadAll(Channel<EventEnvelope> ch, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    private static async IAsyncEnumerable<EventEnvelope> ReadAll(Channel<EventEnvelope> ch)
     {
         while (await ch.Reader.WaitToReadAsync())
         {
