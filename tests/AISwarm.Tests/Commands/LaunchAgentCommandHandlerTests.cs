@@ -9,7 +9,7 @@ using Shouldly;
 
 namespace AISwarm.Tests.Commands;
 
-public class LaunchAgentCommandHandlerTests 
+public class LaunchAgentCommandHandlerTests
     : IDisposable, ISystemUnderTest<LaunchAgentCommandHandler>
 {
     private readonly Mock<IContextService> _context;
@@ -436,7 +436,7 @@ public class LaunchAgentCommandHandlerTests
         }
     }
 
-    public class EdgeCaseTests : LaunchAgentCommandHandlerTests
+    public class GitRepoTests : LaunchAgentCommandHandlerTests
     {
         [Fact]
         public async Task WhenNotInGitRepo_ShouldLogErrorAndAbort()
@@ -493,168 +493,168 @@ public class LaunchAgentCommandHandlerTests
             _logger.Infos.ShouldContain(i => i.Contains("Registered agent") && i.Contains(agent.Id));
         }
 
-    [Fact]
-    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldConfigureGeminiWithSettingsFile()
-    {
-        // Arrange
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
-            .ReturnsAsync("/repo/planner_context.md");
+        [Fact]
+        public async Task WhenMonitorEnabledAndAgentRegistered_ShouldConfigureGeminiWithSettingsFile()
+        {
+            // Arrange
+            _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+                .ReturnsAsync("/repo/planner_context.md");
 
-        // Set up context file to exist (Gemini service checks this)
-        _fs.AddFile("/repo/planner_context.md");
+            // Set up context file to exist (Gemini service checks this)
+            _fs.AddFile("/repo/planner_context.md");
 
-        // Act
-        var result = await SystemUnderTest.RunAsync(
-            agentType: "planner",
-            model: "gemini-1.5-pro",
-            worktree: null,
-            directory: "/repo",
-            dryRun: false,
-            monitor: true);
+            // Act
+            var result = await SystemUnderTest.RunAsync(
+                agentType: "planner",
+                model: "gemini-1.5-pro",
+                worktree: null,
+                directory: "/repo",
+                dryRun: false,
+                monitor: true);
 
-        // Assert
-        result.ShouldBeTrue();
+            // Assert
+            result.ShouldBeTrue();
 
-        // Get the registered agent from database
-        var agents = await _dbContext.Agents.ToListAsync();
-        agents.ShouldHaveSingleItem();
-        var agent = agents.First();
+            // Get the registered agent from database
+            var agents = await _dbContext.Agents.ToListAsync();
+            agents.ShouldHaveSingleItem();
+            var agent = agents.First();
 
-        // Should have launched Gemini with agent settings
-        _process.Invocations.ShouldContain(i =>
-            i.File == "pwsh.exe" &&
-            i.Arguments.Contains("gemini") &&
-            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
-        );
+            // Should have launched Gemini with agent settings
+            _process.Invocations.ShouldContain(i =>
+                i.File == "pwsh.exe" &&
+                i.Arguments.Contains("gemini") &&
+                i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
+            );
 
-        // Should have created Gemini configuration file
-        var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
-        configContent.ShouldNotBeNull();
-        configContent.ShouldContain(agent.Id);
-        configContent.ShouldContain("aiswarm");
+            // Should have created Gemini configuration file
+            var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
+            configContent.ShouldNotBeNull();
+            configContent.ShouldContain(agent.Id);
+            configContent.ShouldContain("aiswarm");
 
-        _logger.Infos.ShouldContain(i => i.Contains("Configuring Gemini with agent settings"));
-    }
+            _logger.Infos.ShouldContain(i => i.Contains("Configuring Gemini with agent settings"));
+        }
 
-    [Fact]
-    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendAgentIdToContextFile()
-    {
-        // Arrange
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
-            .ReturnsAsync("/repo/planner_context.md");
+        [Fact]
+        public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendAgentIdToContextFile()
+        {
+            // Arrange
+            _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+                .ReturnsAsync("/repo/planner_context.md");
 
-        // Set up context file to exist (Gemini service checks this)
-        _fs.AddFile("/repo/planner_context.md");
+            // Set up context file to exist (Gemini service checks this)
+            _fs.AddFile("/repo/planner_context.md");
 
-        // Act
-        var result = await SystemUnderTest.RunAsync(
-            agentType: "planner",
-            model: "gemini-1.5-pro",
-            worktree: null,
-            directory: "/repo",
-            dryRun: false,
-            monitor: true);
+            // Act
+            var result = await SystemUnderTest.RunAsync(
+                agentType: "planner",
+                model: "gemini-1.5-pro",
+                worktree: null,
+                directory: "/repo",
+                dryRun: false,
+                monitor: true);
 
-        // Assert
-        result.ShouldBeTrue();
+            // Assert
+            result.ShouldBeTrue();
 
-        // Get the registered agent from database
-        var agents = await _dbContext.Agents.ToListAsync();
-        agents.ShouldHaveSingleItem();
-        var agent = agents.First();
+            // Get the registered agent from database
+            var agents = await _dbContext.Agents.ToListAsync();
+            agents.ShouldHaveSingleItem();
+            var agent = agents.First();
 
-        // Verify agent information was appended to context file
-        var contextContent = _fs.GetFileContent("/repo/planner_context.md");
-        contextContent.ShouldNotBeNull();
-        contextContent.ShouldContain(agent.Id);
-        contextContent.ShouldContain("mcp_aiswarm_get_next_task");
-        contextContent.ShouldContain("mcp_aiswarm_create_task");
-        contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
-        contextContent.ShouldContain("Task Management Workflow");
-    }
+            // Verify agent information was appended to context file
+            var contextContent = _fs.GetFileContent("/repo/planner_context.md");
+            contextContent.ShouldNotBeNull();
+            contextContent.ShouldContain(agent.Id);
+            contextContent.ShouldContain("mcp_aiswarm_get_next_task");
+            contextContent.ShouldContain("mcp_aiswarm_create_task");
+            contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
+            contextContent.ShouldContain("Task Management Workflow");
+        }
 
-    [Fact]
-    public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendCorrectMcpToolInstructions()
-    {
-        // Arrange
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
-            .ReturnsAsync("/repo/planner_context.md");
+        [Fact]
+        public async Task WhenMonitorEnabledAndAgentRegistered_ShouldAppendCorrectMcpToolInstructions()
+        {
+            // Arrange
+            _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+                .ReturnsAsync("/repo/planner_context.md");
 
-        // Set up context file to exist (Gemini service checks this)
-        _fs.AddFile("/repo/planner_context.md");
+            // Set up context file to exist (Gemini service checks this)
+            _fs.AddFile("/repo/planner_context.md");
 
-        // Act
-        var result = await SystemUnderTest.RunAsync(
-            agentType: "planner",
-            model: "gemini-1.5-pro",
-            worktree: null,
-            directory: "/repo",
-            dryRun: false,
-            monitor: true);
+            // Act
+            var result = await SystemUnderTest.RunAsync(
+                agentType: "planner",
+                model: "gemini-1.5-pro",
+                worktree: null,
+                directory: "/repo",
+                dryRun: false,
+                monitor: true);
 
-        // Assert
-        result.ShouldBeTrue();
+            // Assert
+            result.ShouldBeTrue();
 
-        // Get the registered agent from database
-        var agents = await _dbContext.Agents.ToListAsync();
-        agents.ShouldHaveSingleItem();
-        var agent = agents.First();
+            // Get the registered agent from database
+            var agents = await _dbContext.Agents.ToListAsync();
+            agents.ShouldHaveSingleItem();
+            var agent = agents.First();
 
-        // Verify correct MCP tool instructions were appended to context file
-        var contextContent = _fs.GetFileContent("/repo/planner_context.md");
-        contextContent.ShouldNotBeNull();
-        contextContent.ShouldContain(agent.Id);
+            // Verify correct MCP tool instructions were appended to context file
+            var contextContent = _fs.GetFileContent("/repo/planner_context.md");
+            contextContent.ShouldNotBeNull();
+            contextContent.ShouldContain(agent.Id);
 
-        // Should reference actual MCP tool names
-        contextContent.ShouldContain("mcp_aiswarm_get_next_task");
-        contextContent.ShouldContain("mcp_aiswarm_create_task");
-        contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
+            // Should reference actual MCP tool names
+            contextContent.ShouldContain("mcp_aiswarm_get_next_task");
+            contextContent.ShouldContain("mcp_aiswarm_create_task");
+            contextContent.ShouldContain("mcp_aiswarm_report_task_completion");
 
-        // Should include proper parameter names
-        contextContent.ShouldContain("agentId");
-        contextContent.ShouldContain("taskId");
-        contextContent.ShouldContain("result");
+            // Should include proper parameter names
+            contextContent.ShouldContain("agentId");
+            contextContent.ShouldContain("taskId");
+            contextContent.ShouldContain("result");
 
-        // Should include task completion workflow
-        contextContent.ShouldContain("report_task_completion");
-    }
+            // Should include task completion workflow
+            contextContent.ShouldContain("report_task_completion");
+        }
 
-    [Fact]
-    public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
-    {
-        // Arrange
-        _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
-            .ReturnsAsync("/repo/planner_context.md");
+        [Fact]
+        public async Task WhenMonitorDisabled_ShouldUseLegacyGeminiLaunch()
+        {
+            // Arrange
+            _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
+                .ReturnsAsync("/repo/planner_context.md");
 
-        // Set up context file to exist (Gemini service checks this)
-        _fs.AddFile("/repo/planner_context.md");
+            // Set up context file to exist (Gemini service checks this)
+            _fs.AddFile("/repo/planner_context.md");
 
-        // Act
-        var result = await SystemUnderTest.RunAsync(
-            agentType: "planner",
-            model: "gemini-1.5-pro",
-            worktree: null,
-            directory: "/repo",
-            dryRun: false,
-            monitor: false);
+            // Act
+            var result = await SystemUnderTest.RunAsync(
+                agentType: "planner",
+                model: "gemini-1.5-pro",
+                worktree: null,
+                directory: "/repo",
+                dryRun: false,
+                monitor: false);
 
-        // Assert
-        result.ShouldBeTrue();
+            // Assert
+            result.ShouldBeTrue();
 
-        // Should have launched Gemini without agent settings (no configuration file)
-        _process.Invocations.ShouldContain(i =>
-            i.File == "pwsh.exe" &&
-            i.Arguments.Contains("gemini") &&
-            i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-            i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
-        );
+            // Should have launched Gemini without agent settings (no configuration file)
+            _process.Invocations.ShouldContain(i =>
+                i.File == "pwsh.exe" &&
+                i.Arguments.Contains("gemini") &&
+                i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
+                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
+            );
 
-        // Should not have created configuration file since monitor is disabled
-        var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
-        configContent.ShouldBeNull();
+            // Should not have created configuration file since monitor is disabled
+            var configContent = _fs.GetFileContent("/repo/.gemini/settings.json");
+            configContent.ShouldBeNull();
 
-        _logger.Infos.ShouldNotContain(i => i.Contains("Configuring Gemini with agent settings"));
-    }
+            _logger.Infos.ShouldNotContain(i => i.Contains("Configuring Gemini with agent settings"));
+        }
     }
 }
