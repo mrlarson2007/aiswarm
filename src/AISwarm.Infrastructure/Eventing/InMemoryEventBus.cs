@@ -7,6 +7,16 @@ public class InMemoryEventBus : IEventBus, IDisposable
     private readonly List<(EventFilter Filter, Channel<EventEnvelope> Channel)> _subs = new();
     private readonly object _gate = new();
     private bool _disposed;
+    private readonly BoundedChannelOptions? _boundedOptions;
+
+    public InMemoryEventBus()
+    {
+    }
+
+    public InMemoryEventBus(BoundedChannelOptions options)
+    {
+        _boundedOptions = options;
+    }
 
     public IAsyncEnumerable<EventEnvelope> Subscribe(EventFilter filter, CancellationToken ct = default)
     {
@@ -15,7 +25,9 @@ public class InMemoryEventBus : IEventBus, IDisposable
             return Empty<EventEnvelope>();
         }
 
-        var channel = Channel.CreateUnbounded<EventEnvelope>();
+        var channel = _boundedOptions is null
+            ? Channel.CreateUnbounded<EventEnvelope>()
+            : Channel.CreateBounded<EventEnvelope>(_boundedOptions);
         lock (_gate)
         {
             _subs.Add((filter, channel));

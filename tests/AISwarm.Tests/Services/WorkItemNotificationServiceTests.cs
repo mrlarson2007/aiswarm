@@ -35,6 +35,48 @@ public class WorkItemNotificationServiceTests
     }
 
     [Fact(Timeout = 5000)]
+    public async Task PublishAsync_WithSlowSubscriberAndBoundedChannel_AppliesBackpressure()
+    {
+        // Arrange: bounded capacity 1 and slow subscriber
+        var options = new System.Threading.Channels.BoundedChannelOptions(1)
+        {
+            FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait
+        };
+
+        var bus = new InMemoryEventBus(options);
+        var service = new WorkItemNotificationService(bus);
+        var agentId = "agent-backpressure";
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
+
+        // Create subscription (channel exists) but do not consume yet
+        var stream = service.SubscribeForAgent(agentId, token);
+
+        // Act: publish first event to fill buffer
+        await service.PublishTaskCreated("t1", agentId, persona: null, CancellationToken.None);
+
+        // Second publish should block until we release the reader
+    var secondPublish = service.PublishTaskCreated("t2", agentId, persona: null, CancellationToken.None).AsTask();
+
+        // Assert: verify it hasn't completed quickly (indicating backpressure)
+        await Task.Delay(100, token);
+        secondPublish.IsCompleted.ShouldBeFalse();
+
+        // Now drain one item to free capacity and ensure the second publish completes
+        var e = stream.GetAsyncEnumerator(token);
+        try
+        {
+            var moved = await e.MoveNextAsync();
+            moved.ShouldBeTrue();
+        }
+        finally
+        {
+            await e.DisposeAsync();
+        }
+        await secondPublish;
+    }
+    [Fact(Timeout = 5000)]
     public async Task WhenBusIsDisposed_SubscriptionsComplete_AndFurtherPublishesFail()
     {
         // Arrange
