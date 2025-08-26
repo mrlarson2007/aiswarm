@@ -51,7 +51,7 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
                 AgentType = "planner",
                 WorkingDirectory = "/test/path",
                 Model = "gemini-1.5-pro",
-                WorktreeName = "main",
+                WorktreeName = "main"
 
             };
 
