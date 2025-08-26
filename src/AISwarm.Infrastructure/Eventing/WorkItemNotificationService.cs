@@ -26,7 +26,9 @@ public class WorkItemNotificationService : IWorkItemNotificationService
             throw new ArgumentException("persona must be provided", nameof(persona));
         var filter = new EventFilter(
             Types: new[] { TaskCreatedType },
-            Predicate: e => e.Payload is TaskCreatedPayload p && string.Equals(p.Persona, persona, StringComparison.OrdinalIgnoreCase));
+            Predicate: e => e.Payload is TaskCreatedPayload p
+                && string.Equals(p.Persona, persona, StringComparison.OrdinalIgnoreCase)
+                && p.AgentId == null);
         return _bus.Subscribe(filter, ct);
     }
 

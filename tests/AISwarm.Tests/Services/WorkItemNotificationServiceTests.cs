@@ -62,7 +62,7 @@ public class WorkItemNotificationServiceTests
         }, cts.Token);
 
         await Task.Delay(5, cts.Token); // give subscription a moment
-    await service.PublishTaskCreated(taskId, agentId, persona);
+        await service.PublishTaskCreated(taskId, agentId, persona);
 
         await readTask;
 
@@ -71,6 +71,103 @@ public class WorkItemNotificationServiceTests
         var payload = (TaskCreatedPayload)received[0].Payload!;
         payload.TaskId.ShouldBe(taskId);
         payload.AgentId.ShouldBe(agentId);
+        payload.Persona.ShouldBe(persona);
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task WhenCancellingSubscription_ShouldStopReceivingEvents()
+    {
+        // Arrange
+        var agentId = "agent-cancel";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var received = new List<EventEnvelope>();
+
+        // Act - start reading, then publish one event, cancel, then publish another
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in service.SubscribeForAgent(agentId, cts.Token))
+                {
+                    received.Add(evt);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // expected when the token is cancelled
+            }
+        });
+
+        // Give the subscription a moment to start
+        await Task.Delay(5, cts.Token);
+
+        // Publish first event (should be received)
+        await service.PublishTaskCreated(taskId: "t1", agentId: agentId, persona: "reviewer", CancellationToken.None);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
+        {
+            await Task.Delay(5, cts.Token);
+        }
+
+        // Cancel subscription and then publish another event (should NOT be received)
+        cts.Cancel();
+        await Task.Delay(10, CancellationToken.None);
+        await service.PublishTaskCreated(taskId: "t2", agentId: agentId, persona: "reviewer", CancellationToken.None);
+
+        // Wait for reader to finish
+        try { await readTask; } catch (OperationCanceledException) { }
+
+        // Assert
+        received.Count.ShouldBe(1);
+        var payload = (TaskCreatedPayload)received[0].Payload!;
+        payload.TaskId.ShouldBe("t1");
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task WhenPublishingTaskForSpecificAgent_PersonaSubscriberShouldNotReceiveIt()
+    {
+        // Arrange
+        var persona = "reviewer";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var received = new List<EventEnvelope>();
+
+        // Act: subscribe to persona, then publish one agent-assigned and one unassigned event
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var evt in service.SubscribeForPersona(persona, cts.Token).WithCancellation(cts.Token))
+            {
+                received.Add(evt);
+                if (received.Count >= 2) break; // safety
+            }
+        }, cts.Token);
+
+        await Task.Delay(5, cts.Token);
+
+        // Agent-assigned with same persona (should NOT be delivered to persona subscriber)
+        await service.PublishTaskCreated(taskId: "t-agent", agentId: "agent-99", persona: persona);
+
+        // Unassigned with same persona (should be delivered)
+        await service.PublishTaskCreated(taskId: "t-unassigned", agentId: null, persona: persona);
+
+        // Wait briefly for deliveries
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (received.Count < 1 && sw.Elapsed < TimeSpan.FromMilliseconds(500))
+        {
+            await Task.Delay(5, cts.Token);
+        }
+
+        cts.Cancel();
+        try { await readTask; } catch (OperationCanceledException) { }
+
+        // Assert: only the unassigned task should be received
+        received.Count.ShouldBe(1);
+        var payload = (TaskCreatedPayload)received[0].Payload!;
+        payload.TaskId.ShouldBe("t-unassigned");
+        payload.AgentId.ShouldBeNull();
         payload.Persona.ShouldBe(persona);
     }
 }

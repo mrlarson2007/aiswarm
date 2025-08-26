@@ -48,8 +48,10 @@ public class InMemoryEventBus : IEventBus
 
     private static bool Matches(EventFilter f, EventEnvelope e)
     {
-        if (f.Types != null && f.Types.Count > 0 && !f.Types.Contains(e.Type)) return false;
-        if (f.Predicate != null && !f.Predicate(e)) return false;
+        if (f.Types != null && f.Types.Count > 0 && !f.Types.Contains(e.Type))
+            return false;
+        if (f.Predicate != null && !f.Predicate(e))
+            return false;
         return true;
     }
 }
