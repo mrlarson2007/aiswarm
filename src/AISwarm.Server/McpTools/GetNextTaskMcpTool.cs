@@ -6,6 +6,7 @@ using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
+using System.Linq;
 
 namespace AISwarm.Server.McpTools;
 
@@ -16,7 +17,7 @@ namespace AISwarm.Server.McpTools;
 public class GetNextTaskMcpTool(
     IDatabaseScopeService scopeService,
     ILocalAgentService localAgentService,
-    IEventBus eventBus)
+    IWorkItemNotificationService workItemNotifications)
 {
     public GetNextTaskConfiguration Configuration
     {
@@ -28,6 +29,7 @@ public class GetNextTaskMcpTool(
     ///     Gets the next pending task for the specified agent
     /// </summary>
     /// <param name="agentId">ID of the agent requesting a task</param>
+    /// <param name="timeoutMs">Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result</param>
     /// <returns>Result with task information or error message</returns>
     [McpServerTool(Name = "get_next_task")]
     [Description("Gets the next pending task for the specified agent")]
@@ -57,55 +59,99 @@ public class GetNextTaskMcpTool(
         string agentId,
         GetNextTaskConfiguration configuration)
     {
-        // First validate that the agent exists
-        using (var scope = scopeService.CreateReadScope())
+        var agentInfo = await GetAgentInfoAsync(agentId);
+        if (agentInfo == null)
         {
-            var agent = await scope.Agents.FindAsync(agentId);
-            if (agent == null)
-                return GetNextTaskResult
-                    .Failure($"Agent not found: {agentId}");
+            return GetNextTaskResult
+                .Failure($"Agent not found: {agentId}");
         }
+
+        var preferredTaskId = await workItemNotifications.TryConsumeTaskCreatedAsync(
+                agentId, agentInfo.PersonaId, CancellationToken.None);
 
         // Update agent heartbeat since the agent is actively requesting tasks
         await localAgentService.UpdateHeartbeatAsync(agentId);
 
-        // Initial query/claim attempt
-        var result = await TryGetOrClaimTaskAsync(agentId);
-        if (result != null)
-            return result;
+        GetNextTaskResult? result;
 
-        // Only wait on the bus if the database is empty
-        using (var checkScope = scopeService.CreateReadScope())
+        if (!string.IsNullOrEmpty(preferredTaskId))
         {
-            var anyTasks = await checkScope.Tasks.AnyAsync();
-            if (!anyTasks)
-            {
-                using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
-                await foreach (var _ in eventBus.Subscribe(
-                    new EventFilter(Types: new[] { WorkItemNotificationService.TaskCreatedType }),
-                    cts.Token))
-                {
-                    break; // wake on first event
-                }
-            }
+            var preferred = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
+            if (preferred != null)
+                return preferred;
         }
 
-        // Re-check once after waiting (or immediately if not empty)
-        result = await TryGetOrClaimTaskAsync(agentId);
-        if (result != null)
-            return result;
+        using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
+        try
+        {
+            do
+            {
+                preferredTaskId = await TryGetNextTaskIdAsync(agentInfo, cts.Token);
+                result = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
+                if (result != null)
+                    return result;
+            } while (preferredTaskId != null);
+        }
+        finally
+        {
+            if (!cts.IsCancellationRequested)
+            {
+                await cts.CancelAsync();
+            }
+        }
 
         return GetNextTaskResult.NoTasksAvailable();
     }
 
-    private async Task<GetNextTaskResult?> TryGetOrClaimTaskAsync(string agentId)
+    private async Task<string?> TryGetNextTaskIdAsync(AgentInfo agentInfo, CancellationToken cancellationToken)
+    {
+        return await workItemNotifications
+            .SubscribeForAgentOrPersona(agentInfo.AgentId, agentInfo.PersonaId, cancellationToken)
+            .Select(e => (e.Payload as TaskCreatedPayload)?.TaskId)
+            .Where(id => id != null)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<AgentInfo?> GetAgentInfoAsync(string agentId)
+    {
+        using var scope = scopeService.CreateReadScope();
+        var agent = await scope.Agents.FindAsync(agentId);
+        if (agent == null)
+            return null;
+        return new AgentInfo(agent.Id, agent.PersonaId);
+    }
+
+    private async Task<GetNextTaskResult?> TryGetOrClaimTaskAsync(
+        AgentInfo agentInfo,
+        string? preferredTaskId = null)
     {
         using var scope = scopeService.CreateReadScope();
 
-        var agent = await scope.Agents.FindAsync(agentId);
+        // If we received an event for a specific task, try to honor it first
+        if (!string.IsNullOrWhiteSpace(preferredTaskId))
+        {
+            var evtTask = await scope.Tasks.FindAsync(preferredTaskId);
+            if (evtTask != null && evtTask.Status == TaskStatus.Pending)
+            {
+                if (evtTask.AgentId == agentInfo.AgentId)
+                {
+                    return GetNextTaskResult.SuccessWithTask(
+                        evtTask.Id,
+                        evtTask.Persona,
+                        evtTask.Description);
+                }
+
+                // If unassigned and persona matches (or no persona), try to claim this exact task
+                if (string.IsNullOrEmpty(evtTask.AgentId) &&
+                    (string.IsNullOrEmpty(evtTask.PersonaId) || evtTask.PersonaId == agentInfo.PersonaId))
+                {
+                    return await ClaimUnassignedTaskAsync(evtTask.Id, agentInfo.AgentId);
+                }
+            }
+        }
 
         var pendingTask = await scope.Tasks
-            .Where(t => t.AgentId == agentId)
+            .Where(t => t.AgentId == agentInfo.AgentId)
             .Where(t => t.Status == TaskStatus.Pending)
             .OrderByDescending(t => t.Priority)
             .ThenBy(t => t.CreatedAt)
@@ -120,13 +166,13 @@ public class GetNextTaskMcpTool(
         var unassignedTask = await scope.Tasks
             .Where(t => t.AgentId == null || t.AgentId == string.Empty)
             .Where(t => t.Status == TaskStatus.Pending)
-            .Where(t => string.IsNullOrEmpty(t.PersonaId) || t.PersonaId == agent!.PersonaId)
+            .Where(t => string.IsNullOrEmpty(t.PersonaId) || t.PersonaId == agentInfo.PersonaId)
             .OrderByDescending(t => t.Priority)
             .ThenBy(t => t.CreatedAt)
             .FirstOrDefaultAsync();
 
         if (unassignedTask != null)
-            return await ClaimUnassignedTaskAsync(unassignedTask.Id, agentId);
+            return await ClaimUnassignedTaskAsync(unassignedTask.Id, agentInfo.AgentId);
 
         return null;
     }
@@ -165,4 +211,6 @@ public class GetNextTaskMcpTool(
             task.Persona,
             task.Description);
     }
+
+    record AgentInfo(string AgentId, string PersonaId);
 }

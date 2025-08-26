@@ -20,6 +20,69 @@ public class WorkItemNotificationServiceTests
         }
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task SubscribeForAgentOrPersona_ShouldDeliverForEitherMatch()
+    {
+        // Arrange
+        var agentId = "agent-combined";
+        var persona = "planner";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
+
+        var received = new List<EventEnvelope>();
+
+        // Act
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var evt in service.SubscribeForAgentOrPersona(agentId, persona, token))
+            {
+                received.Add(evt);
+                if (received.Count >= 2)
+                    break; // expect 2 events
+            }
+        }, token);
+
+        await Task.Delay(5, token);
+        await service.PublishTaskCreated("t-agent", agentId, persona: null);
+        await service.PublishTaskCreated("t-persona", agentId: null, persona: persona);
+
+        await WaitForCountAsync(received, 2, token);
+        cts.Cancel();
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
+
+        // Assert
+        received.Count.ShouldBe(2);
+        var ids = received.Select(e => ((TaskCreatedPayload)e.Payload!).TaskId).OrderBy(x => x).ToArray();
+        ids.ShouldBe(new[] { "t-agent", "t-persona" });
+    }
+
+    [Fact(Timeout = 5000)]
+    public async Task TryConsumeTaskCreatedAsync_ShouldReturnNullWhenNoEventAndNotBlock()
+    {
+        // Arrange
+        var agentId = "agent-peek";
+        var persona = "reviewer";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var token = cts.Token;
+
+        // Act
+        var start = DateTime.UtcNow;
+        var peek = await service.TryConsumeTaskCreatedAsync(agentId, persona, token);
+        var elapsed = DateTime.UtcNow - start;
+
+        // Assert: no event immediately available and should return quickly
+        peek.ShouldBeNull();
+        elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(150));
+
+        // Note: publishing before subscribing won't be observed by TryConsume,
+        // since subscriptions are not retroactive.
+    }
     [Fact]
     public void WhenSubscribingWithNullPersona_ShouldThrowArgumentException()
     {

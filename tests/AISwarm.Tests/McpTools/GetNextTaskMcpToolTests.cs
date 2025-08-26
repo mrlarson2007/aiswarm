@@ -19,6 +19,7 @@ public class GetNextTaskMcpToolTests
     private readonly FakeTimeService _timeService;
     private readonly Mock<ILocalAgentService> _mockLocalAgentService;
     private readonly IEventBus _bus = new InMemoryEventBus();
+    private readonly IWorkItemNotificationService _notifier;
     private GetNextTaskMcpTool? _systemUnderTest;
 
     public GetNextTaskMcpTool SystemUnderTest =>
@@ -26,7 +27,7 @@ public class GetNextTaskMcpToolTests
 
     private GetNextTaskMcpTool CreateSystemUnderTest()
     {
-        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _bus);
+        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _notifier);
         tool.Configuration = new GetNextTaskConfiguration();
         return tool;
     }
@@ -44,6 +45,8 @@ public class GetNextTaskMcpToolTests
         _mockLocalAgentService = new Mock<ILocalAgentService>();
         _mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(It.IsAny<string>()))
             .ReturnsAsync(true);
+
+        _notifier = new WorkItemNotificationService(_bus);
     }
 
     public void Dispose()
@@ -321,7 +324,7 @@ public class GetNextTaskMcpToolTests
             {
                 var task = await readScope.Tasks.FindAsync(taskId);
                 task.ShouldNotBeNull();
-                task!.AgentId.ShouldBe(string.Empty);
+                task.AgentId.ShouldBe(string.Empty);
             }
         }
 
@@ -349,7 +352,7 @@ public class GetNextTaskMcpToolTests
             using var scope = _scopeService.CreateReadScope();
             var claimed = await scope.Tasks.FindAsync(unassignedTaskId);
             claimed.ShouldNotBeNull();
-            claimed!.AgentId.ShouldBe(agentId);
+            claimed.AgentId.ShouldBe(agentId);
         }
     }
 
@@ -555,8 +558,7 @@ public class GetNextTaskMcpToolTests
             var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
 
             // Publish TaskCreated on the event bus so the waiter wakes immediately
-            var notifier = new WorkItemNotificationService(_bus);
-            await notifier.PublishTaskCreated(taskId, agentId, expectedPersona);
+            await _notifier.PublishTaskCreated(taskId, agentId, expectedPersona);
 
             var startTime = DateTime.UtcNow;
             var result = await pollingTask;
