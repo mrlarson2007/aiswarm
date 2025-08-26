@@ -50,7 +50,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
 
     private static async IAsyncEnumerable<T> Empty<T>()
     {
-    await Task.CompletedTask;
+        await Task.CompletedTask;
         yield break;
     }
 

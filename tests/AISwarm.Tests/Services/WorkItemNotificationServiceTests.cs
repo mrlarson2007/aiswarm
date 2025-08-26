@@ -57,7 +57,7 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskCreated("t1", agentId, persona: null, CancellationToken.None);
 
         // Second publish should block until we release the reader
-    var secondPublish = service.PublishTaskCreated("t2", agentId, persona: null, CancellationToken.None).AsTask();
+        var secondPublish = service.PublishTaskCreated("t2", agentId, persona: null, CancellationToken.None).AsTask();
 
         // Assert: verify it hasn't completed quickly (indicating backpressure)
         await Task.Delay(100, token);
