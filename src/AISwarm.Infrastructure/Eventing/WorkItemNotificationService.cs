@@ -34,6 +34,8 @@ public class WorkItemNotificationService : IWorkItemNotificationService
 
     public ValueTask PublishTaskCreated(string taskId, string? agentId, string? persona, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("taskId must be provided", nameof(taskId));
         var payload = new TaskCreatedPayload(taskId, agentId, persona);
         var evt = new EventEnvelope(TaskCreatedType, DateTimeOffset.UtcNow, null, agentId, payload);
         return _bus.PublishAsync(evt, ct);

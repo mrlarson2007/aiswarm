@@ -213,4 +213,18 @@ public class WorkItemNotificationServiceTests
         payload.Persona.ShouldBe(persona);
     }
 
+    [Fact]
+    public void WhenPublishingWithNullTaskId_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+
+        // Act
+        var act = () => service.PublishTaskCreated(taskId: null!, agentId: null, persona: null).AsTask();
+
+        // Assert
+        var ex = Should.Throw<ArgumentException>(() => act());
+        ex.Message.ShouldContain("taskId");
+    }
+
 }
