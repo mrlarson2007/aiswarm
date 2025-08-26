@@ -94,21 +94,6 @@ public class GeminiService(
         }
     }
 
-    /// <inheritdoc />
-    [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
-    public Task<bool> LaunchInteractiveWithSettingsAsync(
-        string contextFilePath,
-        string? model,
-        AgentSettings agentSettings,
-        string? workingDirectory = null)
-    {
-        return LaunchInteractiveAsync(
-            contextFilePath,
-            model,
-            workingDirectory,
-            agentSettings);
-    }
-
     private async Task CreateGeminiConfigurationAsync(
         string workingDirectory,
         AgentSettings agentSettings)

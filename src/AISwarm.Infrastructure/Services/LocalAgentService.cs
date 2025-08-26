@@ -81,7 +81,7 @@ public class LocalAgentService(
         if (agent != null)
         {
             // Attempt to kill the actual process if we have a process ID and termination service
-            if (!string.IsNullOrEmpty(agent.ProcessId) && processTerminationService != null)
+            if (!string.IsNullOrEmpty(agent.ProcessId))
             {
                 await processTerminationService.KillProcessAsync(agent.ProcessId);
             }

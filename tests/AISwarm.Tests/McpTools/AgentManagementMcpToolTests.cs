@@ -4,6 +4,7 @@ using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Shouldly;
 
 namespace AISwarm.Tests.McpTools;
@@ -17,36 +18,50 @@ public class AgentManagementMcpToolTests
     private readonly TestLogger _logger;
     private readonly FakeContextService _fakeContextService;
     private readonly FakeGitService _fakeGitService;
-    private readonly FakeGeminiService _fakeGeminiService;
-    private readonly FakeLocalAgentService _fakeLocalAgentService;
+    private readonly Mock<IInteractiveTerminalService> _fakeTerminalService;
+    private readonly FakeFileSystemService _fakeFileSystemService;
+    private readonly GeminiService _geminiService;
+    private readonly LocalAgentService _localAgentService;
     private readonly TestEnvironmentService _testEnvironmentService;
     private AgentManagementMcpTool? _systemUnderTest;
+    private readonly Mock<IProcessTerminationService> _mockProcessTerminateService;
 
     public AgentManagementMcpTool SystemUnderTest =>
         _systemUnderTest ??= new AgentManagementMcpTool(
             _scopeService,
             _fakeContextService,
             _fakeGitService,
-            _fakeGeminiService,
-            _fakeLocalAgentService,
+            _geminiService,
+            _localAgentService,
             _testEnvironmentService,
             _logger);
 
     public AgentManagementMcpToolTests()
     {
-        _timeService = new FakeTimeService();
-        _logger = new TestLogger();
-        _fakeContextService = new FakeContextService();
-        _fakeGitService = new FakeGitService();
-        _fakeGeminiService = new FakeGeminiService();
-        _fakeLocalAgentService = new FakeLocalAgentService();
-        _testEnvironmentService = new TestEnvironmentService();
-
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _dbContext = new CoordinationDbContext(options);
+
+        _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(_dbContext);
+        _logger = new TestLogger();
+        _fakeContextService = new FakeContextService();
+        _mockProcessTerminateService = new Mock<IProcessTerminationService>();
+        _fakeGitService = new FakeGitService();
+        _fakeTerminalService = new Mock<IInteractiveTerminalService>();
+        _fakeFileSystemService = new FakeFileSystemService();
+        _geminiService = new GeminiService(
+            _fakeTerminalService.Object,
+            _logger,
+            _fakeFileSystemService);
+        
+        _localAgentService = new LocalAgentService(
+            _timeService,
+            _scopeService,
+            _mockProcessTerminateService.Object);
+
+        _testEnvironmentService = new TestEnvironmentService();
     }
 
     public void Dispose()
@@ -66,6 +81,63 @@ public class AgentManagementMcpToolTests
 
             // Act
             var result = await SystemUnderTest.ListAgentsAsync(nonExistentPersona);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.Agents.ShouldNotBeNull();
+            result.Agents.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task WhenValidPersona_ShouldReturnAgents()
+        {
+            // Arrange
+            await CreateAgentAsync("agent1", "implementer", AgentStatus.Running);
+            await CreateAgentAsync("agent2", "reviewer", AgentStatus.Running);
+            var existingPersona = "implementer";
+
+            // Act
+            var result = await SystemUnderTest.ListAgentsAsync(existingPersona);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.Agents.ShouldNotBeNull();
+            result.Agents.ShouldHaveSingleItem();
+            var foundAgent = result.Agents.First();
+            foundAgent.AgentId.ShouldBe("agent1");
+            foundAgent.Status.ShouldBe("Running");
+            foundAgent.PersonaId.ShouldBe("implementer");
+        }
+
+        [Fact]
+        public async Task WhenNoPersonaFilter_ShouldReturnAllAgents()
+        {
+            // Arrange
+            await CreateAgentAsync("agent1", "implementer", AgentStatus.Running);
+            await CreateAgentAsync("agent2", "reviewer", AgentStatus.Running);
+
+            // Act
+            var result = await SystemUnderTest.ListAgentsAsync();
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.Agents.ShouldNotBeNull();
+            result.Agents.Length.ShouldBe(2);
+            result.Agents[0].AgentId.ShouldBe("agent1");
+            result.Agents[0].Status.ShouldBe("Running");
+            result.Agents[0].PersonaId.ShouldBe("implementer");
+            result.Agents[1].AgentId.ShouldBe("agent2");
+            result.Agents[1].Status.ShouldBe("Running");
+            result.Agents[1].PersonaId.ShouldBe("reviewer");
+        }
+
+        [Fact]
+        public async Task WhenNoAgentsExist_ShouldReturnEmptyArray()
+        {
+            // Arrange - No agents created
+
+            // Act
+            var result = await SystemUnderTest.ListAgentsAsync();
 
             // Assert
             result.Success.ShouldBeTrue();
@@ -146,18 +218,26 @@ public class AgentManagementMcpToolTests
 
             _fakeContextService.CreatedContextPath = "/test/repo/test-branch/implementer_context.md";
 
-            _fakeLocalAgentService.RegisteredAgentId = "test-agent-123";
+            _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+                .Returns(true);
 
-            _fakeGeminiService.LaunchResult = true;
+            _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
+                It.Is<string>(x => x.Contains("gemini")),
+                It.IsAny<string>()))
+                .Returns(true);
+
+            _fakeFileSystemService.AddFile(
+                "/test/repo/test-branch/implementer_context.md");
 
             // Act
             var result = await SystemUnderTest.LaunchAgentAsync(persona, description, model, worktreeName);
 
             // Assert
             result.Success.ShouldBeTrue();
-            result.AgentId
-                .ShouldBe("test-agent-123"); // Should be the registered agent ID from fake service, not random GUID
-            result.ProcessId.ShouldBeNull(); // Currently null since IGeminiService doesn't return process ID
+            result.AgentId.ShouldNotBeNull(); 
+            result.ProcessId.ShouldBeNull(); 
             result.ErrorMessage.ShouldBeNull();
         }
 
@@ -169,9 +249,14 @@ public class AgentManagementMcpToolTests
             _fakeGitService.RepositoryRoot = "/test/repo";
             _fakeGitService.CreatedWorktreePath = "/test/repo/test-branch";
             _fakeContextService.CreatedContextPath = "/test/repo/test-branch/implementer_context.md";
-            _fakeLocalAgentService.RegisteredAgentId = "test-agent-123";
-            _fakeGeminiService.LaunchResult = true;
+            _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
+                It.Is<string>(x => x.Contains("--yolo")),
+                It.IsAny<string>()))
+                .Returns(true);
 
+            _fakeFileSystemService.AddFile(
+                "/test/repo/test-branch/implementer_context.md");
+                
             // Act
             var result = await SystemUnderTest.LaunchAgentAsync(
                 "implementer",
@@ -182,8 +267,6 @@ public class AgentManagementMcpToolTests
 
             // Assert
             result.Success.ShouldBeTrue();
-            _fakeGeminiService.LastLaunchYoloParameter.ShouldNotBeNull();
-            _fakeGeminiService.LastLaunchYoloParameter.Value.ShouldBeTrue();
         }
     }
 
@@ -203,6 +286,35 @@ public class AgentManagementMcpToolTests
             result.ErrorMessage.ShouldNotBeNull();
             result.ErrorMessage.ShouldContain("Agent not found");
         }
+
+        [Fact]
+        public async Task WhenAgentFound_ShouldTerminateAgent()
+        {
+            // Arrange
+            var existingAgentId = "existing-agent";
+            await CreateAgentAsync(
+                existingAgentId, 
+                "implementer", 
+                AgentStatus.Running,
+                processId: "12345");
+
+            // Act
+            var result = await SystemUnderTest.KillAgentAsync(existingAgentId);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.ErrorMessage.ShouldBeNull();
+            _mockProcessTerminateService
+                .Verify(x => x.KillProcessAsync("12345"), Times.Once);
+
+            var listResult = await SystemUnderTest.ListAgentsAsync();
+            listResult.ShouldNotBeNull();
+            listResult.Agents.ShouldNotBeNull();
+            listResult.Agents.Length.ShouldBe(1);
+            listResult.Agents[0].AgentId.ShouldBe(existingAgentId);
+            listResult.Agents[0].Status.ShouldBe("Killed");
+        }
+
     }
 
     private async Task CreateAgentAsync(
