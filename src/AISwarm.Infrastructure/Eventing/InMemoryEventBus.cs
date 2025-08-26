@@ -2,13 +2,17 @@ using System.Threading.Channels;
 
 namespace AISwarm.Infrastructure.Eventing;
 
-public class InMemoryEventBus : IEventBus
+public class InMemoryEventBus : IEventBus, IDisposable
 {
     private readonly List<(EventFilter Filter, Channel<EventEnvelope> Channel)> _subs = new();
     private readonly object _gate = new();
+    private bool _disposed;
 
     public IAsyncEnumerable<EventEnvelope> Subscribe(EventFilter filter, CancellationToken ct = default)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(InMemoryEventBus));
+
         var channel = Channel.CreateUnbounded<EventEnvelope>();
         lock (_gate)
         {
@@ -31,6 +35,9 @@ public class InMemoryEventBus : IEventBus
 
     public async ValueTask PublishAsync(EventEnvelope evt, CancellationToken ct = default)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(InMemoryEventBus));
+
         List<Channel<EventEnvelope>> targets;
         lock (_gate)
         {
@@ -53,5 +60,24 @@ public class InMemoryEventBus : IEventBus
         if (f.Predicate != null && !f.Predicate(e))
             return false;
         return true;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        List<Channel<EventEnvelope>> channels;
+        lock (_gate)
+        {
+            _disposed = true;
+            channels = _subs.Select(s => s.Channel).ToList();
+            _subs.Clear();
+        }
+
+        foreach (var ch in channels)
+        {
+            ch.Writer.TryComplete();
+        }
     }
 }

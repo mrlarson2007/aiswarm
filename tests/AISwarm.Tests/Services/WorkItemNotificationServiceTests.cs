@@ -25,6 +25,48 @@ public class WorkItemNotificationServiceTests
         ex.Message.ShouldContain("persona");
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task WhenBusIsDisposed_SubscriptionsComplete_AndFurtherPublishesFail()
+    {
+        // Arrange
+        var agentId = "agent-dispose";
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        var completed = false;
+
+        // Act: subscribe and then dispose bus, expect enumeration to complete
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var _ in service.SubscribeForAgent(agentId, cts.Token).WithCancellation(cts.Token))
+                {
+                    // consume until completion
+                }
+                completed = true;
+            }
+            catch (OperationCanceledException) { }
+        }, cts.Token);
+
+        await Task.Delay(5, cts.Token);
+
+        // Dispose bus via cast (test-only): InMemoryEventBus implements IDisposable in next step
+        ( _bus as IDisposable )?.Dispose();
+
+        await Task.Delay(20);
+        cts.Cancel();
+        try { await readTask; } catch (OperationCanceledException) { }
+
+        completed.ShouldBeTrue();
+
+        // Publishing after disposal should fail
+        await Should.ThrowAsync<ObjectDisposedException>(async () =>
+        {
+            await service.PublishTaskCreated("post-dispose", agentId, persona: null);
+        });
+    }
+
     [Fact]
     public void WhenSubscribingWithNullAgentId_ShouldThrowArgumentException()
     {
@@ -170,4 +212,5 @@ public class WorkItemNotificationServiceTests
         payload.AgentId.ShouldBeNull();
         payload.Persona.ShouldBe(persona);
     }
+
 }
