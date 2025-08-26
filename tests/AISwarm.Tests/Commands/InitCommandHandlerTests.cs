@@ -4,87 +4,75 @@ using Shouldly;
 
 namespace AISwarm.Tests.Commands;
 
-public class InitCommandHandlerTests 
+public class InitCommandHandlerTests
     : ISystemUnderTest<InitCommandHandler>
 {
-    private readonly TestLogger _logger;
-    private readonly FakeFileSystemService _fileSystem;
-    private readonly TestEnvironmentService _environment;
+    private readonly TestLogger _logger = new();
+    private readonly FakeFileSystemService _fileSystem = new();
+    private readonly TestEnvironmentService _environment = new();
     private InitCommandHandler? _systemUnderTest;
 
     public InitCommandHandler SystemUnderTest =>
         _systemUnderTest ??= new InitCommandHandler(_logger, _fileSystem, _environment);
 
-    public InitCommandHandlerTests()
+    [Fact]
+    public async Task WhenInitializingDirectory_ShouldCreateAiswarmPersonasDirectory()
     {
-        _logger = new TestLogger();
-        _fileSystem = new FakeFileSystemService();
-        _environment = new TestEnvironmentService();
+        // Arrange
+        _environment.CurrentDirectory = "/test/repo";
+
+        // Act
+        var result = await SystemUnderTest.RunAsync();
+
+        // Assert
+        result.ShouldBeTrue();
+        _fileSystem.DirectoryExists("/test/repo/.aiswarm").ShouldBeTrue();
+        _fileSystem.DirectoryExists("/test/repo/.aiswarm/personas").ShouldBeTrue();
     }
 
-    public class InitializationSuccessTests : InitCommandHandlerTests
+    [Fact]
+    public async Task WhenInitializingDirectory_ShouldCreateTemplatePersonaFile()
     {
-        [Fact]
-        public async Task WhenInitializingDirectory_ShouldCreateAiswarmPersonasDirectory()
-        {
-            // Arrange
-            _environment.CurrentDirectory = "/test/repo";
+        // Arrange
+        _environment.CurrentDirectory = "/test/repo";
 
-            // Act
-            var result = await SystemUnderTest.RunAsync();
+        // Act
+        var result = await SystemUnderTest.RunAsync();
 
-            // Assert
-            result.ShouldBeTrue();
-            _fileSystem.DirectoryExists("/test/repo/.aiswarm").ShouldBeTrue();
-            _fileSystem.DirectoryExists("/test/repo/.aiswarm/personas").ShouldBeTrue();
-        }
-
-        [Fact]
-        public async Task WhenInitializingDirectory_ShouldCreateTemplatePersonaFile()
-        {
-            // Arrange
-            _environment.CurrentDirectory = "/test/repo";
-
-            // Act
-            var result = await SystemUnderTest.RunAsync();
-
-            // Assert
-            result.ShouldBeTrue();
-            _fileSystem.FileExists("/test/repo/.aiswarm/personas/template_prompt.md").ShouldBeTrue();
-        }
-
-        [Fact]
-        public async Task WhenInitializingDirectory_ShouldLogSuccessMessage()
-        {
-            // Arrange
-            _environment.CurrentDirectory = "/test/repo";
-
-            // Act
-            var result = await SystemUnderTest.RunAsync();
-
-            // Assert
-            result.ShouldBeTrue();
-            _logger.Infos.ShouldContain(i => i.Contains("Initialized .aiswarm directory"));
-            _logger.Infos.ShouldContain(i => i.Contains(".aiswarm/personas"));
-        }
+        // Assert
+        result.ShouldBeTrue();
+        _fileSystem.FileExists("/test/repo/.aiswarm/personas/template_prompt.md").ShouldBeTrue();
     }
 
-    public class InitializationEdgeCaseTests : InitCommandHandlerTests
+    [Fact]
+    public async Task WhenInitializingDirectory_ShouldLogSuccessMessage()
     {
-        [Fact]
-        public async Task WhenDirectoryAlreadyExists_ShouldNotOverwriteAndLogWarning()
-        {
-            // Arrange
-            _environment.CurrentDirectory = "/test/repo";
-            _fileSystem.AddDirectory("/test/repo/.aiswarm/personas");
-            _fileSystem.AddFile("/test/repo/.aiswarm/personas/template_prompt.md");
+        // Arrange
+        _environment.CurrentDirectory = "/test/repo";
 
-            // Act
-            var result = await SystemUnderTest.RunAsync();
+        // Act
+        var result = await SystemUnderTest.RunAsync();
 
-            // Assert
-            result.ShouldBeTrue();
-            _logger.Warnings.ShouldContain(w => w.Contains("already exists"));
-        }
+        // Assert
+        result.ShouldBeTrue();
+        _logger.Infos.ShouldContain(i => i.Contains("Initialized .aiswarm directory"));
+        _logger.Infos.ShouldContain(i => i.Contains(".aiswarm/personas"));
     }
+
+    [Fact]
+    public async Task WhenDirectoryAlreadyExists_ShouldNotOverwriteAndLogWarning()
+    {
+        // Arrange
+        _environment.CurrentDirectory = "/test/repo";
+        _fileSystem.AddDirectory("/test/repo/.aiswarm/personas");
+        _fileSystem.AddFile("/test/repo/.aiswarm/personas/template_prompt.md");
+
+        // Act
+        var result = await SystemUnderTest.RunAsync();
+
+        // Assert
+        result.ShouldBeTrue();
+        _logger.Warnings.ShouldContain(w => w.Contains("already exists"));
+    }
+
 }

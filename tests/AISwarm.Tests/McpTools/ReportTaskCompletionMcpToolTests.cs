@@ -98,7 +98,7 @@ public class ReportTaskCompletionMcpToolTests
             result.Message.ShouldContain("already completed");
             result.Message.ShouldContain(taskId);
         }
-    
+
         [Fact]
         public async Task WhenReportingCompletionForFailedTask_ShouldUpdateStatusToCompleted()
         {

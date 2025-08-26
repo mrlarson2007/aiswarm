@@ -9,7 +9,7 @@ using Shouldly;
 
 namespace AISwarm.Tests.McpTools;
 
-public class AgentManagementMcpToolTests 
+public class AgentManagementMcpToolTests
     : IDisposable, ISystemUnderTest<AgentManagementMcpTool>
 {
     private readonly CoordinationDbContext _dbContext;
@@ -55,7 +55,7 @@ public class AgentManagementMcpToolTests
             _fakeTerminalService.Object,
             _logger,
             _fakeFileSystemService);
-        
+
         _localAgentService = new LocalAgentService(
             _timeService,
             _scopeService,
@@ -236,8 +236,8 @@ public class AgentManagementMcpToolTests
 
             // Assert
             result.Success.ShouldBeTrue();
-            result.AgentId.ShouldNotBeNull(); 
-            result.ProcessId.ShouldBeNull(); 
+            result.AgentId.ShouldNotBeNull();
+            result.ProcessId.ShouldBeNull();
             result.ErrorMessage.ShouldBeNull();
         }
 
@@ -256,7 +256,7 @@ public class AgentManagementMcpToolTests
 
             _fakeFileSystemService.AddFile(
                 "/test/repo/test-branch/implementer_context.md");
-                
+
             // Act
             var result = await SystemUnderTest.LaunchAgentAsync(
                 "implementer",
@@ -293,8 +293,8 @@ public class AgentManagementMcpToolTests
             // Arrange
             var existingAgentId = "existing-agent";
             await CreateAgentAsync(
-                existingAgentId, 
-                "implementer", 
+                existingAgentId,
+                "implementer",
                 AgentStatus.Running,
                 processId: "12345");
 

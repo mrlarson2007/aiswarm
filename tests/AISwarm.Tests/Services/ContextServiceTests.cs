@@ -7,7 +7,7 @@ public class ContextServiceTests : ISystemUnderTest<ContextService>
 {
     private ContextService? _systemUnderTest;
 
-    public ContextService SystemUnderTest => 
+    public ContextService SystemUnderTest =>
         _systemUnderTest ??= new ContextService();
 
     [Fact]
