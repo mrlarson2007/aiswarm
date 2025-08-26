@@ -1,5 +1,3 @@
-using AISwarm.DataLayer.Entities;
-
 namespace AISwarm.Infrastructure;
 
 /// <summary>
@@ -8,9 +6,6 @@ namespace AISwarm.Infrastructure;
 public interface ILocalAgentService
 {
     Task<string> RegisterAgentAsync(AgentRegistrationRequest request);
-    Task<Agent?> GetAgentAsync(string agentId);
     Task<bool> UpdateHeartbeatAsync(string agentId);
-    Task MarkAgentRunningAsync(string agentId, string processId);
-    Task StopAgentAsync(string agentId);
     Task KillAgentAsync(string agentId);
 }

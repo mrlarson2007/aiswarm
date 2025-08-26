@@ -7,13 +7,6 @@ namespace AISwarm.Infrastructure;
 public interface IContextService
 {
     /// <summary>
-    /// Retrieve the raw prompt text for an agent type from external or embedded sources.
-    /// </summary>
-    /// <param name="agentType">Logical agent (persona) type identifier.</param>
-    /// <returns>Prompt content.</returns>
-    string GetAgentPrompt(string agentType);
-
-    /// <summary>
     /// Create a context markdown file for the given agent type inside the specified directory.
     /// File name convention: <c>{agentType}_context.md</c>.
     /// </summary>

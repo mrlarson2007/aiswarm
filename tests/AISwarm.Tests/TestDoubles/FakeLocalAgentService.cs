@@ -24,6 +24,11 @@ public class FakeLocalAgentService : ILocalAgentService
         get;
         set;
     }
+    public string? KilledAgentId
+    {
+        get;
+        private set;
+    }
 
     public Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
@@ -49,27 +54,11 @@ public class FakeLocalAgentService : ILocalAgentService
         return Task.FromResult(true);
     }
 
-    public Task MarkAgentRunningAsync(string agentId, string processId)
-    {
-        if (ShouldFail)
-            throw new InvalidOperationException(FailureMessage);
-
-        return Task.CompletedTask;
-    }
-
-    public Task StopAgentAsync(string agentId)
-    {
-        if (ShouldFail)
-            throw new InvalidOperationException(FailureMessage);
-
-        return Task.CompletedTask;
-    }
-
     public Task KillAgentAsync(string agentId)
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-
+        this.KilledAgentId = agentId;
         return Task.CompletedTask;
     }
 }

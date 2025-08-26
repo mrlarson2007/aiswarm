@@ -9,33 +9,6 @@ public class GeminiService(
 
     private const string GeminiProcessName = "gemini";
     private const string VersionCommand = $"{GeminiProcessName} --version";
-    /// <inheritdoc />
-    public async Task<bool> IsGeminiCliAvailableAsync()
-    {
-        try
-        {
-            var result = await terminal.RunAsync(VersionCommand, Environment.CurrentDirectory, 5000);
-            return result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput);
-        }
-        catch { return false; }
-    }
-
-    /// <inheritdoc />
-    public async Task<string?> GetGeminiVersionAsync()
-    {
-        try
-        {
-            var result = await terminal.RunAsync(VersionCommand, Environment.CurrentDirectory, 5000);
-            if (result.IsSuccess || !string.IsNullOrEmpty(result.StandardOutput))
-            {
-                var lines = result.StandardOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var versionLine = lines.FirstOrDefault<string>(line => !line.Contains("DeprecationWarning") && !line.Contains("trace-deprecation") && !string.IsNullOrWhiteSpace(line));
-                return versionLine?.Trim();
-            }
-            return null;
-        }
-        catch { return null; }
-    }
 
     /// <inheritdoc />
     public async Task<bool> LaunchInteractiveAsync(
@@ -92,21 +65,6 @@ public class GeminiService(
             logger.Error($"Error launching Gemini CLI: {ex.Message}");
             return false;
         }
-    }
-
-    /// <inheritdoc />
-    [Obsolete("Use LaunchInteractiveAsync with agentSettings parameter instead")]
-    public Task<bool> LaunchInteractiveWithSettingsAsync(
-        string contextFilePath,
-        string? model,
-        AgentSettings agentSettings,
-        string? workingDirectory = null)
-    {
-        return LaunchInteractiveAsync(
-            contextFilePath,
-            model,
-            workingDirectory,
-            agentSettings);
     }
 
     private async Task CreateGeminiConfigurationAsync(

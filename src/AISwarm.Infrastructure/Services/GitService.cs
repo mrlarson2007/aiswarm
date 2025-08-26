@@ -25,8 +25,7 @@ public partial class GitService(
         return result.IsSuccess ? result.StandardOutput.Trim() : null;
     }
 
-    /// <inheritdoc />
-    public bool IsValidWorktreeName(string name)
+    private bool IsValidWorktreeName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             return false;
@@ -101,19 +100,5 @@ public partial class GitService(
 
         logger.Info($"Created worktree '{name}' at: {worktreePath}");
         return worktreePath;
-    }
-
-    /// <inheritdoc />
-    public async Task<bool> RemoveWorktreeAsync(string name)
-    {
-        var existing = await GetExistingWorktreesAsync();
-        if (!existing.TryGetValue(name, out var path))
-            return false;
-        var result = await process.RunAsync("git", $"worktree remove \"{path}\"", Environment.CurrentDirectory, 30000);
-        if (result.IsSuccess)
-            logger.Info($"Removed worktree '{name}' from: {path}");
-        else
-            logger.Error($"Failed to remove worktree '{name}': {result.StandardError}");
-        return result.IsSuccess;
     }
 }

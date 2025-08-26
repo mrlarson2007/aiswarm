@@ -1,217 +1,295 @@
 using AISwarm.DataLayer;
-using AISwarm.Infrastructure;
+using AISwarm.DataLayer.Entities;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class CreateTaskMcpToolTests
+public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMcpTool>
 {
-    private readonly ServiceProvider _serviceProvider;
+    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
+    private CreateTaskMcpTool? _systemUnderTest;
+
+    public CreateTaskMcpTool SystemUnderTest =>
+        _systemUnderTest ??= new CreateTaskMcpTool(
+            _scopeService,
+            _timeService);
 
     public CreateTaskMcpToolTests()
     {
-        var services = new ServiceCollection();
+        _timeService = new FakeTimeService();
 
-        // Add database services
-        services.AddDbContext<CoordinationDbContext>(options =>
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()));
-        services.AddSingleton<ITimeService, FakeTimeService>();
-        services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
-
-        // Add MCP tools
-        services.AddSingleton<CreateTaskMcpTool>();
-
-        _serviceProvider = services.BuildServiceProvider();
-        _scopeService = _serviceProvider.GetRequiredService<IDatabaseScopeService>();
+        var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new CoordinationDbContext(options);
+        _scopeService = new DatabaseScopeService(_dbContext);
     }
 
-    [Fact]
-    public async Task WhenCreatingTask_ShouldSaveTaskToDatabase()
+    public void Dispose()
     {
-        // Arrange
-        var agentId = "agent-123";
-        var persona = "You are a code reviewer. Review code for quality and security.";
-        var description = "Review the authentication module for security vulnerabilities";
-        var expectedCreatedAt = new DateTime(2025, 8, 21, 10, 0, 0, DateTimeKind.Utc);
-
-        // Create a running agent first
-        await CreateRunningAgentAsync(agentId);
-
-        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
-
-        // Act
-        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
-
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldNotBeNull();
-
-        using var scope = _scopeService.CreateReadScope();
-        var tasks = scope.Tasks.Where(t => t.Id == result.TaskId)
-            .Where(t => t.AgentId == agentId)
-            .ToList();
-
-        tasks.Count.ShouldBe(1);
-        var task = tasks.First();
-        task.AgentId.ShouldBe(agentId);
-        task.Persona.ShouldBe(persona);
-        task.Description.ShouldBe(description);
-        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
-        task.CreatedAt.ShouldBe(expectedCreatedAt);
+        _dbContext.Dispose();
     }
 
-    [Fact]
-    public async Task WhenCreatingTaskForNonExistentAgent_ShouldReturnFailureResult()
+    public class TaskCreationTests : CreateTaskMcpToolTests
     {
-        // Arrange
-        var nonExistentAgentId = "non-existent-agent";
-        var persona = "You are a code reviewer.";
-        var description = "Review code";
-
-        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
-
-        // Act
-        var result = await createTaskTool.CreateTaskAsync(nonExistentAgentId, persona, description);
-
-        // Assert
-        result.Success.ShouldBeFalse();
-        result.TaskId.ShouldBeNull();
-        result.ErrorMessage.ShouldNotBeNull();
-        result.ErrorMessage.ShouldContain("Agent not found");
-        result.ErrorMessage.ShouldContain(nonExistentAgentId);
-    }
-
-    [Fact]
-    public async Task WhenCreatingTaskForStoppedAgent_ShouldReturnFailureResult()
-    {
-        // Arrange
-        var agentId = "stopped-agent-123";
-        var persona = "You are a code reviewer.";
-        var description = "Review code";
-
-        // Create a stopped agent first
-        await CreateStoppedAgentAsync(agentId);
-
-        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
-
-        // Act
-        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
-
-        // Assert
-        result.Success.ShouldBeFalse();
-        result.TaskId.ShouldBeNull();
-        result.ErrorMessage.ShouldNotBeNull();
-        result.ErrorMessage.ShouldContain("Agent is not in a valid state to receive tasks");
-        result.ErrorMessage.ShouldContain(agentId);
-    }
-
-    [Fact]
-    public async Task WhenCreatingTaskForStartingAgent_ShouldCreateTaskSuccessfully()
-    {
-        // Arrange
-        var agentId = "starting-agent-123";
-        var persona = "You are a code reviewer. Review code for quality and security.";
-        var description = "Review code while agent is starting up";
-
-        // Create a starting agent first
-        await CreateStartingAgentAsync(agentId);
-
-        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
-
-        // Act
-        var result = await createTaskTool.CreateTaskAsync(agentId, persona, description);
-
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldNotBeNull();
-
-        using var scope = _scopeService.CreateReadScope();
-        var task = await scope.Tasks.FindAsync(result.TaskId);
-        task.ShouldNotBeNull();
-        task.AgentId.ShouldBe(agentId);
-        task.Persona.ShouldBe(persona);
-        task.Description.ShouldBe(description);
-        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
-    }
-
-    [Fact]
-    public async Task WhenCreatingUnassignedTask_ShouldCreateTaskWithNullAgentId()
-    {
-        // Arrange
-        var persona = "You are a code reviewer. Review code for quality and security.";
-        var description = "Review the authentication module for security vulnerabilities";
-
-        var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
-
-        // Act
-        var result = await createTaskTool.CreateTaskAsync(null, persona, description);
-
-        // Assert
-        result.Success.ShouldBeTrue();
-        result.TaskId.ShouldNotBeNull();
-
-        using var scope = _scopeService.CreateReadScope();
-        var task = await scope.Tasks.FindAsync(result.TaskId);
-        task.ShouldNotBeNull();
-        task.AgentId.ShouldBeNull();
-        task.Persona.ShouldBe(persona);
-        task.Description.ShouldBe(description);
-        task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Pending);
-    }
-
-    private async Task CreateRunningAgentAsync(string agentId)
-    {
-        using var scope = _scopeService.CreateWriteScope();
-        var agent = new DataLayer.Entities.Agent
+        [Fact]
+        public async Task WhenCreatingTaskForRunningAgent_ShouldSaveTaskToDatabase()
         {
-            Id = agentId,
-            PersonaId = "test-persona",
-            AgentType = "test",
-            WorkingDirectory = "/test",
-            Status = DataLayer.Entities.AgentStatus.Running,
-            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
+            // Arrange
+            var agentId = "agent-123";
+            var persona = "You are a code reviewer. Review code for quality and security.";
+            var description = "Review the authentication module for security vulnerabilities";
+
+            // Create a running agent first
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(agentId, persona, description);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+
+            // Assert - Check database directly instead of using service API
+            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            taskInDb.ShouldNotBeNull();
+            taskInDb.Id.ShouldBe(result.TaskId);
+            taskInDb.AgentId.ShouldBe(agentId);
+            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.Description.ShouldBe(description);
+            taskInDb.Status.ShouldBe(TaskStatus.Pending);
+            taskInDb.Priority.ShouldBe(TaskPriority.Normal);
+            taskInDb.CreatedAt.ShouldBe(_timeService.UtcNow);
+            taskInDb.StartedAt.ShouldBeNull();
+            taskInDb.CompletedAt.ShouldBeNull();
+            taskInDb.Result.ShouldBeNull();
+        }
+
+        [Fact]
+        public async Task WhenCreatingTaskForStartingAgent_ShouldCreateTaskSuccessfully()
+        {
+            // Arrange
+            var agentId = "starting-agent-123";
+            var persona = "You are a code reviewer. Review code for quality and security.";
+            var description = "Review code while agent is starting up";
+
+            // Create a starting agent first
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Starting,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(agentId, persona, description);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+
+            // Assert - Check database directly instead of using service API
+            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            taskInDb.ShouldNotBeNull();
+            taskInDb.AgentId.ShouldBe(agentId);
+            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.Description.ShouldBe(description);
+            taskInDb.Status.ShouldBe(TaskStatus.Pending);
+        }
+
+        [Fact]
+        public async Task WhenCreatingUnassignedTask_ShouldCreateTaskWithNullAgentId()
+        {
+            // Arrange
+            var persona = "You are a code reviewer. Review code for quality and security.";
+            var description = "Review the authentication module for security vulnerabilities";
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(null, persona, description);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+
+            // Assert - Check database directly instead of using service API
+            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            taskInDb.ShouldNotBeNull();
+            taskInDb.AgentId.ShouldBeNull();
+            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.Description.ShouldBe(description);
+            taskInDb.Status.ShouldBe(TaskStatus.Pending);
+        }
+
+        [Fact]
+        public async Task WhenCreatingTaskWithHighPriority_ShouldSetPriorityCorrectly()
+        {
+            // Arrange
+            var agentId = "agent-priority-test";
+            var persona = "You are a security expert.";
+            var description = "Critical security vulnerability fix";
+
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "security-expert",
+                    AgentType = "security",
+                    WorkingDirectory = "/security",
+                    Status = AgentStatus.Running,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(agentId, persona, description, TaskPriority.Critical);
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldNotBeNull();
+
+            // Assert - Check database directly for priority setting
+            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            taskInDb.ShouldNotBeNull();
+            taskInDb.Priority.ShouldBe(TaskPriority.Critical);
+            taskInDb.AgentId.ShouldBe(agentId);
+        }
     }
 
-    private async Task CreateStartingAgentAsync(string agentId)
+    public class TaskCreationFailureTests : CreateTaskMcpToolTests
     {
-        using var scope = _scopeService.CreateWriteScope();
-        var agent = new DataLayer.Entities.Agent
+        [Fact]
+        public async Task WhenCreatingTaskForNonExistentAgent_ShouldReturnFailureResult()
         {
-            Id = agentId,
-            PersonaId = "test-persona",
-            AgentType = "test",
-            WorkingDirectory = "/test",
-            Status = DataLayer.Entities.AgentStatus.Starting,
-            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
+            // Arrange
+            var nonExistentAgentId = "non-existent-agent";
+            var persona = "You are a code reviewer.";
+            var description = "Review code";
 
-    private async Task CreateStoppedAgentAsync(string agentId)
-    {
-        using var scope = _scopeService.CreateWriteScope();
-        var agent = new DataLayer.Entities.Agent
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(nonExistentAgentId, persona, description);
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.TaskId.ShouldBeNull();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("Agent not found");
+            result.ErrorMessage.ShouldContain(nonExistentAgentId);
+
+            // Assert - Verify no task was created in database
+            var totalTasks = await _dbContext.Tasks.CountAsync();
+            totalTasks.ShouldBe(0);
+        }
+
+        [Fact]
+        public async Task WhenCreatingTaskForStoppedAgent_ShouldReturnFailureResult()
         {
-            Id = agentId,
-            PersonaId = "test-persona",
-            AgentType = "test",
-            WorkingDirectory = "/test",
-            Status = DataLayer.Entities.AgentStatus.Stopped,
-            LastHeartbeat = _serviceProvider.GetRequiredService<ITimeService>().UtcNow
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
+            // Arrange
+            var agentId = "stopped-agent-123";
+            var persona = "You are a code reviewer.";
+            var description = "Review code";
+
+            // Create a stopped agent first
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Stopped,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow,
+                    StoppedAt = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(agentId, persona, description);
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.TaskId.ShouldBeNull();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("Agent is not in a valid state to receive tasks");
+            result.ErrorMessage.ShouldContain(agentId);
+            result.ErrorMessage.ShouldContain("Stopped");
+
+            // Assert - Verify no task was created in database
+            var totalTasks = await _dbContext.Tasks.CountAsync();
+            totalTasks.ShouldBe(0);
+        }
+
+        [Fact]
+        public async Task WhenCreatingTaskForKilledAgent_ShouldReturnFailureResult()
+        {
+            // Arrange
+            var agentId = "killed-agent-123";
+            var persona = "You are a code reviewer.";
+            var description = "Review code";
+
+            // Create a killed agent first
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Agents.Add(new Agent
+                {
+                    Id = agentId,
+                    PersonaId = "test-persona",
+                    AgentType = "test",
+                    WorkingDirectory = "/test",
+                    Status = AgentStatus.Killed,
+                    RegisteredAt = _timeService.UtcNow,
+                    LastHeartbeat = _timeService.UtcNow,
+                    StoppedAt = _timeService.UtcNow
+                });
+                await scope.SaveChangesAsync();
+            }
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(agentId, persona, description);
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.TaskId.ShouldBeNull();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("Agent is not in a valid state to receive tasks");
+            result.ErrorMessage.ShouldContain(agentId);
+            result.ErrorMessage.ShouldContain("Killed");
+
+            // Assert - Verify no task was created in database
+            var totalTasks = await _dbContext.Tasks.CountAsync();
+            totalTasks.ShouldBe(0);
+        }
     }
 }

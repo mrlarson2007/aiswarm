@@ -16,8 +16,7 @@ public class ContextService : IContextService
     private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split
     private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
 
-    /// <inheritdoc />
-    public string GetAgentPrompt(string agentType)
+    private string GetAgentPrompt(string agentType)
     {
         var personaFiles = GetAllPersonaFiles();
         if (personaFiles.TryGetValue(agentType.ToLowerInvariant(), out var filePath) && File.Exists(filePath))

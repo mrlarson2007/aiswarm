@@ -5,12 +5,15 @@ using Shouldly;
 namespace AISwarm.Tests.Commands;
 
 public class InitCommandHandlerTests
+    : ISystemUnderTest<InitCommandHandler>
 {
     private readonly TestLogger _logger = new();
     private readonly FakeFileSystemService _fileSystem = new();
     private readonly TestEnvironmentService _environment = new();
+    private InitCommandHandler? _systemUnderTest;
 
-    private InitCommandHandler SystemUnderTest => new(_logger, _fileSystem, _environment);
+    public InitCommandHandler SystemUnderTest =>
+        _systemUnderTest ??= new InitCommandHandler(_logger, _fileSystem, _environment);
 
     [Fact]
     public async Task WhenInitializingDirectory_ShouldCreateAiswarmPersonasDirectory()
@@ -71,4 +74,5 @@ public class InitCommandHandlerTests
         result.ShouldBeTrue();
         _logger.Warnings.ShouldContain(w => w.Contains("already exists"));
     }
+
 }
