@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shouldly;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
+using AISwarm.Infrastructure.Eventing;
 
 namespace AISwarm.Tests.McpTools;
 
@@ -17,6 +18,7 @@ public class GetNextTaskMcpToolTests
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly Mock<ILocalAgentService> _mockLocalAgentService;
+    private readonly IEventBus _bus = new InMemoryEventBus();
     private GetNextTaskMcpTool? _systemUnderTest;
 
     public GetNextTaskMcpTool SystemUnderTest =>
@@ -24,7 +26,7 @@ public class GetNextTaskMcpToolTests
 
     private GetNextTaskMcpTool CreateSystemUnderTest()
     {
-        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object);
+        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _bus);
         tool.Configuration = new GetNextTaskConfiguration();
         return tool;
     }
@@ -538,19 +540,23 @@ public class GetNextTaskMcpToolTests
                 await scope.SaveChangesAsync();
             }
 
-            // Configure longer polling timeout so we can simulate task arriving
+            // Configure longer wait so we can simulate arrival
             var configuration = new GetNextTaskConfiguration
             {
                 TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
-                PollingInterval = TimeSpan.FromMilliseconds(100) // Check every 100ms
+                PollingInterval = TimeSpan.FromMilliseconds(100) // No longer used, kept for compatibility
             };
 
-            // Act - Start polling in background and add task after delay
+            // Act - Start waiting and add task after delay
             var pollingTask = SystemUnderTest.GetNextTaskAsync(agentId, configuration);
 
-            // Advance time to simulate task arriving during polling
+            // Simulate task creation after a short delay
             _timeService.AdvanceTime(TimeSpan.FromMilliseconds(200));
             var taskId = await CreatePendingTaskUsingNewScopeAsync(agentId, expectedPersona, expectedDescription);
+
+            // Publish TaskCreated on the event bus so the waiter wakes immediately
+            var notifier = new WorkItemNotificationService(_bus);
+            await notifier.PublishTaskCreated(taskId, agentId, expectedPersona);
 
             var startTime = DateTime.UtcNow;
             var result = await pollingTask;
@@ -565,7 +571,7 @@ public class GetNextTaskMcpToolTests
             result.Message.ShouldContain("call this tool again");
             result.Message.ShouldContain("get the next task");
 
-            // Should have returned quickly once task was available, not waited full timeout
+            // Should have returned quickly once event was published
             elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
         }
     }
