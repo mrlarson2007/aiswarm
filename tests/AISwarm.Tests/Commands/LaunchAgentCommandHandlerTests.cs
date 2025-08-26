@@ -113,7 +113,7 @@ public class LaunchAgentCommandHandlerTests
             _logger.Infos.ShouldContain(s => s.Contains("Model: gemini-1.5-flash"));
             _logger.Infos.ShouldContain(s => s.Contains("Workspace: Current branch"));
             _logger.Infos.ShouldContain(s => s.Contains("Working directory: /custom"));
-            var planned = $"Planned context file: {Path.Combine("/custom", "planner_context.md")}";
+            var planned = $"Planned context file: {Path.Join("/custom", "planner_context.md")}";
             _logger.Infos.ShouldContain(s => s.Contains(planned));
             _logger.Infos.ShouldContain(s => s.Contains("Manual launch:"));
             _logger.Infos.ShouldNotContain(s => s.Contains("Worktree (planned):"));
