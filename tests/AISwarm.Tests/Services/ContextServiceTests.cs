@@ -11,7 +11,7 @@ public class ContextServiceTests : ISystemUnderTest<ContextService>
         _systemUnderTest ??= new ContextService();
 
     [Fact]
-    public async Task WhenCreateContextFileWithNoAgentIdI_ShouldBehaveLikeNormalCreateContextFile()
+    public async Task WhenCreateContextFileWithNoAgentId_ShouldBehaveLikeNormalCreateContextFile()
     {
         // Arrange
         var agentType = "implementer";
