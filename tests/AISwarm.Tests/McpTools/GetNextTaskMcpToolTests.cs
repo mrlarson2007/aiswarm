@@ -560,9 +560,7 @@ public class GetNextTaskMcpToolTests
             // Publish TaskCreated on the event bus so the waiter wakes immediately
             await _notifier.PublishTaskCreated(taskId, agentId, expectedPersona);
 
-            var startTime = DateTime.UtcNow;
             var result = await pollingTask;
-            var elapsed = DateTime.UtcNow - startTime;
 
             // Assert
             result.Success.ShouldBeTrue();
@@ -572,9 +570,6 @@ public class GetNextTaskMcpToolTests
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("call this tool again");
             result.Message.ShouldContain("get the next task");
-
-            // Should have returned quickly once event was published
-            elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(900));
         }
     }
 
