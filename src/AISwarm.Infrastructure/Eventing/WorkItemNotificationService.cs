@@ -87,6 +87,24 @@ public class WorkItemNotificationService : IWorkItemNotificationService
         return _bus.Subscribe(filter, ct);
     }
 
+    public IAsyncEnumerable<EventEnvelope> SubscribeForTaskIds(IReadOnlyList<string> taskIds, CancellationToken ct = default)
+    {
+        if (taskIds == null || taskIds.Count == 0)
+            throw new ArgumentException("taskIds must be provided and not empty", nameof(taskIds));
+        
+        var filter = new EventFilter(
+            Types: new[] { TaskCreatedType, TaskCompletedType, TaskFailedType },
+            Predicate: e => e.Payload is ITaskLifecyclePayload p && taskIds.Contains(p.TaskId));
+        return _bus.Subscribe(filter, ct);
+    }
+
+    public IAsyncEnumerable<EventEnvelope> SubscribeForAllTaskEvents(CancellationToken ct = default)
+    {
+        var filter = new EventFilter(
+            Types: new[] { TaskCreatedType, TaskCompletedType, TaskFailedType });
+        return _bus.Subscribe(filter, ct);
+    }
+
     public async Task<string?> TryConsumeTaskCreatedAsync(string agentId, string persona, CancellationToken ct = default)
     {
         // Attempt a non-blocking single-event consume by racing a zero-time cancellation

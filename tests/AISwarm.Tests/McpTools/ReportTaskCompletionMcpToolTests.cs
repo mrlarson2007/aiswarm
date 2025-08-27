@@ -139,7 +139,7 @@ public class ReportTaskCompletionMcpToolTests
 
             var readTask = Task.Run(async () =>
             {
-                await foreach (var evt in _notifier.SubscribeForTaskLifecycle(agentId, token))
+                await foreach (var evt in _notifier.SubscribeForAllTaskEvents(token))
                 {
                     if (evt.Type == WorkItemNotificationService.TaskCompletedType)
                     {
@@ -235,7 +235,7 @@ public class ReportTaskCompletionMcpToolTests
 
             var readTask = Task.Run(async () =>
             {
-                await foreach (var evt in _notifier.SubscribeForTaskLifecycle(agentId, token))
+                await foreach (var evt in _notifier.SubscribeForAllTaskEvents(token))
                 {
                     if (evt.Type == WorkItemNotificationService.TaskFailedType)
                     {

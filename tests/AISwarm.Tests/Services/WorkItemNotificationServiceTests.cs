@@ -398,6 +398,18 @@ public class WorkItemNotificationServiceTests
         captured.ShouldBeNull();
     }
 
+    [Fact]
+    public void WhenSubscribingForTaskIdsWithEmptyList_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+        var emptyTaskIds = Array.Empty<string>();
+
+        // Act & Assert
+        Should.Throw<ArgumentException>(() => 
+            service.SubscribeForTaskIds(emptyTaskIds).GetAsyncEnumerator().MoveNextAsync().AsTask());
+    }
+
 
 
 
