@@ -472,6 +472,69 @@ public class WorkItemNotificationServiceTests
         eventTypes.Count(t => t == "TaskFailed").ShouldBe(1);
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task WhenSubscribingForAllTaskEvents_ShouldReceiveAllTaskLifecycleEventsWithoutFiltering()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
+
+        var received = new List<EventEnvelope>();
+
+        // Act
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var evt in service.SubscribeForAllTaskEvents(token))
+            {
+                received.Add(evt);
+                if (received.Count >= 5) // Expect all 5 events
+                    break;
+            }
+        }, token);
+
+        await Task.Delay(5, token); // Give subscription time to start
+
+        // Publish various task events - all should be received
+        await service.PublishTaskCreated("task-alpha", "agent-1", "reviewer");
+        await service.PublishTaskCreated("task-beta", "agent-2", "planner");
+        await service.PublishTaskCompleted("task-alpha", "agent-1");
+        await service.PublishTaskFailed("task-beta", "agent-2", "timeout");
+        await service.PublishTaskCreated("task-gamma", null, "implementer"); // Unassigned task
+
+        await WaitForCountAsync(received, 5, token);
+        cts.Cancel();
+        
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
+
+        // Assert
+        received.Count.ShouldBe(5);
+        
+        // Verify all event types are present
+        var eventTypes = received.Select(e => e.Type).ToArray();
+        eventTypes.Count(t => t == "TaskCreated").ShouldBe(3);
+        eventTypes.Count(t => t == "TaskCompleted").ShouldBe(1);
+        eventTypes.Count(t => t == "TaskFailed").ShouldBe(1);
+        
+        // Verify all task IDs are present (no filtering)
+        var receivedTaskIds = received.Select(e => 
+            e.Payload switch
+            {
+                TaskCreatedPayload p => p.TaskId,
+                TaskCompletedPayload p => p.TaskId,
+                TaskFailedPayload p => p.TaskId,
+                _ => throw new InvalidOperationException("Unexpected payload type")
+            }).ToArray();
+            
+        receivedTaskIds.ShouldContain("task-alpha");
+        receivedTaskIds.ShouldContain("task-beta");
+        receivedTaskIds.ShouldContain("task-gamma");
+    }
+
 
 
 
