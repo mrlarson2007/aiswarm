@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.Entities;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
@@ -10,7 +11,8 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class ReportTaskCompletionMcpTool(
     IDatabaseScopeService databaseScopeService,
-    ITimeService timeService)
+    ITimeService timeService,
+    IWorkItemNotificationService workItemNotifications)
 {
     [McpServerTool(Name = "report_task_completion")]
     [Description("Reports completion of a task with results")]
@@ -35,8 +37,10 @@ public class ReportTaskCompletionMcpTool(
         task.Result = result;
         task.CompletedAt = timeService.UtcNow;
 
-        await scope.SaveChangesAsync();
+    await scope.SaveChangesAsync();
         scope.Complete();
+
+    await workItemNotifications.PublishTaskCompleted(taskId, task.AgentId);
 
         return ReportTaskCompletionResult.Success(taskId);
     }
@@ -60,8 +64,10 @@ public class ReportTaskCompletionMcpTool(
         task.Result = errorMessage;
         task.CompletedAt = timeService.UtcNow;
 
-        await scope.SaveChangesAsync();
+    await scope.SaveChangesAsync();
         scope.Complete();
+
+    await workItemNotifications.PublishTaskFailed(taskId, task.AgentId, errorMessage);
 
         return ReportTaskCompletionResult.Success(taskId);
     }

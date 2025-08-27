@@ -1,6 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Server.McpTools;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
@@ -13,16 +14,19 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly IWorkItemNotificationService _notifier;
     private CreateTaskMcpTool? _systemUnderTest;
 
     public CreateTaskMcpTool SystemUnderTest =>
         _systemUnderTest ??= new CreateTaskMcpTool(
             _scopeService,
-            _timeService);
+            _timeService,
+            _notifier);
 
     public CreateTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
+    _notifier = new WorkItemNotificationService(new InMemoryEventBus());
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -38,6 +42,41 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
 
     public class TaskCreationTests : CreateTaskMcpToolTests
     {
+        [Fact(Timeout = 5000)]
+        public async Task WhenCreatingUnassignedTask_ShouldPublishTaskCreatedEvent()
+        {
+            // Arrange
+            var persona = "planner";
+            var description = "Plan next steps";
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var token = cts.Token;
+            var received = new List<EventEnvelope>();
+
+            var readTask = Task.Run(async () =>
+            {
+                await foreach (var evt in (_notifier as WorkItemNotificationService)!
+                    .SubscribeForPersona(persona, token))
+                {
+                    received.Add(evt);
+                    break;
+                }
+            }, token);
+
+            await Task.Delay(5, token);
+
+            // Act
+            var result = await SystemUnderTest.CreateTaskAsync(null, persona, description);
+            result.Success.ShouldBeTrue();
+
+            // Assert - event should be delivered
+            await readTask;
+            received.Count.ShouldBe(1);
+            var payload = (TaskCreatedPayload)received[0].Payload!;
+            payload.TaskId.ShouldBe(result.TaskId);
+            payload.AgentId.ShouldBeNull();
+            payload.Persona.ShouldBe(persona);
+        }
         [Fact]
         public async Task WhenCreatingTaskForRunningAgent_ShouldSaveTaskToDatabase()
         {

@@ -1,5 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +14,17 @@ public class ReportTaskCompletionMcpToolTests
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly IEventBus _bus = new InMemoryEventBus();
+    private readonly IWorkItemNotificationService _notifier;
     private ReportTaskCompletionMcpTool? _systemUnderTest;
 
     public ReportTaskCompletionMcpTool SystemUnderTest =>
-        _systemUnderTest ??= new ReportTaskCompletionMcpTool(_scopeService, _timeService);
+        _systemUnderTest ??= new ReportTaskCompletionMcpTool(_scopeService, _timeService, _notifier);
 
     public ReportTaskCompletionMcpToolTests()
     {
         _timeService = new FakeTimeService();
+        _notifier = new WorkItemNotificationService(_bus);
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -121,6 +125,37 @@ public class ReportTaskCompletionMcpToolTests
             task.Result.ShouldBe(errorMessage);
             task.CompletedAt.ShouldNotBeNull();
         }
+
+        [Fact(Timeout = 5000)]
+        public async Task WhenReportingTaskCompletion_ShouldPublishTaskCompletedEvent()
+        {
+            var agentId = "notify-agent";
+            var taskId = "notify-complete";
+            await CreateInProgressTaskAsync(taskId, agentId);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var token = cts.Token;
+            var received = new List<EventEnvelope>();
+
+            var readTask = Task.Run(async () =>
+            {
+                await foreach (var evt in _notifier.SubscribeForTaskLifecycle(agentId, token))
+                {
+                    if (evt.Type == WorkItemNotificationService.TaskCompletedType)
+                    {
+                        received.Add(evt);
+                        break;
+                    }
+                }
+            }, token);
+            await Task.Delay(5, token);
+
+            var result = await SystemUnderTest.ReportTaskCompletionAsync(taskId, "done");
+            result.IsSuccess.ShouldBeTrue();
+
+            await readTask;
+            received.Count.ShouldBe(1);
+        }
     }
 
     public class TaskReportFailureTests : ReportTaskCompletionMcpToolTests
@@ -185,6 +220,37 @@ public class ReportTaskCompletionMcpToolTests
             task.ShouldNotBeNull();
             task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
             task.Result.ShouldBe(errorMessage);
+        }
+
+        [Fact(Timeout = 5000)]
+        public async Task WhenReportingTaskFailure_ShouldPublishTaskFailedEvent()
+        {
+            var agentId = "notify-agent-2";
+            var taskId = "notify-failed";
+            await CreateInProgressTaskAsync(taskId, agentId);
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            var token = cts.Token;
+            var received = new List<EventEnvelope>();
+
+            var readTask = Task.Run(async () =>
+            {
+                await foreach (var evt in _notifier.SubscribeForTaskLifecycle(agentId, token))
+                {
+                    if (evt.Type == WorkItemNotificationService.TaskFailedType)
+                    {
+                        received.Add(evt);
+                        break;
+                    }
+                }
+            }, token);
+            await Task.Delay(5, token);
+
+            var result = await SystemUnderTest.ReportTaskFailureAsync(taskId, "error");
+            result.IsSuccess.ShouldBeTrue();
+
+            await readTask;
+            received.Count.ShouldBe(1);
         }
     }
 

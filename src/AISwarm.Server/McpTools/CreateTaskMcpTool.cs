@@ -3,6 +3,7 @@ using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Server.Entities;
+using AISwarm.Infrastructure.Eventing;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
@@ -14,7 +15,8 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class CreateTaskMcpTool(
     IDatabaseScopeService scopeService,
-    ITimeService timeService)
+    ITimeService timeService,
+    IWorkItemNotificationService workItemNotifications)
 {
     /// <summary>
     ///     Creates a new task and assigns it to the specified agent
@@ -69,6 +71,9 @@ public class CreateTaskMcpTool(
         scope.Tasks.Add(workItem);
         await scope.SaveChangesAsync();
         scope.Complete();
+
+        // Publish non-durable notification that a task was created
+        await workItemNotifications.PublishTaskCreated(taskId, agentId, persona);
 
         return CreateTaskResult.SuccessWithTaskId(taskId);
     }

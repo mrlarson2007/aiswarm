@@ -4,6 +4,8 @@ public class WorkItemNotificationService : IWorkItemNotificationService
 {
     private readonly IEventBus _bus;
     public const string TaskCreatedType = "TaskCreated";
+    public const string TaskCompletedType = "TaskCompleted";
+    public const string TaskFailedType = "TaskFailed";
 
     public WorkItemNotificationService(IEventBus bus)
     {
@@ -32,12 +34,41 @@ public class WorkItemNotificationService : IWorkItemNotificationService
         return _bus.Subscribe(filter, ct);
     }
 
+    public IAsyncEnumerable<EventEnvelope> SubscribeForTaskLifecycle(string agentId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(agentId))
+            throw new ArgumentException("agentId must be provided", nameof(agentId));
+        var filter = new EventFilter(
+            Types: new[] { TaskCreatedType, TaskCompletedType, TaskFailedType },
+            Predicate: e => e.Payload is ITaskLifecyclePayload p &&
+                string.Equals(p.AgentId, agentId, StringComparison.OrdinalIgnoreCase));
+        return _bus.Subscribe(filter, ct);
+    }
+
     public ValueTask PublishTaskCreated(string taskId, string? agentId, string? persona, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(taskId))
             throw new ArgumentException("taskId must be provided", nameof(taskId));
         var payload = new TaskCreatedPayload(taskId, agentId, persona);
         var evt = new EventEnvelope(TaskCreatedType, DateTimeOffset.UtcNow, null, agentId, payload);
+        return _bus.PublishAsync(evt, ct);
+    }
+
+    public ValueTask PublishTaskCompleted(string taskId, string? agentId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("taskId must be provided", nameof(taskId));
+        var payload = new TaskCompletedPayload(taskId, agentId);
+        var evt = new EventEnvelope(TaskCompletedType, DateTimeOffset.UtcNow, null, agentId, payload);
+        return _bus.PublishAsync(evt, ct);
+    }
+
+    public ValueTask PublishTaskFailed(string taskId, string? agentId, string? reason, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskId))
+            throw new ArgumentException("taskId must be provided", nameof(taskId));
+        var payload = new TaskFailedPayload(taskId, agentId, reason);
+        var evt = new EventEnvelope(TaskFailedType, DateTimeOffset.UtcNow, null, agentId, payload);
         return _bus.PublishAsync(evt, ct);
     }
 
@@ -73,12 +104,10 @@ public class WorkItemNotificationService : IWorkItemNotificationService
         {
             // No event available immediately
         }
-        finally
-        {
-            await enumerator.DisposeAsync();
-        }
         return null;
     }
 }
-
-public record TaskCreatedPayload(string TaskId, string? AgentId, string? Persona);
+public interface ITaskLifecyclePayload { string TaskId { get; } string? AgentId { get; } }
+public record TaskCreatedPayload(string TaskId, string? AgentId, string? Persona) : ITaskLifecyclePayload;
+public record TaskCompletedPayload(string TaskId, string? AgentId) : ITaskLifecyclePayload;
+public record TaskFailedPayload(string TaskId, string? AgentId, string? Reason) : ITaskLifecyclePayload;
