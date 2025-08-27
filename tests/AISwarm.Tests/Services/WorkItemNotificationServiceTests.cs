@@ -535,6 +535,59 @@ public class WorkItemNotificationServiceTests
         receivedTaskIds.ShouldContain("task-gamma");
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task WhenCancellingSubscribeForTaskIds_ShouldStopReceivingEvents()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+        var taskIds = new[] { "cancel-test-1", "cancel-test-2" };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
+
+        var received = new List<EventEnvelope>();
+
+        // Act
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var evt in service.SubscribeForTaskIds(taskIds, token))
+                {
+                    received.Add(evt);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation token is triggered
+            }
+        });
+
+        await Task.Delay(5, token); // Give subscription time to start
+
+        // Publish first event (should be received)
+        await service.PublishTaskCreated("cancel-test-1", "agent-1", "reviewer");
+        await WaitForCountAsync(received, 1, token);
+
+        // Cancel subscription
+        cts.Cancel();
+        await Task.Delay(10, CancellationToken.None);
+
+        // Publish second event (should NOT be received due to cancellation)
+        await service.PublishTaskCreated("cancel-test-2", "agent-2", "planner");
+        await Task.Delay(50, CancellationToken.None);
+
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
+
+        // Assert
+        received.Count.ShouldBe(1);
+        var payload = (TaskCreatedPayload)received[0].Payload!;
+        payload.TaskId.ShouldBe("cancel-test-1");
+    }
+
 
 
 
