@@ -5,6 +5,7 @@ using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
@@ -63,7 +64,7 @@ public class ReportTaskCompletionMcpToolTests
             using var scope = _scopeService.CreateReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
-            task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Completed);
+            task.Status.ShouldBe(TaskStatus.Completed);
             task.Result.ShouldBe(completionResult);
             task.CompletedAt.ShouldNotBeNull();
         }
@@ -122,7 +123,7 @@ public class ReportTaskCompletionMcpToolTests
             using var scope = _scopeService.CreateReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
-            task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Completed);
+            task.Status.ShouldBe(TaskStatus.Completed);
             task.Result.ShouldBe(errorMessage);
             task.CompletedAt.ShouldNotBeNull();
         }
@@ -180,7 +181,7 @@ public class ReportTaskCompletionMcpToolTests
             using var scope = _scopeService.CreateReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
-            task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
+            task.Status.ShouldBe(TaskStatus.Failed);
             task.Result.ShouldBe(errorMessage);
             task.CompletedAt.ShouldNotBeNull();
         }
@@ -219,7 +220,7 @@ public class ReportTaskCompletionMcpToolTests
             using var scope = _scopeService.CreateReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
-            task.Status.ShouldBe(DataLayer.Entities.TaskStatus.Failed);
+            task.Status.ShouldBe(TaskStatus.Failed);
             task.Result.ShouldBe(errorMessage);
         }
 
@@ -280,7 +281,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Pending,
+            Status = TaskStatus.Pending,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
@@ -298,7 +299,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.InProgress,
+            Status = TaskStatus.InProgress,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
@@ -317,7 +318,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Completed,
+            Status = TaskStatus.Completed,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
@@ -337,7 +338,7 @@ public class ReportTaskCompletionMcpToolTests
         {
             Id = taskId,
             AgentId = agentId,
-            Status = DataLayer.Entities.TaskStatus.Failed,
+            Status = TaskStatus.Failed,
             Persona = "Test persona content",
             Description = "Test task description",
             Priority = TaskPriority.Normal,
