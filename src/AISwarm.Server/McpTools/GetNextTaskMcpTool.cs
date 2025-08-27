@@ -81,6 +81,12 @@ public class GetNextTaskMcpTool(
                 return preferred;
         }
 
+        // First, check the database for existing pending tasks before waiting for events
+        result = await TryGetOrClaimTaskAsync(agentInfo, null);
+        if (result != null)
+            return result;
+
+        // Wait for new task events
         using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
         try
         {

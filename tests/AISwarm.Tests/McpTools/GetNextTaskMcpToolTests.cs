@@ -58,6 +58,43 @@ public class GetNextTaskMcpToolTests
     public class TaskRetrievalNoTasksAvailableTests : GetNextTaskMcpToolTests
     {
         [Fact]
+        public async Task WhenTaskExistsInDatabase_ShouldFindTaskOnFirstCall()
+        {
+            // Arrange - RED: This test reproduces the bug where agents don't pick up existing tasks
+            var agentId = "agent-existing-task";
+            var persona = "You are a reviewer. Review code for quality.";
+            var description = "Review the authentication module";
+
+            // Create a running agent
+            await CreateRunningAgentAsync(agentId);
+
+            // Create a task that's already assigned to the agent (simulating a task created before agent starts)
+            // NOTE: This does NOT publish an event, so the agent should check database directly
+            var taskId = await CreatePendingTaskAsync(agentId, persona, description);
+
+            // Act - GetNextTaskAsync should check database first, not wait for events
+            // Using a short timeout configuration - the key is it should find the task without timing out
+            var config = new GetNextTaskConfiguration { TimeToWaitForTask = TimeSpan.FromMilliseconds(200) };
+            
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId, config);
+            stopwatch.Stop();
+
+            // Assert - Should find the task without waiting the full timeout period
+            result.Success.ShouldBeTrue("Should find existing task in database");
+            result.TaskId.ShouldBe(taskId);
+            result.Persona.ShouldBe(persona);
+            result.Description.ShouldBe(description);
+            
+            // Should not take the full timeout - should be much faster than 200ms
+            stopwatch.ElapsedMilliseconds.ShouldBeLessThan(200, 
+                "Should find task quickly from database, not wait full timeout period");
+
+            // Verify heartbeat was updated
+            _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
+        }
+
+        [Fact]
         public async Task WhenNonExistentAgent_ShouldReturnFailureResult()
         {
             // Arrange
