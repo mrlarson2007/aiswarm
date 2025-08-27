@@ -103,7 +103,6 @@ public class GetNextTaskMcpTool(
     {
         try
         {
-            Console.WriteLine("Waiting for task event...");
             return await workItemNotifications
                 .SubscribeForAgentOrPersona(agentInfo.AgentId, agentInfo.PersonaId, cancellationToken)
                 .Select(e => (e.Payload as TaskCreatedPayload)?.TaskId)
