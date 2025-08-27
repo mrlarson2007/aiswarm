@@ -31,7 +31,7 @@ public static class ServiceRegistration
         services.AddSingleton<ITimeService, SystemTimeService>();
 
         // Eventing defaults (unbounded) and high-level notification service
-        services.AddSingleton<IEventBus>(_ => new InMemoryEventBus());
+        services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ => new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
         services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
         return services;
     }
@@ -69,7 +69,13 @@ public static class ServiceRegistration
             };
 
             // Replace the default IEventBus with a bounded instance
-            services.AddSingleton<IEventBus>(_ => new InMemoryEventBus(options));
+            services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
+                new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options));
+        }
+        else
+        {
+            services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
+                new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
         }
 
         return services;

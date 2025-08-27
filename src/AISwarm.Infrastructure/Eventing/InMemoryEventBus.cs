@@ -2,10 +2,11 @@ using System.Threading.Channels;
 
 namespace AISwarm.Infrastructure.Eventing;
 
-public class InMemoryEventBus : IEventBus, IDisposable
+public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDisposable
 {
-    private readonly List<(EventFilter Filter, Channel<EventEnvelope> Channel)> _subs = new();
-    private readonly object _gate = new();
+    private readonly List<(EventFilter<TType, TPayload> Filter, Channel<EventEnvelope<TType, TPayload>> Channel)> _subs =
+        [];
+    private readonly Lock _gate = new();
     private bool _disposed;
     private readonly BoundedChannelOptions? _boundedOptions;
 
@@ -18,16 +19,16 @@ public class InMemoryEventBus : IEventBus, IDisposable
         _boundedOptions = options;
     }
 
-    public IAsyncEnumerable<EventEnvelope> Subscribe(EventFilter filter, CancellationToken ct = default)
+    public IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter, CancellationToken ct = default)
     {
         if (_disposed)
         {
-            return Empty<EventEnvelope>();
+            return Empty<EventEnvelope<TType, TPayload>>();
         }
 
         var channel = _boundedOptions is null
-            ? Channel.CreateUnbounded<EventEnvelope>()
-            : Channel.CreateBounded<EventEnvelope>(_boundedOptions);
+            ? Channel.CreateUnbounded<EventEnvelope<TType, TPayload>>()
+            : Channel.CreateBounded<EventEnvelope<TType, TPayload>>(_boundedOptions);
         lock (_gate)
         {
             _subs.Add((filter, channel));
@@ -54,7 +55,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
         yield break;
     }
 
-    private void ClearSubscriptions(Channel<EventEnvelope> channel)
+    private void ClearSubscriptions(Channel<EventEnvelope<TType, TPayload>> channel)
     {
         for (int i = _subs.Count - 1; i >= 0; i--)
         {
@@ -66,7 +67,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
         }
     }
 
-    private static async IAsyncEnumerable<EventEnvelope> ReadAll(Channel<EventEnvelope> ch)
+    private static async IAsyncEnumerable<EventEnvelope<TType, TPayload>> ReadAll(Channel<EventEnvelope<TType, TPayload>> ch)
     {
         while (await ch.Reader.WaitToReadAsync())
         {
@@ -77,12 +78,12 @@ public class InMemoryEventBus : IEventBus, IDisposable
         }
     }
 
-    public async ValueTask PublishAsync(EventEnvelope evt, CancellationToken ct = default)
+    public async ValueTask PublishAsync(EventEnvelope<TType, TPayload> evt, CancellationToken ct = default)
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(InMemoryEventBus));
+            throw new ObjectDisposedException(nameof(InMemoryEventBus<TType, TPayload>));
 
-        List<Channel<EventEnvelope>> targets;
+        List<Channel<EventEnvelope<TType, TPayload>>> targets;
         lock (_gate)
         {
             targets = _subs
@@ -97,7 +98,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
         }
     }
 
-    private static bool Matches(EventFilter f, EventEnvelope e)
+    private static bool Matches(EventFilter<TType, TPayload> f, EventEnvelope<TType, TPayload> e)
     {
         if (f.Types != null && f.Types.Count > 0 && !f.Types.Contains(e.Type))
             return false;
@@ -111,7 +112,7 @@ public class InMemoryEventBus : IEventBus, IDisposable
         if (_disposed)
             return;
 
-        List<Channel<EventEnvelope>> channels;
+        List<Channel<EventEnvelope<TType, TPayload>>> channels;
         lock (_gate)
         {
             _disposed = true;

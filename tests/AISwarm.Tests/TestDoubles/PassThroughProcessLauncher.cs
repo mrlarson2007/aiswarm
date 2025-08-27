@@ -11,7 +11,7 @@ namespace AISwarm.Tests.TestDoubles;
 public sealed class PassThroughProcessLauncher : IProcessLauncher
 {
     private readonly ConcurrentQueue<Expectation> _expectations = new();
-    public readonly List<Invocation> Invocations = new();
+    public readonly List<Invocation> Invocations = [];
 
     public Task<ProcessResult> RunAsync(
         string fileName,

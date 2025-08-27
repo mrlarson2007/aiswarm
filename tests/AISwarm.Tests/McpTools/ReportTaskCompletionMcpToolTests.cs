@@ -14,7 +14,8 @@ public class ReportTaskCompletionMcpToolTests
     private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
-    private readonly IEventBus _bus = new InMemoryEventBus();
+    private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
+        new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
     private readonly IWorkItemNotificationService _notifier;
     private ReportTaskCompletionMcpTool? _systemUnderTest;
 
@@ -135,21 +136,21 @@ public class ReportTaskCompletionMcpToolTests
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var token = cts.Token;
-            var received = new List<EventEnvelope>();
+            var received = new List<TaskEventEnvelope>();
 
             var readTask = Task.Run(async () =>
             {
-                await foreach (var evt in _notifier.SubscribeForTaskIds([taskId], token))
+                await foreach (var evt in _notifier.SubscibeForTaskCompletion([taskId], token))
                 {
-                    if (evt.Type == WorkItemNotificationService.TaskCompletedType)
+                    if (evt.Type == TaskEventType.Completed)
                     {
                         received.Add(evt);
                         break;
                     }
                 }
             }, token);
-            await Task.Delay(5, token);
 
+            await Task.Delay(30, token);
             var result = await SystemUnderTest.ReportTaskCompletionAsync(taskId, "done");
             result.IsSuccess.ShouldBeTrue();
 
@@ -231,13 +232,13 @@ public class ReportTaskCompletionMcpToolTests
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var token = cts.Token;
-            var received = new List<EventEnvelope>();
+            var received = new List<TaskEventEnvelope>();
 
             var readTask = Task.Run(async () =>
             {
-                await foreach (var evt in _notifier.SubscribeForTaskIds([taskId], token))
+                await foreach (var evt in _notifier.SubscibeForTaskCompletion([taskId], token))
                 {
-                    if (evt.Type == WorkItemNotificationService.TaskFailedType)
+                    if (evt.Type == TaskEventType.Failed)
                     {
                         received.Add(evt);
                         break;

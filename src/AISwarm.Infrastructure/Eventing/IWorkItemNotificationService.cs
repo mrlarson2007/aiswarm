@@ -2,11 +2,11 @@ namespace AISwarm.Infrastructure.Eventing;
 
 public interface IWorkItemNotificationService
 {
-    IAsyncEnumerable<EventEnvelope> SubscribeForAgent(string agentId, CancellationToken ct = default);
-    IAsyncEnumerable<EventEnvelope> SubscribeForPersona(string persona, CancellationToken ct = default);
-    IAsyncEnumerable<EventEnvelope> SubscribeForAgentOrPersona(string agentId, string persona, CancellationToken ct = default);
-    IAsyncEnumerable<EventEnvelope> SubscribeForTaskIds(IReadOnlyList<string> taskIds, CancellationToken ct = default);
-    IAsyncEnumerable<EventEnvelope> SubscribeForAllTaskEvents(CancellationToken ct = default);
+    IAsyncEnumerable<TaskEventEnvelope> SubscribeForAgent(string agentId, CancellationToken ct = default);
+    IAsyncEnumerable<TaskEventEnvelope> SubscribeForPersona(string persona, CancellationToken ct = default);
+    IAsyncEnumerable<TaskEventEnvelope> SubscribeForAgentOrPersona(string agentId, string persona, CancellationToken ct = default);
+    IAsyncEnumerable<TaskEventEnvelope> SubscibeForTaskCompletion(IReadOnlyList<string> taskIds, CancellationToken ct = default);
+    IAsyncEnumerable<TaskEventEnvelope> SubscribeForAllTaskEvents(CancellationToken ct = default);
     Task<string?> TryConsumeTaskCreatedAsync(string agentId, string persona, CancellationToken ct = default);
     ValueTask PublishTaskCreated(string taskId, string? agentId, string? persona, CancellationToken ct = default);
     ValueTask PublishTaskCompleted(string taskId, string? agentId, CancellationToken ct = default);

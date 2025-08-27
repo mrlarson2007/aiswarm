@@ -1,11 +1,10 @@
-using Microsoft.Extensions.Logging;
-
 namespace AISwarm.Infrastructure.Eventing;
 
-public record EventFilter(
-    IReadOnlyList<string>? Types = null,
-    string? AgentId = null,
-    string? Persona = null,
-    string? TaskId = null,
-    LogLevel? MinSeverity = null,
-    Func<EventEnvelope, bool>? Predicate = null);
+public record EventFilter<TType, TPayload>(
+    IReadOnlyList<TType>? Types = null,
+    Func<EventEnvelope<TType, TPayload>, bool>? Predicate = null);
+
+public record TaskEventFilter(
+    IReadOnlyList<TaskEventType>? Types = null,
+    Func<EventEnvelope<TaskEventType, ITaskLifecyclePayload>, bool>? Predicate = null) :
+        EventFilter<TaskEventType, ITaskLifecyclePayload>(Types, Predicate);

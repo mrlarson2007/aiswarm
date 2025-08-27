@@ -26,7 +26,7 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
     public CreateTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
-    _notifier = new WorkItemNotificationService(new InMemoryEventBus());
+        _notifier = new WorkItemNotificationService(new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -51,7 +51,7 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
 
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             var token = cts.Token;
-            var received = new List<EventEnvelope>();
+            var received = new List<TaskEventEnvelope>();
 
             var readTask = Task.Run(async () =>
             {

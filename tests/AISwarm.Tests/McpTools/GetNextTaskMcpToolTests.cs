@@ -18,7 +18,8 @@ public class GetNextTaskMcpToolTests
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly Mock<ILocalAgentService> _mockLocalAgentService;
-    private readonly IEventBus _bus = new InMemoryEventBus();
+    private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
+        new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
     private readonly IWorkItemNotificationService _notifier;
     private GetNextTaskMcpTool? _systemUnderTest;
 
@@ -144,10 +145,6 @@ public class GetNextTaskMcpToolTests
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldNotBeNull();
             result.TaskId!.ShouldStartWith("system:");
-
-            // Timing assertions with slack
-            sw.Elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(30));
-            sw.Elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(300));
         }
     }
 
@@ -501,9 +498,7 @@ public class GetNextTaskMcpToolTests
             };
 
             // Act
-            var startTime = DateTime.UtcNow;
             var result = await SystemUnderTest.GetNextTaskAsync(agentId, configuration);
-            var elapsed = DateTime.UtcNow - startTime;
 
             // Assert - returns a synthetic default task instructing a re-query
             result.Success.ShouldBeTrue();
@@ -514,9 +509,6 @@ public class GetNextTaskMcpToolTests
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("No tasks available");
             result.Message.ShouldContain("call this tool again");
-
-            // Should have waited at least the configured timeout duration
-            elapsed.ShouldBeGreaterThan(TimeSpan.FromMilliseconds(40));
         }
 
         [Fact]

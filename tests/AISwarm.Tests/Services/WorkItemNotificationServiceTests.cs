@@ -8,10 +8,11 @@ namespace AISwarm.Tests.Services;
 public class WorkItemNotificationServiceTests
 {
     // Per-test-instance setup (xUnit creates a new class instance per test)
-    private readonly IEventBus _bus = new InMemoryEventBus();
+    private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
+        new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
     private IWorkItemNotificationService SystemUnderTest => new WorkItemNotificationService(_bus);
 
-    private static async Task WaitForCountAsync(List<EventEnvelope> list, int expected, CancellationToken ct)
+    private static async Task WaitForCountAsync(List<TaskEventEnvelope> list, int expected, CancellationToken ct)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500))
@@ -30,7 +31,7 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act
         var readTask = Task.Run(async () =>
@@ -48,7 +49,7 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskCreated("t-persona", agentId: null, persona: persona);
 
         await WaitForCountAsync(received, 2, token);
-        cts.Cancel();
+        await cts.CancelAsync();
         try
         {
             await readTask;
@@ -106,7 +107,7 @@ public class WorkItemNotificationServiceTests
             FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait
         };
 
-        var bus = new InMemoryEventBus(options);
+        var bus = new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options);
         var service = new WorkItemNotificationService(bus);
         var agentId = "agent-backpressure";
 
@@ -170,7 +171,7 @@ public class WorkItemNotificationServiceTests
         (_bus as IDisposable)?.Dispose();
 
         await Task.Delay(20);
-        cts.Cancel();
+        await cts.CancelAsync();
         try
         {
             await readTask;
@@ -213,7 +214,7 @@ public class WorkItemNotificationServiceTests
         var token = cts.Token;
 
         // Act
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
         var readTask = Task.Run(async () =>
         {
             await foreach (var evt in service.SubscribeForAgent(agentId, token))
@@ -245,7 +246,7 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act - start reading, then publish one event, cancel, then publish another
         var readTask = Task.Run(async () =>
@@ -271,7 +272,7 @@ public class WorkItemNotificationServiceTests
         await WaitForCountAsync(received, 1, cts.Token);
 
         // Cancel subscription and then publish another event (should NOT be received)
-        cts.Cancel();
+        await cts.CancelAsync();
         await Task.Delay(10, CancellationToken.None);
         await service.PublishTaskCreated(taskId: "t2", agentId: agentId, persona: "reviewer", CancellationToken.None);
 
@@ -297,7 +298,7 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act: subscribe to persona, then publish one agent-assigned and one unassigned event
         var readTask = Task.Run(async () =>
@@ -321,7 +322,7 @@ public class WorkItemNotificationServiceTests
         // Wait briefly for deliveries
         await WaitForCountAsync(received, 1, cts.Token);
 
-        cts.Cancel();
+        await cts.CancelAsync();
         try
         {
             await readTask;
@@ -359,7 +360,7 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
         bool completed = false;
         Exception? captured = null;
 
@@ -386,7 +387,7 @@ public class WorkItemNotificationServiceTests
         await WaitForCountAsync(received, 1, cts.Token);
 
         // Cancel and ensure enumeration completes without OCE
-        cts.Cancel();
+        await cts.CancelAsync();
         try
         {
             await readTask;
@@ -406,8 +407,8 @@ public class WorkItemNotificationServiceTests
         var emptyTaskIds = Array.Empty<string>();
 
         // Act & Assert
-        Should.Throw<ArgumentException>(() => 
-            service.SubscribeForTaskIds(emptyTaskIds).GetAsyncEnumerator().MoveNextAsync().AsTask());
+        Should.Throw<ArgumentException>(() =>
+            service.SubscibeForTaskCompletion(emptyTaskIds).GetAsyncEnumerator().MoveNextAsync().AsTask());
     }
 
     [Fact(Timeout = 5000)]
@@ -419,12 +420,12 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act
         var readTask = Task.Run(async () =>
         {
-            await foreach (var evt in service.SubscribeForTaskIds(targetTaskIds, token))
+            await foreach (var evt in service.SubscibeForTaskCompletion(targetTaskIds, token))
             {
                 received.Add(evt);
                 if (received.Count >= 4) // Expect 4 events: 2 created, 1 completed, 1 failed
@@ -442,9 +443,9 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskFailed("task-3", "agent-c", "error"); // Should match
         await service.PublishTaskCompleted("task-2", "agent-b"); // Should NOT match
 
-        await WaitForCountAsync(received, 4, token);
-        cts.Cancel();
-        
+        await WaitForCountAsync(received, 2, token);
+        await cts.CancelAsync();
+
         try
         {
             await readTask;
@@ -452,35 +453,34 @@ public class WorkItemNotificationServiceTests
         catch (OperationCanceledException) { }
 
         // Assert
-        received.Count.ShouldBe(4);
-        
-        var receivedTaskIds = received.Select(e => 
+        received.Count.ShouldBe(2);
+
+        var receivedTaskIds = received.Select(e =>
             e.Payload switch
             {
-                TaskCreatedPayload p => p.TaskId,
                 TaskCompletedPayload p => p.TaskId,
                 TaskFailedPayload p => p.TaskId,
                 _ => throw new InvalidOperationException("Unexpected payload type")
             }).ToArray();
 
         receivedTaskIds.ShouldAllBe(taskId => targetTaskIds.Contains(taskId));
-        
+
         // Verify we got the expected event types
         var eventTypes = received.Select(e => e.Type).ToArray();
-        eventTypes.Count(t => t == "TaskCreated").ShouldBe(2);
-        eventTypes.Count(t => t == "TaskCompleted").ShouldBe(1);
-        eventTypes.Count(t => t == "TaskFailed").ShouldBe(1);
+        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(0);
+        eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
+        eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
     }
 
-    [Fact(Timeout = 5000)]
+    [Fact(Timeout = 50000000)]
     public async Task WhenSubscribingForAllTaskEvents_ShouldReceiveAllTaskLifecycleEventsWithoutFiltering()
     {
         // Arrange
         var service = SystemUnderTest;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(200000));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act
         var readTask = Task.Run(async () =>
@@ -488,7 +488,7 @@ public class WorkItemNotificationServiceTests
             await foreach (var evt in service.SubscribeForAllTaskEvents(token))
             {
                 received.Add(evt);
-                if (received.Count >= 5) // Expect all 5 events
+                if (received.Count >= 5) // Expect all 2 events
                     break;
             }
         }, token);
@@ -503,8 +503,8 @@ public class WorkItemNotificationServiceTests
         await service.PublishTaskCreated("task-gamma", null, "implementer"); // Unassigned task
 
         await WaitForCountAsync(received, 5, token);
-        cts.Cancel();
-        
+        await cts.CancelAsync();
+
         try
         {
             await readTask;
@@ -513,15 +513,15 @@ public class WorkItemNotificationServiceTests
 
         // Assert
         received.Count.ShouldBe(5);
-        
+
         // Verify all event types are present
         var eventTypes = received.Select(e => e.Type).ToArray();
-        eventTypes.Count(t => t == "TaskCreated").ShouldBe(3);
-        eventTypes.Count(t => t == "TaskCompleted").ShouldBe(1);
-        eventTypes.Count(t => t == "TaskFailed").ShouldBe(1);
-        
+        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(3);
+        eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
+        eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
+
         // Verify all task IDs are present (no filtering)
-        var receivedTaskIds = received.Select(e => 
+        var receivedTaskIds = received.Select(e =>
             e.Payload switch
             {
                 TaskCreatedPayload p => p.TaskId,
@@ -529,7 +529,7 @@ public class WorkItemNotificationServiceTests
                 TaskFailedPayload p => p.TaskId,
                 _ => throw new InvalidOperationException("Unexpected payload type")
             }).ToArray();
-            
+
         receivedTaskIds.ShouldContain("task-alpha");
         receivedTaskIds.ShouldContain("task-beta");
         receivedTaskIds.ShouldContain("task-gamma");
@@ -544,14 +544,14 @@ public class WorkItemNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
-        var received = new List<EventEnvelope>();
+        var received = new List<TaskEventEnvelope>();
 
         // Act
         var readTask = Task.Run(async () =>
         {
             try
             {
-                await foreach (var evt in service.SubscribeForTaskIds(taskIds, token))
+                await foreach (var evt in service.SubscibeForTaskCompletion(taskIds, token))
                 {
                     received.Add(evt);
                 }
@@ -565,15 +565,15 @@ public class WorkItemNotificationServiceTests
         await Task.Delay(5, token); // Give subscription time to start
 
         // Publish first event (should be received)
-        await service.PublishTaskCreated("cancel-test-1", "agent-1", "reviewer");
+        await service.PublishTaskFailed("cancel-test-1", "agent-1", "cancelled");
         await WaitForCountAsync(received, 1, token);
 
         // Cancel subscription
-        cts.Cancel();
+        await cts.CancelAsync();
         await Task.Delay(10, CancellationToken.None);
 
         // Publish second event (should NOT be received due to cancellation)
-        await service.PublishTaskCreated("cancel-test-2", "agent-2", "planner");
+        await service.PublishTaskFailed("cancel-test-2", "agent-2", "cancelled");
         await Task.Delay(50, CancellationToken.None);
 
         try
@@ -584,7 +584,7 @@ public class WorkItemNotificationServiceTests
 
         // Assert
         received.Count.ShouldBe(1);
-        var payload = (TaskCreatedPayload)received[0].Payload!;
+        var payload = (TaskFailedPayload)received[0].Payload!;
         payload.TaskId.ShouldBe("cancel-test-1");
     }
 

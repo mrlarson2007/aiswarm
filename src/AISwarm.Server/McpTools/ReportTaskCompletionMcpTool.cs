@@ -37,10 +37,10 @@ public class ReportTaskCompletionMcpTool(
         task.Result = result;
         task.CompletedAt = timeService.UtcNow;
 
-    await scope.SaveChangesAsync();
+        await scope.SaveChangesAsync();
         scope.Complete();
 
-    await workItemNotifications.PublishTaskCompleted(taskId, task.AgentId);
+        await workItemNotifications.PublishTaskCompleted(taskId, task.AgentId);
 
         return ReportTaskCompletionResult.Success(taskId);
     }
@@ -64,10 +64,10 @@ public class ReportTaskCompletionMcpTool(
         task.Result = errorMessage;
         task.CompletedAt = timeService.UtcNow;
 
-    await scope.SaveChangesAsync();
+        await scope.SaveChangesAsync();
         scope.Complete();
 
-    await workItemNotifications.PublishTaskFailed(taskId, task.AgentId, errorMessage);
+        await workItemNotifications.PublishTaskFailed(taskId, task.AgentId, errorMessage);
 
         return ReportTaskCompletionResult.Success(taskId);
     }

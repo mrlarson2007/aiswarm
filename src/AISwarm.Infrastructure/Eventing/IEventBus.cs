@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure.Eventing;
 
-public interface IEventBus
+public interface IEventBus<TType, TPayload>
 {
-    IAsyncEnumerable<EventEnvelope> Subscribe(EventFilter filter, CancellationToken ct = default);
-    ValueTask PublishAsync(EventEnvelope evt, CancellationToken ct = default);
+    IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter, CancellationToken ct = default);
+    ValueTask PublishAsync(EventEnvelope<TType, TPayload> evt, CancellationToken ct = default);
 }
