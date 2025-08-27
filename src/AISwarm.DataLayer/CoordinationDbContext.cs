@@ -21,6 +21,12 @@ public class CoordinationDbContext(
         set;
     } = null!;
 
+    public DbSet<MemoryEntry> MemoryEntries
+    {
+        get;
+        set;
+    } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
