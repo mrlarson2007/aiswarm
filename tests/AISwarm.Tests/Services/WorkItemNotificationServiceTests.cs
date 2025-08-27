@@ -410,6 +410,68 @@ public class WorkItemNotificationServiceTests
             service.SubscribeForTaskIds(emptyTaskIds).GetAsyncEnumerator().MoveNextAsync().AsTask());
     }
 
+    [Fact(Timeout = 5000)]
+    public async Task WhenSubscribingForTaskIds_ShouldDeliverEventsForMatchingTaskIds()
+    {
+        // Arrange
+        var service = SystemUnderTest;
+        var targetTaskIds = new[] { "task-1", "task-3" };
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var token = cts.Token;
+
+        var received = new List<EventEnvelope>();
+
+        // Act
+        var readTask = Task.Run(async () =>
+        {
+            await foreach (var evt in service.SubscribeForTaskIds(targetTaskIds, token))
+            {
+                received.Add(evt);
+                if (received.Count >= 4) // Expect 4 events: 2 created, 1 completed, 1 failed
+                    break;
+            }
+        }, token);
+
+        await Task.Delay(5, token); // Give subscription time to start
+
+        // Publish events - some matching, some not
+        await service.PublishTaskCreated("task-1", "agent-a", "reviewer"); // Should match
+        await service.PublishTaskCreated("task-2", "agent-b", "planner");  // Should NOT match
+        await service.PublishTaskCreated("task-3", "agent-c", "implementer"); // Should match
+        await service.PublishTaskCompleted("task-1", "agent-a"); // Should match
+        await service.PublishTaskFailed("task-3", "agent-c", "error"); // Should match
+        await service.PublishTaskCompleted("task-2", "agent-b"); // Should NOT match
+
+        await WaitForCountAsync(received, 4, token);
+        cts.Cancel();
+        
+        try
+        {
+            await readTask;
+        }
+        catch (OperationCanceledException) { }
+
+        // Assert
+        received.Count.ShouldBe(4);
+        
+        var receivedTaskIds = received.Select(e => 
+            e.Payload switch
+            {
+                TaskCreatedPayload p => p.TaskId,
+                TaskCompletedPayload p => p.TaskId,
+                TaskFailedPayload p => p.TaskId,
+                _ => throw new InvalidOperationException("Unexpected payload type")
+            }).ToArray();
+
+        receivedTaskIds.ShouldAllBe(taskId => targetTaskIds.Contains(taskId));
+        
+        // Verify we got the expected event types
+        var eventTypes = received.Select(e => e.Type).ToArray();
+        eventTypes.Count(t => t == "TaskCreated").ShouldBe(2);
+        eventTypes.Count(t => t == "TaskCompleted").ShouldBe(1);
+        eventTypes.Count(t => t == "TaskFailed").ShouldBe(1);
+    }
+
 
 
 
