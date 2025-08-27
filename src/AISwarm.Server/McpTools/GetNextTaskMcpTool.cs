@@ -72,19 +72,9 @@ public class GetNextTaskMcpTool(
         // Update agent heartbeat since the agent is actively requesting tasks
         await localAgentService.UpdateHeartbeatAsync(agentId);
 
-        GetNextTaskResult? result;
-
-        if (!string.IsNullOrEmpty(preferredTaskId))
-        {
-            var preferred = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
-            if (preferred != null)
-                return preferred;
-        }
-
-        // First, check the database for existing pending tasks before waiting for events
-        result = await TryGetOrClaimTaskAsync(agentInfo, null);
-        if (result != null)
-            return result;
+        var preferred = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
+        if (preferred != null)
+            return preferred;
 
         // Wait for new task events
         using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
@@ -93,7 +83,7 @@ public class GetNextTaskMcpTool(
             do
             {
                 preferredTaskId = await TryGetNextTaskIdAsync(agentInfo, cts.Token);
-                result = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
+                var result = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
                 if (result != null)
                     return result;
             } while (preferredTaskId != null);
@@ -111,11 +101,19 @@ public class GetNextTaskMcpTool(
 
     private async Task<string?> TryGetNextTaskIdAsync(AgentInfo agentInfo, CancellationToken cancellationToken)
     {
-        return await workItemNotifications
-            .SubscribeForAgentOrPersona(agentInfo.AgentId, agentInfo.PersonaId, cancellationToken)
-            .Select(e => (e.Payload as TaskCreatedPayload)?.TaskId)
-            .Where(id => id != null)
-            .FirstOrDefaultAsync(cancellationToken);
+        try
+        {
+            return await workItemNotifications
+                .SubscribeForAgentOrPersona(agentInfo.AgentId, agentInfo.PersonaId, cancellationToken)
+                .Select(e => (e.Payload as TaskCreatedPayload)?.TaskId)
+                .Where(id => id != null)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Return null when cancelled (timeout reached)
+            return null;
+        }
     }
 
     private async Task<AgentInfo?> GetAgentInfoAsync(string agentId)

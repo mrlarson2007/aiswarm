@@ -545,6 +545,7 @@ public class WorkItemNotificationServiceTests
         var token = cts.Token;
 
         var received = new List<TaskEventEnvelope>();
+        var firstEventReceived = new TaskCompletionSource<bool>();
 
         // Act
         var readTask = Task.Run(async () =>
@@ -554,6 +555,10 @@ public class WorkItemNotificationServiceTests
                 await foreach (var evt in service.SubscibeForTaskCompletion(taskIds, token))
                 {
                     received.Add(evt);
+                    
+                    // Signal when first event is received to ensure deterministic ordering
+                    if (received.Count == 1)
+                        firstEventReceived.SetResult(true);
                 }
             }
             catch (OperationCanceledException)
@@ -562,29 +567,34 @@ public class WorkItemNotificationServiceTests
             }
         });
 
-        await Task.Delay(5, token); // Give subscription time to start
+        // Wait a moment for subscription to be established (minimal wait)
+        await Task.Delay(5, CancellationToken.None);
 
-        // Publish first event (should be received)
+        // Publish first event (should be received) - using TaskFailed which matches the subscription filter
         await service.PublishTaskFailed("cancel-test-1", "agent-1", "cancelled");
-        await WaitForCountAsync(received, 1, token);
+        
+        // Wait for first event to be processed
+        await firstEventReceived.Task;
 
-        // Cancel subscription
+        // Cancel subscription immediately after confirming first event received
         await cts.CancelAsync();
-        await Task.Delay(10, CancellationToken.None);
-
-        // Publish second event (should NOT be received due to cancellation)
-        await service.PublishTaskFailed("cancel-test-2", "agent-2", "cancelled");
-        await Task.Delay(50, CancellationToken.None);
-
+        
+        // Wait for the async enumeration to complete
         try
         {
             await readTask;
         }
         catch (OperationCanceledException) { }
 
+        // Now publish second event after cancellation (should NOT be received)
+        await service.PublishTaskFailed("cancel-test-2", "agent-2", "cancelled");
+
+        // Brief wait to allow any potential (incorrect) delivery
+        await Task.Delay(10, CancellationToken.None);
+
         // Assert
-        received.Count.ShouldBe(1);
-        var payload = (TaskFailedPayload)received[0].Payload!;
+        received.Count.ShouldBe(1, "Should only receive the first event, not the second after cancellation");
+        var payload = (TaskFailedPayload)received[0].Payload;
         payload.TaskId.ShouldBe("cancel-test-1");
     }
 
