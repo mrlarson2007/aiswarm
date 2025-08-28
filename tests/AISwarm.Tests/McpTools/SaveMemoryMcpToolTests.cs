@@ -36,4 +36,15 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             result.ErrorMessage.ShouldContain("value");
         }
     }
+
+    [Fact]
+    public async Task WhenSavingMemoryWithValidInput_ShouldReturnSuccess()
+    {
+        var result = await SystemUnderTest.SaveMemory(
+            key: "test-key",
+            value: "test-value");
+
+        result.Success.ShouldBeTrue();
+        result.ErrorMessage.ShouldBeNull();
+    }
 }
