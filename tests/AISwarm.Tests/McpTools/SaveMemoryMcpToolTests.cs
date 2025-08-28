@@ -13,11 +13,8 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         [Fact]
         public async Task WhenSavingMemoryWithEmptyKey_ShouldReturnErrorMessage()
         {
-            // Arrange
-            var tool = SystemUnderTest;
-
             // Act
-            var result = await tool.SaveMemory(
+            var result = await SystemUnderTest.SaveMemory(
                 key: string.Empty,
                 value: "test-value");
 
@@ -25,6 +22,18 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             result.Success.ShouldBeFalse();
             result.ErrorMessage.ShouldNotBeNull();
             result.ErrorMessage.ShouldContain("key");
+        }
+
+        [Fact]
+        public async Task  WhenSavingMemoryWithEmptyValue_ShouldReturnErrorMessage()
+        {
+            var result = await SystemUnderTest.SaveMemory(
+                key: "test-key",
+                value: string.Empty);
+
+            result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("value");
         }
     }
 }
