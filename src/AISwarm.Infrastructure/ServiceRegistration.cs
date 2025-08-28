@@ -12,6 +12,7 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IGeminiService, GeminiService>();
+        services.AddSingleton<IAgentStateService, AgentStateService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
         services.AddSingleton<IContextService, ContextService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
