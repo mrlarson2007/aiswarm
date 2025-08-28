@@ -15,11 +15,10 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
+
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
-    // setup database context in memory for testing, and Memory Service
-    private readonly CoordinationDbContext _dbContext;
+    // setup database context factory for testing, and Memory Service
     private readonly DatabaseScopeService _scopeService;
     private readonly ITimeService _timeService = new FakeTimeService();
 

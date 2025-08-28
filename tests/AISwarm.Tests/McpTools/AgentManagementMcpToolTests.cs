@@ -10,9 +10,8 @@ using Shouldly;
 namespace AISwarm.Tests.McpTools;
 
 public class AgentManagementMcpToolTests
-    : IDisposable, ISystemUnderTest<AgentManagementMcpTool>
+    : ISystemUnderTest<AgentManagementMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly TestLogger _logger;
@@ -36,15 +35,14 @@ public class AgentManagementMcpToolTests
             _testEnvironmentService,
             _logger);
 
-    public AgentManagementMcpToolTests()
+    protected AgentManagementMcpToolTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
 
         _timeService = new FakeTimeService();
-        _scopeService = new DatabaseScopeService(_dbContext);
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
         _logger = new TestLogger();
         _fakeContextService = new FakeContextService();
         _mockProcessTerminateService = new Mock<IProcessTerminationService>();
@@ -62,11 +60,6 @@ public class AgentManagementMcpToolTests
             _mockProcessTerminateService.Object);
 
         _testEnvironmentService = new TestEnvironmentService();
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
     }
 
     public class ListAgentsTests : AgentManagementMcpToolTests

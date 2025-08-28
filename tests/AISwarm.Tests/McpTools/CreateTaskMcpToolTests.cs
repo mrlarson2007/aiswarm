@@ -9,9 +9,8 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.McpTools;
 
-public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMcpTool>
+public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly IWorkItemNotificationService _notifier;
@@ -23,7 +22,7 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             _timeService,
             _notifier);
 
-    public CreateTaskMcpToolTests()
+    protected CreateTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
         _notifier = new WorkItemNotificationService(new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
@@ -31,13 +30,7 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
 
     public class TaskCreationTests : CreateTaskMcpToolTests
@@ -72,7 +65,7 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             // Assert - event should be delivered
             await readTask;
             received.Count.ShouldBe(1);
-            var payload = (TaskCreatedPayload)received[0].Payload!;
+            var payload = (TaskCreatedPayload)received[0].Payload;
             payload.TaskId.ShouldBe(result.TaskId);
             payload.AgentId.ShouldBeNull();
             payload.Persona.ShouldBe(persona);
@@ -109,7 +102,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var taskInDb = await assertScope.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.Id.ShouldBe(result.TaskId);
             taskInDb.AgentId.ShouldBe(agentId);
@@ -155,7 +149,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var taskInDb = await assertScope.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBe(agentId);
             taskInDb.Persona.ShouldBe(persona);
@@ -178,7 +173,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            using var assertScope2 = _scopeService.CreateReadScope();
+            var taskInDb = await assertScope2.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBeNull();
             taskInDb.Persona.ShouldBe(persona);
@@ -217,7 +213,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly for priority setting
-            var taskInDb = await _dbContext.Tasks.FindAsync(result.TaskId);
+            using var assertScope3 = _scopeService.CreateReadScope();
+            var taskInDb = await assertScope3.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.Priority.ShouldBe(TaskPriority.Critical);
             taskInDb.AgentId.ShouldBe(agentId);
@@ -245,7 +242,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.ErrorMessage.ShouldContain(nonExistentAgentId);
 
             // Assert - Verify no task was created in database
-            var totalTasks = await _dbContext.Tasks.CountAsync();
+            using var assertScope4 = _scopeService.CreateReadScope();
+            var totalTasks = await assertScope4.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }
 
@@ -286,7 +284,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.ErrorMessage.ShouldContain("Stopped");
 
             // Assert - Verify no task was created in database
-            var totalTasks = await _dbContext.Tasks.CountAsync();
+            using var assertScope5 = _scopeService.CreateReadScope();
+            var totalTasks = await assertScope5.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }
 
@@ -327,7 +326,8 @@ public class CreateTaskMcpToolTests : IDisposable, ISystemUnderTest<CreateTaskMc
             result.ErrorMessage.ShouldContain("Killed");
 
             // Assert - Verify no task was created in database
-            var totalTasks = await _dbContext.Tasks.CountAsync();
+            using var assertScope6 = _scopeService.CreateReadScope();
+            var totalTasks = await assertScope6.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }
     }

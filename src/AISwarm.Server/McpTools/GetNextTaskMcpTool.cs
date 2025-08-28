@@ -6,7 +6,6 @@ using AISwarm.Server.Entities;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
-using System.Linq;
 
 namespace AISwarm.Server.McpTools;
 

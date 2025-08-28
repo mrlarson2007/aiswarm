@@ -1,7 +1,5 @@
-using System.Runtime.CompilerServices;
 using AISwarm.Infrastructure.Eventing;
 using Shouldly;
-using Xunit;
 
 namespace AISwarm.Tests.Services;
 
@@ -45,8 +43,8 @@ public class WorkItemNotificationServiceTests
         }, token);
 
         await Task.Delay(5, token);
-        await service.PublishTaskCreated("t-agent", agentId, persona: null);
-        await service.PublishTaskCreated("t-persona", agentId: null, persona: persona);
+        await service.PublishTaskCreated("t-agent", agentId, persona: null, CancellationToken.None);
+        await service.PublishTaskCreated("t-persona", agentId: null, persona: persona, CancellationToken.None);
 
         await WaitForCountAsync(received, 2, token);
         await cts.CancelAsync();
@@ -58,7 +56,7 @@ public class WorkItemNotificationServiceTests
 
         // Assert
         received.Count.ShouldBe(2);
-        var ids = received.Select(e => ((TaskCreatedPayload)e.Payload!).TaskId).OrderBy(x => x).ToArray();
+        var ids = received.Select(e => ((TaskCreatedPayload)e.Payload).TaskId).OrderBy(x => x).ToArray();
         ids.ShouldBe(new[] { "t-agent", "t-persona" });
     }
 
@@ -225,13 +223,13 @@ public class WorkItemNotificationServiceTests
         }, token);
 
         await Task.Delay(5, cts.Token); // give subscription a moment
-        await service.PublishTaskCreated(taskId, agentId, persona);
+        await service.PublishTaskCreated(taskId, agentId, persona, token);
 
         await readTask;
 
         // Assert
         received.Count.ShouldBe(1);
-        var payload = (TaskCreatedPayload)received[0].Payload!;
+        var payload = (TaskCreatedPayload)received[0].Payload;
         payload.TaskId.ShouldBe(taskId);
         payload.AgentId.ShouldBe(agentId);
         payload.Persona.ShouldBe(persona);
@@ -285,7 +283,7 @@ public class WorkItemNotificationServiceTests
 
         // Assert
         received.Count.ShouldBe(1);
-        var payload = (TaskCreatedPayload)received[0].Payload!;
+        var payload = (TaskCreatedPayload)received[0].Payload;
         payload.TaskId.ShouldBe("t1");
     }
 
@@ -331,7 +329,7 @@ public class WorkItemNotificationServiceTests
 
         // Assert: only the unassigned task should be received
         received.Count.ShouldBe(1);
-        var payload = (TaskCreatedPayload)received[0].Payload!;
+        var payload = (TaskCreatedPayload)received[0].Payload;
         payload.TaskId.ShouldBe("t-unassigned");
         payload.AgentId.ShouldBeNull();
         payload.Persona.ShouldBe(persona);
@@ -555,7 +553,7 @@ public class WorkItemNotificationServiceTests
                 await foreach (var evt in service.SubscibeForTaskCompletion(taskIds, token))
                 {
                     received.Add(evt);
-                    
+
                     // Signal when first event is received to ensure deterministic ordering
                     if (received.Count == 1)
                         firstEventReceived.SetResult(true);
@@ -572,13 +570,13 @@ public class WorkItemNotificationServiceTests
 
         // Publish first event (should be received) - using TaskFailed which matches the subscription filter
         await service.PublishTaskFailed("cancel-test-1", "agent-1", "cancelled");
-        
+
         // Wait for first event to be processed
         await firstEventReceived.Task;
 
         // Cancel subscription immediately after confirming first event received
         await cts.CancelAsync();
-        
+
         // Wait for the async enumeration to complete
         try
         {

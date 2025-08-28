@@ -12,7 +12,7 @@ using AISwarm.Infrastructure.Eventing;
 namespace AISwarm.Tests.McpTools;
 
 public class GetNextTaskMcpToolTests
-    : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
+    : ISystemUnderTest<GetNextTaskMcpTool>
 {
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
@@ -21,7 +21,6 @@ public class GetNextTaskMcpToolTests
         new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
     private readonly IWorkItemNotificationService _notifier;
     private GetNextTaskMcpTool? _systemUnderTest;
-    private readonly IDbContextFactory<CoordinationDbContext> _contextFactory;
 
     public GetNextTaskMcpTool SystemUnderTest =>
         _systemUnderTest ??= CreateSystemUnderTest();
@@ -33,27 +32,21 @@ public class GetNextTaskMcpToolTests
         return tool;
     }
 
-    public GetNextTaskMcpToolTests()
+    protected GetNextTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        
-        _contextFactory = new TestDbContextFactory(options);
-        _scopeService = new DatabaseScopeService(_contextFactory);
+
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
 
         _mockLocalAgentService = new Mock<ILocalAgentService>();
         _mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(It.IsAny<string>()))
             .ReturnsAsync(true);
 
         _notifier = new WorkItemNotificationService(_bus);
-    }
-
-    public void Dispose()
-    {
-        // Context factory handles disposal
     }
 
     public class TaskRetrievalNoTasksAvailableTests : GetNextTaskMcpToolTests
@@ -76,7 +69,7 @@ public class GetNextTaskMcpToolTests
             // Act - GetNextTaskAsync should check database first, not wait for events
             // Using a short timeout configuration - the key is it should find the task without timing out
             var config = new GetNextTaskConfiguration { TimeToWaitForTask = TimeSpan.FromMilliseconds(200) };
-            
+
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var result = await SystemUnderTest.GetNextTaskAsync(agentId, config);
             stopwatch.Stop();
@@ -86,9 +79,9 @@ public class GetNextTaskMcpToolTests
             result.TaskId.ShouldBe(taskId);
             result.Persona.ShouldBe(persona);
             result.Description.ShouldBe(description);
-            
+
             // Should not take the full timeout - should be much faster than 200ms
-            stopwatch.ElapsedMilliseconds.ShouldBeLessThan(200, 
+            stopwatch.ElapsedMilliseconds.ShouldBeLessThan(200,
                 "Should find task quickly from database, not wait full timeout period");
 
             // Verify heartbeat was updated
@@ -737,20 +730,5 @@ public class GetNextTaskMcpToolTests
         await scope.SaveChangesAsync();
         scope.Complete();
         return taskId;
-    }
-}
-
-public class TestDbContextFactory : IDbContextFactory<CoordinationDbContext>
-{
-    private readonly DbContextOptions<CoordinationDbContext> _options;
-
-    public TestDbContextFactory(DbContextOptions<CoordinationDbContext> options)
-    {
-        _options = options;
-    }
-
-    public CoordinationDbContext CreateDbContext()
-    {
-        return new CoordinationDbContext(_options);
     }
 }

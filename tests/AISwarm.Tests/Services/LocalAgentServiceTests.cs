@@ -10,9 +10,8 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
 namespace AISwarm.Tests.Services;
 
-public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentService>
+public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private LocalAgentService? _systemUnderTest;
     private readonly FakeTimeService _timeService;
@@ -30,13 +29,9 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
-    }
 
-    public void Dispose()
-    {
-        _dbContext.Dispose();
+        var contextFactory = new TestDbContextFactory(options);
+        _scopeService = new DatabaseScopeService(contextFactory);
     }
 
     public class AgentRegistrationTests : LocalAgentServiceTests
@@ -61,7 +56,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             // Assert - Check database directly instead of using service API
             agentId.ShouldNotBeNullOrEmpty();
 
-            var agentInDb = await _dbContext.Agents.FindAsync(agentId);
+            using var scope = _scopeService.CreateReadScope();
+            var agentInDb = await scope.Agents.FindAsync(agentId);
             agentInDb.ShouldNotBeNull();
             agentInDb.Id.ShouldBe(agentId);
             agentInDb.PersonaId.ShouldBe("planner");
@@ -98,8 +94,10 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             agentId1.ShouldNotBeNullOrEmpty();
             agentId2.ShouldNotBeNullOrEmpty();
 
-            var agent1InDb = await _dbContext.Agents.FindAsync(agentId1);
-            var agent2InDb = await _dbContext.Agents.FindAsync(agentId2);
+            // Assert - Check database directly instead of using service API
+            using var scope = _scopeService.CreateReadScope();
+            var agent1InDb = await scope.Agents.FindAsync(agentId1);
+            var agent2InDb = await scope.Agents.FindAsync(agentId2);
 
             agent1InDb.ShouldNotBeNull();
             agent1InDb.PersonaId.ShouldBe("planner");
@@ -110,7 +108,7 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             agent2InDb.WorkingDirectory.ShouldBe("/path2");
 
             // Verify database contains exactly 2 agents
-            var totalAgents = await _dbContext.Agents.CountAsync();
+            var totalAgents = await scope.Agents.CountAsync();
             totalAgents.ShouldBe(2);
         }
 
@@ -131,7 +129,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             var agentId = await SystemUnderTest.RegisterAgentAsync(request);
 
             // Assert
-            var agent = await _dbContext.Agents.FindAsync(agentId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var agent = await assertScope.Agents.FindAsync(agentId);
             agent.ShouldNotBeNull();
             agent.PersonaId.ShouldBe("tester");
             agent.AgentType.ShouldBe("tester");
@@ -174,7 +173,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             // Assert
             success.ShouldBeTrue();
 
-            var updatedAgent = await _dbContext.Agents.FindAsync(agentId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var updatedAgent = await assertScope.Agents.FindAsync(agentId);
             updatedAgent!.Status.ShouldBe(AgentStatus.Running);
             updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
         }
@@ -208,7 +208,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             // Assert
             success.ShouldBeTrue();
 
-            var updatedAgent = await _dbContext.Agents.FindAsync(agentId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var updatedAgent = await assertScope.Agents.FindAsync(agentId);
             updatedAgent!.Status.ShouldBe(AgentStatus.Running);
             updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
         }
@@ -226,7 +227,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             await SystemUnderTest.KillAgentAsync(unknownAgentId);
 
             // Assert - No exception thrown, database remains empty
-            var totalAgents = await _dbContext.Agents.CountAsync();
+            using var assertScope = _scopeService.CreateReadScope();
+            var totalAgents = await assertScope.Agents.CountAsync();
             totalAgents.ShouldBe(0);
         }
 
@@ -258,7 +260,8 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
             await SystemUnderTest.KillAgentAsync(agentId);
 
             // Assert
-            var agent = await _dbContext.Agents.FindAsync(agentId);
+            using var assertScope = _scopeService.CreateReadScope();
+            var agent = await assertScope.Agents.FindAsync(agentId);
             agent!.Status.ShouldBe(AgentStatus.Killed);
             agent.StoppedAt.ShouldBe(_timeService.UtcNow);
         }
@@ -346,16 +349,21 @@ public class LocalAgentServiceTests : IDisposable, ISystemUnderTest<LocalAgentSe
                 CreatedAt = _timeService.UtcNow
             };
 
-            _dbContext.Tasks.AddRange(task1, task2, task3);
-            await _dbContext.SaveChangesAsync();
+            // Setup task data
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.Tasks.AddRange(task1, task2, task3);
+                await scope.SaveChangesAsync();
+            }
 
             // Act
             await SystemUnderTest.KillAgentAsync(agentId);
 
             // Assert
-            var updatedTask1 = await _dbContext.Tasks.FindAsync("task-1");
-            var updatedTask2 = await _dbContext.Tasks.FindAsync("task-2");
-            var updatedTask3 = await _dbContext.Tasks.FindAsync("task-3");
+            using var assertScope = _scopeService.CreateReadScope();
+            var updatedTask1 = await assertScope.Tasks.FindAsync("task-1");
+            var updatedTask2 = await assertScope.Tasks.FindAsync("task-2");
+            var updatedTask3 = await assertScope.Tasks.FindAsync("task-3");
 
             // Task 1 was InProgress for this agent - should be Failed
             updatedTask1!.Status.ShouldBe(TaskStatus.Failed);

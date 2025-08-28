@@ -1,5 +1,4 @@
-﻿using AISwarm.DataLayer.Entities;
-using AISwarm.Infrastructure.Entities;
+﻿using AISwarm.Infrastructure.Entities;
 
 namespace AISwarm.Infrastructure;
 

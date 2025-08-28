@@ -1,41 +1,29 @@
-using System;
-using System.Threading.Tasks;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Server.Entities;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
-using Xunit;
 
 namespace AISwarm.Tests.McpTools;
 
-public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMcpTool>
+public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
-    private readonly IMemoryService _memoryService;
     private readonly FakeTimeService _timeService;
 
     public ReadMemoryMcpTool SystemUnderTest { get; }
 
-    public ReadMemoryMcpToolTests()
+    protected ReadMemoryMcpToolTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        _dbContext = new CoordinationDbContext(options);
         _timeService = new FakeTimeService();
-        _scopeService = new DatabaseScopeService(_dbContext);
-        _memoryService = new MemoryService(_scopeService, _timeService);
-        SystemUnderTest = new ReadMemoryMcpTool(_memoryService);
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
+        IMemoryService memoryService = new MemoryService(_scopeService, _timeService);
+        SystemUnderTest = new ReadMemoryMcpTool(memoryService);
     }
 
     public class ValidationTests : ReadMemoryMcpToolTests
@@ -44,7 +32,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
         public async Task WhenKeyIsEmpty_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("", "");
+            var result = await SystemUnderTest.ReadMemoryAsync("", @namespace:"");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -55,7 +43,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
         public async Task WhenMemoryDoesNotExist_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", "");
+            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", @namespace:"");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -71,7 +59,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             // Arrange
             const string key = "test-key";
             const string value = "test-value";
-            const string @namespace = "";
+            const string @namespace = "mynamespace";
             const string metadata = "{\"source\":\"test\",\"priority\":\"high\"}";
             var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
             {
@@ -116,8 +104,8 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             // Arrange
             const string key = "access-test-key";
             const string value = "access-test-value";
-            const string @namespace = "";
-            
+            const string @namespace = "mynamespace2";
+
             var initialTime = _timeService.UtcNow;
             var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
             {
@@ -134,36 +122,36 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
                 AccessedAt = null,
                 AccessCount = 0
             };
-            
+
             // Create memory entry directly in database
             using (var scope = _scopeService.CreateWriteScope())
             {
                 scope.MemoryEntries.Add(memoryEntry);
                 await scope.SaveChangesAsync();
             }
-            
+
             // Advance time to verify AccessedAt is updated
             var accessTime = initialTime.AddMinutes(5);
             _timeService.AdvanceTime(TimeSpan.FromMinutes(5));
-            
+
             // Act
             var result = await SystemUnderTest.ReadMemoryAsync(key, @namespace);
-            
+
             // Assert - Check database directly for access tracking updates
             using (var scope = _scopeService.CreateReadScope())
             {
                 var updatedEntry = await scope.MemoryEntries
                     .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == @namespace);
-                
+
                 updatedEntry.ShouldNotBeNull();
                 updatedEntry.AccessedAt.ShouldBe(accessTime);
                 updatedEntry.AccessCount.ShouldBe(1);
-                
+
                 // Verify other fields unchanged
                 updatedEntry.CreatedAt.ShouldBe(initialTime);
                 updatedEntry.LastUpdatedAt.ShouldBe(initialTime);
             }
-            
+
             result.Success.ShouldBeTrue();
         }
     }

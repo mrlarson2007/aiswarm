@@ -12,7 +12,6 @@ namespace AISwarm.Tests.McpTools;
 public class ReportTaskCompletionMcpToolTests
     : IDisposable, ISystemUnderTest<ReportTaskCompletionMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
@@ -31,13 +30,13 @@ public class ReportTaskCompletionMcpToolTests
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
+
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
 
     public void Dispose()
     {
-        _dbContext.Dispose();
+        // Context factory handles disposal
     }
 
     public class TaskReportCompletionTests : ReportTaskCompletionMcpToolTests
