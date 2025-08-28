@@ -232,7 +232,7 @@ public class WorkItemNotificationServiceTests
         var payload = (TaskCreatedPayload)received[0].Payload;
         payload.TaskId.ShouldBe(taskId);
         payload.AgentId.ShouldBe(agentId);
-        payload.Persona.ShouldBe(persona);
+        payload.PersonaId.ShouldBe(persona);
     }
 
     [Fact(Timeout = 5000)]
@@ -332,7 +332,7 @@ public class WorkItemNotificationServiceTests
         var payload = (TaskCreatedPayload)received[0].Payload;
         payload.TaskId.ShouldBe("t-unassigned");
         payload.AgentId.ShouldBeNull();
-        payload.Persona.ShouldBe(persona);
+        payload.PersonaId.ShouldBe(persona);
     }
 
     [Fact]

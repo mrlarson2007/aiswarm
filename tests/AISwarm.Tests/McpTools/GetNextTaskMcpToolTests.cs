@@ -56,11 +56,11 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange - RED: This test reproduces the bug where agents don't pick up existing tasks
             var agentId = "agent-existing-task";
-            var persona = "You are a reviewer. Review code for quality.";
+            var persona = "reviewer";
             var description = "Review the authentication module";
 
             // Create a running agent
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, persona);
 
             // Create a task that's already assigned to the agent (simulating a task created before agent starts)
             // NOTE: This does NOT publish an event, so the agent should check database directly
@@ -113,12 +113,12 @@ public class GetNextTaskMcpToolTests
             // Arrange
             var agentId = "agent-race-condition";
             var otherAgentId = "other-agent";
-            var persona = "You are a planner. Plan development tasks.";
+            var persona = "planner";
             var description = "Plan the authentication feature";
 
             // Create running agents
-            await CreateRunningAgentAsync(agentId);
-            await CreateRunningAgentAsync(otherAgentId);
+            await CreateRunningAgentAsync(agentId, persona);
+            await CreateRunningAgentAsync(otherAgentId, persona);
 
             // Create an unassigned task
             var taskId = await CreateUnassignedTaskAsync(persona, description);
@@ -157,7 +157,7 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-timeout-param";
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, "planner");
 
             var tool = SystemUnderTest;
             // Ensure default config has long timeout, so param takes effect
@@ -186,13 +186,13 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-priority-test";
-            var lowPriorityPersona = "You are a reviewer. Review code for quality.";
+            var lowPriorityPersona = "reviewer";
             var lowPriorityDescription = "Review documentation for typos";
-            var highPriorityPersona = "You are a security reviewer. Review for security issues.";
+            var highPriorityPersona = "reviewer";
             var highPriorityDescription = "Critical security review needed immediately";
 
             // Create a running agent
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create low priority task first (older timestamp)
             var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
@@ -229,13 +229,13 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-assigned-priority";
-            var lowPriorityPersona = "You are a reviewer. Review code for quality.";
+            var lowPriorityPersona = "reviewer";
             var lowPriorityDescription = "Review documentation for typos";
-            var highPriorityPersona = "You are a security reviewer. Review for security issues.";
+            var highPriorityPersona = "reviewer";
             var highPriorityDescription = "Critical security review needed immediately";
 
             // Create a running agent
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create low priority assigned task first (older timestamp)
             _ = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
@@ -261,13 +261,13 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-mixed-priority";
-            var assignedPersona = "You are a reviewer. Review code for quality.";
+            var assignedPersona = "reviewer";
             var assignedDescription = "Review basic documentation";
-            var unassignedPersona = "You are an emergency responder. Handle critical issues.";
+            var unassignedPersona = "implementer";
             var unassignedDescription = "Critical system failure needs immediate attention";
 
             // Create a running agent
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create high priority unassigned task first
             var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, TaskPriority.Critical);
@@ -299,11 +299,11 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-claimer";
-            var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+            var expectedPersona = "planner";
             var expectedDescription = "Plan the authentication feature implementation";
 
             // Create a running agent
-            await CreateRunningAgentAsync(agentId);
+            await CreateRunningAgentAsync(agentId, "planner");
 
             // Create an unassigned task (AgentId is null/empty)
             var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription);
@@ -335,9 +335,9 @@ public class GetNextTaskMcpToolTests
             await CreateRunningAgentAsync(reviewerAgentId, "reviewer");
             await CreateRunningAgentAsync(plannerAgentId, "planner");
 
-            var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+            var expectedPersona = "planner";
             var expectedDescription = "Plan the authentication feature implementation";
-            var taskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription, "planner");
+            var taskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription);
 
             // Act - non-matching agent tries to get task
             var nonMatchingResult = await SystemUnderTest.GetNextTaskAsync(reviewerAgentId);
@@ -363,9 +363,9 @@ public class GetNextTaskMcpToolTests
             var agentId = "agent-persona-match";
             await CreateRunningAgentAsync(agentId, "planner");
 
-            var expectedPersona = "You are a planner. Plan and coordinate development tasks.";
+            var expectedPersona = "planner";
             var expectedDescription = "Plan the roadmap";
-            var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription, "planner");
+            var unassignedTaskId = await CreateUnassignedTaskAsync(expectedPersona, expectedDescription);
 
             // Act
             var result = await SystemUnderTest.GetNextTaskAsync(agentId);
@@ -399,7 +399,6 @@ public class GetNextTaskMcpToolTests
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -440,7 +439,6 @@ public class GetNextTaskMcpToolTests
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -482,7 +480,6 @@ public class GetNextTaskMcpToolTests
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -512,7 +509,6 @@ public class GetNextTaskMcpToolTests
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -547,7 +543,7 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-polling-success";
-            var expectedPersona = "You are a code reviewer. Review code for quality and security.";
+            var expectedPersona = "test-persona";
             var expectedDescription = "Review the authentication module for security vulnerabilities";
 
             // Create a running agent with no initial tasks
@@ -556,8 +552,7 @@ public class GetNextTaskMcpToolTests
                 scope.Agents.Add(new Agent
                 {
                     Id = agentId,
-                    PersonaId = "test-persona",
-                    AgentType = "test",
+                    PersonaId = expectedPersona,
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -596,23 +591,6 @@ public class GetNextTaskMcpToolTests
         }
     }
 
-    private async Task CreateRunningAgentAsync(string agentId)
-    {
-        using var scope = _scopeService.CreateWriteScope();
-        var agent = new Agent
-        {
-            Id = agentId,
-            PersonaId = "test-persona",
-            AgentType = "test",
-            WorkingDirectory = "/test",
-            Status = AgentStatus.Running,
-            RegisteredAt = _timeService.UtcNow,
-            LastHeartbeat = _timeService.UtcNow
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
 
     private async Task CreateRunningAgentAsync(string agentId, string personaId)
     {
@@ -621,7 +599,6 @@ public class GetNextTaskMcpToolTests
         {
             Id = agentId,
             PersonaId = personaId,
-            AgentType = "test",
             WorkingDirectory = "/test",
             Status = AgentStatus.Running,
             LastHeartbeat = _timeService.UtcNow,
@@ -640,7 +617,7 @@ public class GetNextTaskMcpToolTests
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,
             Description = description,
             CreatedAt = _timeService.UtcNow
         };
@@ -660,7 +637,7 @@ public class GetNextTaskMcpToolTests
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,
             Description = description,
             CreatedAt = _timeService.UtcNow
         };
@@ -670,7 +647,7 @@ public class GetNextTaskMcpToolTests
         return taskId;
     }
 
-    private async Task<string> CreateUnassignedTaskAsync(string persona, string description, string? personaId = null)
+    private async Task<string> CreateUnassignedTaskAsync(string personaId, string description)
     {
         using var scope = _scopeService.CreateWriteScope();
         var taskId = Guid.NewGuid().ToString();
@@ -679,9 +656,8 @@ public class GetNextTaskMcpToolTests
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
             Status = TaskStatus.Pending,
-            Persona = persona,
-            Description = description,
             PersonaId = personaId,
+            Description = description,
             CreatedAt = _timeService.UtcNow
         };
         scope.Tasks.Add(task);
@@ -700,7 +676,7 @@ public class GetNextTaskMcpToolTests
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,
             Description = description,
             Priority = priority,
             CreatedAt = _timeService.UtcNow
@@ -721,7 +697,7 @@ public class GetNextTaskMcpToolTests
             Id = taskId,
             AgentId = string.Empty, // Unassigned task
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,
             Description = description,
             Priority = priority,
             CreatedAt = _timeService.UtcNow

@@ -31,7 +31,7 @@ public class CreateTaskMcpTool(
     public async Task<CreateTaskResult> CreateTaskAsync(
         [Description("ID of the agent to assign the task to (optional - leave empty for unassigned task)")]
         string? agentId,
-        [Description("Full persona markdown content for the agent")]
+        [Description("Agent persona (implementer, reviewer, planner, etc.)")]
         string persona,
         [Description("Description of what the agent should accomplish")]
         string description,
@@ -62,7 +62,7 @@ public class CreateTaskMcpTool(
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,  // This is the routing tag
             Description = description,
             Priority = priority,
             CreatedAt = timeService.UtcNow

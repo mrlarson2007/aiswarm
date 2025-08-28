@@ -479,7 +479,7 @@ public class LaunchAgentCommandHandlerTests
             var agents = await scope.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
-            agent.AgentType.ShouldBe("planner");
+            agent.PersonaId.ShouldBe("planner");
             agent.WorkingDirectory.ShouldBe("/repo");
             agent.Model.ShouldBe("gemini-1.5-pro");
             agent.Status.ShouldBe(AgentStatus.Starting);

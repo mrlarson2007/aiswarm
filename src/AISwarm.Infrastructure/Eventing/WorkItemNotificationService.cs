@@ -12,14 +12,14 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
         IAsyncEnumerable<EventEnvelope<TaskEventType, ITaskLifecyclePayload>> asyncEnumerable)
     {
         return EventConversion.ConvertToConcreteEnvelope(
-            asyncEnumerable, 
+            asyncEnumerable,
             (type, timestamp, payload) => new TaskEventEnvelope(type, timestamp, payload));
     }
 
     public IAsyncEnumerable<TaskEventEnvelope> SubscribeForAgent(string agentId, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
-        
+
         var filter = new TaskEventFilter(
             Types: [TaskEventType.Created],
             Predicate: e => e.Payload is TaskCreatedPayload p && p.AgentId == agentId);
@@ -29,11 +29,11 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
     public IAsyncEnumerable<TaskEventEnvelope> SubscribeForPersona(string persona, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(persona, nameof(persona));
-        
+
         var filter = new TaskEventFilter(
             Types: [TaskEventType.Created],
             Predicate: e => e.Payload is TaskCreatedPayload p
-                && string.Equals(p.Persona, persona, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(p.PersonaId, persona, StringComparison.OrdinalIgnoreCase)
                 && p.AgentId == null);
         return ToTaskEventEnvelopeAsyncEnumerable(Bus.Subscribe(filter, ct));
     }
@@ -45,7 +45,7 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
         CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(taskId, nameof(taskId));
-        
+
         var payload = new TaskCreatedPayload(taskId, agentId, persona);
         return PublishEventAsync(TaskEventType.Created, payload, ct);
     }
@@ -56,7 +56,7 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
         CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(taskId, nameof(taskId));
-        
+
         var payload = new TaskCompletedPayload(taskId, agentId);
         return PublishEventAsync(TaskEventType.Completed, payload, ct);
     }
@@ -78,7 +78,7 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
             Types: [TaskEventType.Created],
             Predicate: e => e.Payload is TaskCreatedPayload p &&
                 (string.Equals(p.AgentId, agentId, StringComparison.OrdinalIgnoreCase) ||
-                 (p.AgentId == null && string.Equals(p.Persona, persona, StringComparison.OrdinalIgnoreCase))));
+                 (p.AgentId == null && string.Equals(p.PersonaId, persona, StringComparison.OrdinalIgnoreCase))));
         return ToTaskEventEnvelopeAsyncEnumerable(Bus.Subscribe(filter, ct));
     }
 
@@ -132,6 +132,6 @@ public interface ITaskLifecyclePayload : IEventPayload
         get;
     }
 }
-public record TaskCreatedPayload(string TaskId, string? AgentId, string? Persona) : ITaskLifecyclePayload;
+public record TaskCreatedPayload(string TaskId, string? AgentId, string? PersonaId) : ITaskLifecyclePayload;
 public record TaskCompletedPayload(string TaskId, string? AgentId) : ITaskLifecyclePayload;
 public record TaskFailedPayload(string TaskId, string? AgentId, string? Reason) : ITaskLifecyclePayload;

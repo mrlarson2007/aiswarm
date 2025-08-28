@@ -36,7 +36,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
 
         var contextFactory = new TestDbContextFactory(options);
         _scopeService = new DatabaseScopeService(contextFactory);
-        
+
         _mockNotificationService = new Mock<IAgentNotificationService>();
         _mockProcessTerminationService = new Mock<IProcessTerminationService>();
         _agentStateService = new AgentStateService(_scopeService, _mockNotificationService.Object, _mockProcessTerminationService.Object);
@@ -51,7 +51,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             var request = new AgentRegistrationRequest
             {
                 PersonaId = "planner",
-                AgentType = "planner",
                 WorkingDirectory = "/test/path",
                 Model = "gemini-1.5-pro",
                 WorktreeName = "main"
@@ -69,7 +68,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             agentInDb.ShouldNotBeNull();
             agentInDb.Id.ShouldBe(agentId);
             agentInDb.PersonaId.ShouldBe("planner");
-            agentInDb.AgentType.ShouldBe("planner");
             agentInDb.WorkingDirectory.ShouldBe("/test/path");
             agentInDb.Model.ShouldBe("gemini-1.5-pro");
             agentInDb.WorktreeName.ShouldBe("main");
@@ -85,11 +83,10 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
         {
             // Arrange
             var request1 =
-                new AgentRegistrationRequest { PersonaId = "planner", AgentType = "planner", WorkingDirectory = "/path1" };
+                new AgentRegistrationRequest { PersonaId = "planner", WorkingDirectory = "/path1" };
             var request2 = new AgentRegistrationRequest
             {
                 PersonaId = "implementer",
-                AgentType = "implementer",
                 WorkingDirectory = "/path2"
             };
 
@@ -127,7 +124,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             var request = new AgentRegistrationRequest
             {
                 PersonaId = "tester",
-                AgentType = "tester",
                 WorkingDirectory = "/test/minimal-path",
                 Model = null,
                 WorktreeName = null
@@ -141,7 +137,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             var agent = await assertScope.Agents.FindAsync(agentId);
             agent.ShouldNotBeNull();
             agent.PersonaId.ShouldBe("tester");
-            agent.AgentType.ShouldBe("tester");
             agent.WorkingDirectory.ShouldBe("/test/minimal-path");
             agent.Model.ShouldBeNull();
             agent.WorktreeName.ShouldBeNull();
@@ -163,7 +158,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 {
                     Id = agentId,
                     PersonaId = "tester",
-                    AgentType = "tester",
                     WorkingDirectory = "/test/path",
                     Status = AgentStatus.Starting,
                     RegisteredAt = _timeService.UtcNow.AddMinutes(-5),
@@ -198,7 +192,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 {
                     Id = agentId,
                     PersonaId = "tester",
-                    AgentType = "tester",
                     WorkingDirectory = "/test/path",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow.AddMinutes(-5),
@@ -251,7 +244,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 {
                     Id = agentId,
                     PersonaId = "tester",
-                    AgentType = "tester",
                     WorkingDirectory = "/test/path",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow.AddMinutes(-10),
@@ -286,7 +278,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 {
                     Id = agentId,
                     PersonaId = "tester",
-                    AgentType = "tester",
                     WorkingDirectory = "/test/path",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow.AddMinutes(-10),
@@ -300,7 +291,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Act
             await SystemUnderTest.KillAgentAsync(agentId);
 
-            // Assert - The agent state service will be tested separately, 
+            // Assert - The agent state service will be tested separately,
             // here we just verify the method completes successfully
         }
 
@@ -315,7 +306,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 {
                     Id = agentId,
                     PersonaId = "tester",
-                    AgentType = "tester",
                     WorkingDirectory = "/test/path",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow.AddMinutes(-10),
@@ -331,7 +321,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 Id = "task-1",
                 AgentId = agentId,
                 Status = TaskStatus.InProgress,
-                Persona = "implementer",
+                PersonaId = "implementer",
                 Description = "Task 1 in progress",
                 CreatedAt = _timeService.UtcNow,
                 StartedAt = _timeService.UtcNow
@@ -342,7 +332,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 Id = "task-2",
                 AgentId = agentId,
                 Status = TaskStatus.Pending,
-                Persona = "implementer",
+                PersonaId = "implementer",
                 Description = "Task 2 pending",
                 CreatedAt = _timeService.UtcNow
             };
@@ -352,7 +342,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 Id = "task-3",
                 AgentId = "other-agent",
                 Status = TaskStatus.InProgress,
-                Persona = "implementer",
+                PersonaId = "implementer",
                 Description = "Task 3 for different agent",
                 CreatedAt = _timeService.UtcNow
             };

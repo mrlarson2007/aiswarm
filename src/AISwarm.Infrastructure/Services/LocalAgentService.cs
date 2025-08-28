@@ -30,7 +30,6 @@ public class LocalAgentService(
         {
             Id = agentId,
             PersonaId = request.PersonaId,
-            AgentType = request.AgentType,
             WorkingDirectory = request.WorkingDirectory,
             Status = AgentStatus.Starting,
             RegisteredAt = currentTime,
@@ -63,7 +62,7 @@ public class LocalAgentService(
             {
                 await agentStateService.ActivateAsync(agentId, timeService.UtcNow);
             }
-            
+
             await scope.SaveChangesAsync();
             scope.Complete();
             return true;
@@ -86,7 +85,6 @@ public class LocalAgentService(
 public record AgentRegistrationRequest
 {
     public string PersonaId { get; init; } = string.Empty;
-    public string AgentType { get; init; } = string.Empty;
     public string WorkingDirectory { get; init; } = string.Empty;
     public string? Model
     {

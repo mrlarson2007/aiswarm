@@ -68,7 +68,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var payload = (TaskCreatedPayload)received[0].Payload;
             payload.TaskId.ShouldBe(result.TaskId);
             payload.AgentId.ShouldBeNull();
-            payload.Persona.ShouldBe(persona);
+            payload.PersonaId.ShouldBe(persona);
         }
         [Fact]
         public async Task WhenCreatingTaskForRunningAgent_ShouldSaveTaskToDatabase()
@@ -85,7 +85,6 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -107,7 +106,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             taskInDb.ShouldNotBeNull();
             taskInDb.Id.ShouldBe(result.TaskId);
             taskInDb.AgentId.ShouldBe(agentId);
-            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.PersonaId.ShouldBe(persona);
             taskInDb.Description.ShouldBe(description);
             taskInDb.Status.ShouldBe(TaskStatus.Pending);
             taskInDb.Priority.ShouldBe(TaskPriority.Normal);
@@ -132,7 +131,6 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Starting,
                     RegisteredAt = _timeService.UtcNow,
@@ -153,7 +151,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var taskInDb = await assertScope.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBe(agentId);
-            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.PersonaId.ShouldBe(persona);
             taskInDb.Description.ShouldBe(description);
             taskInDb.Status.ShouldBe(TaskStatus.Pending);
         }
@@ -177,7 +175,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var taskInDb = await assertScope2.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBeNull();
-            taskInDb.Persona.ShouldBe(persona);
+            taskInDb.PersonaId.ShouldBe(persona);
             taskInDb.Description.ShouldBe(description);
             taskInDb.Status.ShouldBe(TaskStatus.Pending);
         }
@@ -196,7 +194,6 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
                 {
                     Id = agentId,
                     PersonaId = "security-expert",
-                    AgentType = "security",
                     WorkingDirectory = "/security",
                     Status = AgentStatus.Running,
                     RegisteredAt = _timeService.UtcNow,
@@ -262,7 +259,6 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Stopped,
                     RegisteredAt = _timeService.UtcNow,
@@ -304,7 +300,6 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
                 {
                     Id = agentId,
                     PersonaId = "test-persona",
-                    AgentType = "test",
                     WorkingDirectory = "/test",
                     Status = AgentStatus.Killed,
                     RegisteredAt = _timeService.UtcNow,

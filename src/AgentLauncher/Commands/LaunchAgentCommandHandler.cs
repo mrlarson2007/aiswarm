@@ -68,8 +68,7 @@ public class LaunchAgentCommandHandler(
                 logger.Info("Registering agent in database for monitoring...");
                 var request = new AgentRegistrationRequest
                 {
-                    PersonaId = agentType, // Using agentType as PersonaId for now
-                    AgentType = agentType,
+                    PersonaId = agentType,
                     WorkingDirectory = workDir,
                     Model = model,
                     WorktreeName = worktree

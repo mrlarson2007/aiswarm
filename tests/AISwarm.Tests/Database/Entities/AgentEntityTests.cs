@@ -13,7 +13,6 @@ public class AgentEntityTests
         {
             Id = "agent-123",
             PersonaId = "planner",
-            AgentType = "planner",
             WorkingDirectory = "/test/path",
             Status = AgentStatus.Running,
             StartedAt = DateTime.UtcNow,
@@ -24,7 +23,6 @@ public class AgentEntityTests
         // Assert
         agent.Id.ShouldBe("agent-123");
         agent.PersonaId.ShouldBe("planner");
-        agent.AgentType.ShouldBe("planner");
         agent.WorkingDirectory.ShouldBe("/test/path");
         agent.Status.ShouldBe(AgentStatus.Running);
         agent.StartedAt.ShouldNotBe(default);

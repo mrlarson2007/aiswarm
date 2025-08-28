@@ -113,7 +113,6 @@ public class AgentManagementMcpTool(
             var registrationRequest = new AgentRegistrationRequest
             {
                 PersonaId = persona,
-                AgentType = persona,
                 WorkingDirectory = workingDirectory,
                 Model = model,
                 WorktreeName = worktreeName

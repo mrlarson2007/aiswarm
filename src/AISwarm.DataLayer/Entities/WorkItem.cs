@@ -42,15 +42,6 @@ public class WorkItem
     }
 
     /// <summary>
-    ///     Full persona markdown content defining the agent's role and behavior
-    /// </summary>
-    public string Persona
-    {
-        get;
-        set;
-    } = string.Empty;
-
-    /// <summary>
     ///     Description of what the agent should accomplish
     /// </summary>
     public string Description

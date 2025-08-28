@@ -324,7 +324,6 @@ public class AgentManagementMcpToolTests
         {
             Id = agentId,
             PersonaId = personaId,
-            AgentType = personaId,
             Status = status,
             RegisteredAt = _timeService.UtcNow,
             LastHeartbeat = _timeService.UtcNow,

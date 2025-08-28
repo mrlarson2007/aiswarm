@@ -27,7 +27,6 @@ public class DatabaseScopeTests : IDisposable
         {
             Id = "read-test-agent",
             PersonaId = "tester",
-            AgentType = "tester",
             WorkingDirectory = "/read/test",
             Status = AgentStatus.Starting,
             RegisteredAt = DateTime.UtcNow,
@@ -65,7 +64,6 @@ public class DatabaseScopeTests : IDisposable
             {
                 Id = "write-test-agent",
                 PersonaId = "implementer",
-                AgentType = "implementer",
                 WorkingDirectory = "/write/test",
                 Status = AgentStatus.Starting,
                 RegisteredAt = DateTime.UtcNow,
@@ -98,7 +96,6 @@ public class DatabaseScopeTests : IDisposable
             {
                 Id = "transaction-scope-test",
                 PersonaId = "tester",
-                AgentType = "tester",
                 WorkingDirectory = "/scope/test",
                 Status = AgentStatus.Starting,
                 RegisteredAt = DateTime.UtcNow,

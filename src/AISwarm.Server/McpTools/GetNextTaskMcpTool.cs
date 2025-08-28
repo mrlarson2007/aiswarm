@@ -140,7 +140,7 @@ public class GetNextTaskMcpTool(
                 {
                     return GetNextTaskResult.SuccessWithTask(
                         evtTask.Id,
-                        evtTask.Persona,
+                        evtTask.PersonaId ?? string.Empty,
                         evtTask.Description);
                 }
 
@@ -163,7 +163,7 @@ public class GetNextTaskMcpTool(
         if (pendingTask != null)
             return GetNextTaskResult.SuccessWithTask(
                 pendingTask.Id,
-                pendingTask.Persona,
+                pendingTask.PersonaId ?? string.Empty,
                 pendingTask.Description);
 
         var unassignedTask = await scope.Tasks
@@ -211,7 +211,7 @@ public class GetNextTaskMcpTool(
 
         return GetNextTaskResult.SuccessWithTask(
             task.Id,
-            task.Persona,
+            task.PersonaId ?? string.Empty,
             task.Description);
     }
 
