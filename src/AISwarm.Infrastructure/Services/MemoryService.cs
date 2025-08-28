@@ -58,6 +58,7 @@ public class MemoryService(
             memoryEntry.Value,
             memoryEntry.Namespace,
             memoryEntry.Type,
-            memoryEntry.Size);
+            memoryEntry.Size,
+            memoryEntry.Metadata);
     }
 }

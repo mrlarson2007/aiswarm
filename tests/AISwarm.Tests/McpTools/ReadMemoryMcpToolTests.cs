@@ -72,6 +72,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             const string key = "test-key";
             const string value = "test-value";
             const string @namespace = "";
+            const string metadata = "{\"source\":\"test\",\"priority\":\"high\"}";
             var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
             {
                 Id = Guid.NewGuid().ToString(),
@@ -79,7 +80,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
                 Key = key,
                 Value = value,
                 Type = "text",
-                Metadata = null,
+                Metadata = metadata,
                 IsCompressed = false,
                 Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
                 CreatedAt = _timeService.UtcNow,
@@ -106,6 +107,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             result.Namespace.ShouldBe(memoryEntry.Namespace);
             result.Type.ShouldBe(memoryEntry.Type);
             result.Size.ShouldBe(memoryEntry.Size);
+            result.Metadata.ShouldBe(memoryEntry.Metadata);
         }
 
         [Fact]

@@ -5,5 +5,6 @@ public record MemoryEntryDto(
     string Value,
     string Namespace,
     string Type,
-    int Size);
+    int Size,
+    string? Metadata = null);
 
