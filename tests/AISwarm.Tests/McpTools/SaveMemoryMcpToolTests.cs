@@ -6,7 +6,7 @@ namespace AISwarm.Tests.McpTools;
 
 public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 {
-    public SaveMemoryMcpTool SystemUnderTest => new ();
+    public SaveMemoryMcpTool SystemUnderTest => new();
 
     public class ValidationTests : SaveMemoryMcpToolTests
     {
@@ -25,7 +25,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         }
 
         [Fact]
-        public async Task  WhenSavingMemoryWithEmptyValue_ShouldReturnErrorMessage()
+        public async Task WhenSavingMemoryWithEmptyValue_ShouldReturnErrorMessage()
         {
             var result = await SystemUnderTest.SaveMemory(
                 key: "test-key",
@@ -37,14 +37,22 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         }
     }
 
-    [Fact]
-    public async Task WhenSavingMemoryWithValidInput_ShouldReturnSuccess()
+    public class SuccessTests : SaveMemoryMcpToolTests
     {
-        var result = await SystemUnderTest.SaveMemory(
-            key: "test-key",
-            value: "test-value");
+        [Theory]
+        [InlineData("test-key", "test-value")]
+        [InlineData("test-key2", "test-value2")]
+        [InlineData("test-key3", "test-value3")]
+        public async Task WhenSavingMemoryWithValidInput_ShouldReturnSuccess(string key, string value)
+        {
+            var result = await SystemUnderTest.SaveMemory(
+                key: key,
+                value: value);
 
-        result.Success.ShouldBeTrue();
-        result.ErrorMessage.ShouldBeNull();
+            result.Success.ShouldBeTrue();
+            result.ErrorMessage.ShouldBeNull();
+            result.Key.ShouldBe(key);
+        }
     }
+
 }

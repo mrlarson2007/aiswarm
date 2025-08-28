@@ -23,6 +23,6 @@ public class SaveMemoryMcpTool()
             return Task.FromResult(SaveMemoryResult.Failure("Error: value cannot be empty"));
         }
 
-        return Task.FromResult(SaveMemoryResult.SuccessResult());
+        return Task.FromResult(SaveMemoryResult.SuccessResult(key));
     }
 }
