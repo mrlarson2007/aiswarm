@@ -62,4 +62,29 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             result.ErrorMessage.ShouldBe("memory not found");
         }
     }
+
+    public class SuccessTests : ReadMemoryMcpToolTests
+    {
+        [Fact]
+        public async Task WhenMemoryExists_ShouldReturnMemoryValue()
+        {
+            // Arrange
+            const string key = "test-key";
+            const string value = "test-value";
+            const string @namespace = "";
+            
+            // Save memory first
+            await _memoryService.SaveMemoryAsync(key, value, @namespace);
+            
+            // Act
+            var result = await SystemUnderTest.ReadMemory(key, @namespace);
+            
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.ErrorMessage.ShouldBeNull();
+            result.Value.ShouldBe(value);
+            result.Key.ShouldBe(key);
+            result.Namespace.ShouldBe(@namespace);
+        }
+    }
 }
