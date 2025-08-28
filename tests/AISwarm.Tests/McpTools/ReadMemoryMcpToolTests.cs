@@ -44,11 +44,22 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
         public async Task WhenKeyIsEmpty_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemory("", "default");
+            var result = await SystemUnderTest.ReadMemory("", "");
 
             // Assert
             result.Success.ShouldBeFalse();
             result.ErrorMessage.ShouldBe("key required");
+        }
+
+        [Fact]
+        public async Task WhenMemoryDoesNotExist_ShouldReturnFailure()
+        {
+            // Arrange - Act
+            var result = await SystemUnderTest.ReadMemory("nonexistent-key", "");
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldBe("memory not found");
         }
     }
 }

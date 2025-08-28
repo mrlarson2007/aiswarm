@@ -15,7 +15,7 @@ public class SaveMemoryMcpTool(IMemoryService memoryService)
         string? type = null,
         [Description("JSON metadata for extensibility and rich queries")]
         string? metadata = null,
-        [Description("Optional namespace for organization (default: 'default')")]
+        [Description("Optional namespace for organization (default: empty string)")]
         string? @namespace = null)
     {
         if (string.IsNullOrEmpty(key))
