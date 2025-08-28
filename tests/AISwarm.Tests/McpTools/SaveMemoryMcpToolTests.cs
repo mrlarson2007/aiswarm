@@ -1,12 +1,29 @@
+using AISwarm.DataLayer;
+using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
+using Microsoft.EntityFrameworkCore;
 using Shouldly;
 
 namespace AISwarm.Tests.McpTools;
 
 public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 {
-    public SaveMemoryMcpTool SystemUnderTest => new();
+    protected SaveMemoryMcpToolTests()
+    {
+        var options = new DbContextOptionsBuilder<CoordinationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        _dbContext = new CoordinationDbContext(options);
+        _scopeService = new DatabaseScopeService(_dbContext);
+    }
+    // setup database context in memory for testing, and Memory Service
+    private readonly CoordinationDbContext _dbContext;
+    private readonly DatabaseScopeService _scopeService;
+    private readonly ITimeService _timeService = new FakeTimeService();
+
+    public SaveMemoryMcpTool SystemUnderTest => new (
+        new MemoryService(_scopeService, _timeService));
 
     public class ValidationTests : SaveMemoryMcpToolTests
     {
@@ -39,19 +56,30 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 
     public class SuccessTests : SaveMemoryMcpToolTests
     {
-        [Theory]
-        [InlineData("test-key", "test-value")]
-        [InlineData("test-key2", "test-value2")]
-        [InlineData("test-key3", "test-value3")]
-        public async Task WhenSavingMemoryWithValidInput_ShouldReturnSuccess(string key, string value)
+        [Fact]
+        public async Task WhenSavingMemoryWithValidInput_ShouldReturnSuccess()
         {
+            var key = Guid.NewGuid().ToString();
+            var value = Guid.NewGuid().ToString();
+            var memoryNamespace = Guid.NewGuid().ToString();
             var result = await SystemUnderTest.SaveMemory(
                 key: key,
-                value: value);
+                value: value,
+                @namespace: memoryNamespace);
 
             result.Success.ShouldBeTrue();
             result.ErrorMessage.ShouldBeNull();
             result.Key.ShouldBe(key);
+            result.Namespace.ShouldBe(memoryNamespace);
+
+            using var readScope = _scopeService.CreateReadScope();
+            var memoryEntry = await readScope.MemoryEntries
+                .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == memoryNamespace, CancellationToken.None);
+            memoryEntry.ShouldNotBeNull();
+            memoryEntry.Key.ShouldBe(key);
+            memoryEntry.Value.ShouldBe(value);
+            memoryEntry.Namespace.ShouldBe(memoryNamespace);
+            memoryEntry.LastUpdatedAt.ShouldBe(_timeService.UtcNow);
         }
     }
 

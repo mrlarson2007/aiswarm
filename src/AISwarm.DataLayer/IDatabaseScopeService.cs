@@ -47,6 +47,11 @@ public interface IReadScope : IDisposable
     {
         get;
     }
+
+    DbSet<MemoryEntry> MemoryEntries
+    {
+        get;
+    }
 }
 
 /// <summary>
@@ -74,6 +79,14 @@ public interface IWriteScope : IDisposable
     ///     Tasks DbSet for direct access
     /// </summary>
     DbSet<WorkItem> Tasks
+    {
+        get;
+    }
+
+    /// <summary>
+    ///     MemoryEntries DbSet for direct access
+    /// </summary>
+    DbSet<MemoryEntry> MemoryEntries
     {
         get;
     }

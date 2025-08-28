@@ -23,7 +23,7 @@ public class ReportTaskCompletionMcpToolTests
     public ReportTaskCompletionMcpTool SystemUnderTest =>
         _systemUnderTest ??= new ReportTaskCompletionMcpTool(_scopeService, _timeService, _notifier);
 
-    public ReportTaskCompletionMcpToolTests()
+    protected ReportTaskCompletionMcpToolTests()
     {
         _timeService = new FakeTimeService();
         _notifier = new WorkItemNotificationService(_bus);

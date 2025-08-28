@@ -1,28 +1,30 @@
 using System.ComponentModel;
+using AISwarm.Infrastructure;
 using AISwarm.Server.Entities;
 using ModelContextProtocol.Server;
 
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
-public class SaveMemoryMcpTool()
+public class SaveMemoryMcpTool(IMemoryService memoryService)
 {
     [Description("Save data to memory for agent communication and state persistence")]
-    public Task<SaveMemoryResult> SaveMemory(
+    public async Task<SaveMemoryResult> SaveMemory(
         [Description("Key for the memory entry")] string key,
         [Description("Value to store")] string value,
         [Description("Optional namespace for organization (default: 'default')")] string? @namespace = null)
     {
         if (string.IsNullOrEmpty(key))
         {
-            return Task.FromResult(SaveMemoryResult.Failure("Error: key cannot be empty"));
+            return SaveMemoryResult.Failure("Error: key cannot be empty");
         }
 
         if (string.IsNullOrEmpty(value))
         {
-            return Task.FromResult(SaveMemoryResult.Failure("Error: value cannot be empty"));
+            return SaveMemoryResult.Failure("Error: value cannot be empty");
         }
 
-        return Task.FromResult(SaveMemoryResult.SuccessResult(key));
+        await memoryService.SaveMemoryAsync(key, value, @namespace);
+        return SaveMemoryResult.SuccessResult(key, @namespace);
     }
 }

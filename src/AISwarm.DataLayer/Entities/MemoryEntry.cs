@@ -29,4 +29,10 @@ public class MemoryEntry
     /// </summary>
     [Required]
     public string Value { get; set; } = string.Empty;
+
+    public DateTimeOffset LastUpdatedAt
+    {
+        get;
+        set;
+    } = default;
 }

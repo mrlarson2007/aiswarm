@@ -60,6 +60,7 @@ public class ReadScope(CoordinationDbContext context, bool ownsContext = true) :
 
     public DbSet<Agent> Agents => Context.Agents;
     public DbSet<WorkItem> Tasks => Context.Tasks;
+    public DbSet<MemoryEntry> MemoryEntries => Context.MemoryEntries;
 
     public void Dispose()
     {
@@ -86,6 +87,7 @@ public class WriteScope(CoordinationDbContext context, bool ownsContext = true) 
 
     public DbSet<Agent> Agents => Context.Agents;
     public DbSet<WorkItem> Tasks => Context.Tasks;
+    public DbSet<MemoryEntry> MemoryEntries => Context.MemoryEntries;
 
     /// <summary>
     ///     Save changes to the database
