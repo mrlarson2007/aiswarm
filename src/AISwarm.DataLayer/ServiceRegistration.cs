@@ -33,6 +33,9 @@ public static class ServiceRegistration
         using var context = factory.CreateDbContext();
         context.Database.EnsureCreated();
 
+        // Enable WAL mode for better concurrency
+        context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+
         // Lightweight SQLite schema upgrade: add missing Tasks.PersonaId if upgrading from older DB
         try
         {

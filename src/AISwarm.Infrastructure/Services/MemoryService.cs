@@ -35,11 +35,12 @@ public class MemoryService(
 
         scope.MemoryEntries.Add(memoryEntry);
         await scope.SaveChangesAsync();
+        scope.Complete(); // Commit the transaction
     }
 
     public async Task<MemoryEntryDto?> ReadMemoryAsync(string key, string? @namespace)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.CreateReadScope();
 
         var namespaceName = @namespace ?? "";
         var memoryEntry = await scope.MemoryEntries
@@ -48,11 +49,6 @@ public class MemoryService(
         if (memoryEntry == null)
             return null;
 
-        // Update access tracking
-        memoryEntry.AccessedAt = timeService.UtcNow;
-        memoryEntry.AccessCount++;
-        await scope.SaveChangesAsync();
-
         return new MemoryEntryDto(
             memoryEntry.Key,
             memoryEntry.Value,
@@ -60,5 +56,23 @@ public class MemoryService(
             memoryEntry.Type,
             memoryEntry.Size,
             memoryEntry.Metadata);
+    }
+
+    public async Task UpdateMemoryAccessAsync(string key, string? @namespace)
+    {
+        using var scope = scopeService.CreateWriteScope();
+
+        var namespaceName = @namespace ?? "";
+        var memoryEntry = await scope.MemoryEntries
+            .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
+
+        if (memoryEntry == null)
+            return;
+
+        // Update access tracking
+        memoryEntry.AccessedAt = timeService.UtcNow;
+        memoryEntry.AccessCount++;
+        await scope.SaveChangesAsync();
+        scope.Complete(); // Commit the transaction
     }
 }
