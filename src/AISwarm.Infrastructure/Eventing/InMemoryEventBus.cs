@@ -3,6 +3,8 @@ using System.Threading.Channels;
 namespace AISwarm.Infrastructure.Eventing;
 
 public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDisposable
+    where TType : struct, Enum
+    where TPayload : class, IEventPayload
 {
     private readonly List<(EventFilter<TType, TPayload> Filter, Channel<EventEnvelope<TType, TPayload>> Channel)> _subs =
         [];

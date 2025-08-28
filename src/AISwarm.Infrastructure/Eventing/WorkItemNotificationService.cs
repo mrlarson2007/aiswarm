@@ -134,7 +134,7 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
         return null;
     }
 }
-public interface ITaskLifecyclePayload
+public interface ITaskLifecyclePayload : IEventPayload
 {
     string TaskId
     {
