@@ -107,5 +107,62 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             result.Type.ShouldBe(memoryEntry.Type);
             result.Size.ShouldBe(memoryEntry.Size);
         }
+
+        [Fact]
+        public async Task WhenMemoryIsRead_ShouldUpdateAccessTimeAndCount()
+        {
+            // Arrange
+            const string key = "access-test-key";
+            const string value = "access-test-value";
+            const string @namespace = "";
+            
+            var initialTime = _timeService.UtcNow;
+            var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
+            {
+                Id = Guid.NewGuid().ToString(),
+                Namespace = @namespace,
+                Key = key,
+                Value = value,
+                Type = "text",
+                Metadata = null,
+                IsCompressed = false,
+                Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
+                CreatedAt = initialTime,
+                LastUpdatedAt = initialTime,
+                AccessedAt = null,
+                AccessCount = 0
+            };
+            
+            // Create memory entry directly in database
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                scope.MemoryEntries.Add(memoryEntry);
+                await scope.SaveChangesAsync();
+            }
+            
+            // Advance time to verify AccessedAt is updated
+            var accessTime = initialTime.AddMinutes(5);
+            _timeService.AdvanceTime(TimeSpan.FromMinutes(5));
+            
+            // Act
+            var result = await SystemUnderTest.ReadMemoryAsync(key, @namespace);
+            
+            // Assert - Check database directly for access tracking updates
+            using (var scope = _scopeService.CreateReadScope())
+            {
+                var updatedEntry = await scope.MemoryEntries
+                    .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == @namespace);
+                
+                updatedEntry.ShouldNotBeNull();
+                updatedEntry.AccessedAt.ShouldBe(accessTime);
+                updatedEntry.AccessCount.ShouldBe(1);
+                
+                // Verify other fields unchanged
+                updatedEntry.CreatedAt.ShouldBe(initialTime);
+                updatedEntry.LastUpdatedAt.ShouldBe(initialTime);
+            }
+            
+            result.Success.ShouldBeTrue();
+        }
     }
 }

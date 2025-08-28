@@ -1,6 +1,9 @@
-﻿namespace AISwarm.DataLayer.Entities;
+﻿namespace AISwarm.Infrastructure.Entities;
 
-public record MemoryEntryDto(string Key, string Value, string Namespace, string Type, int Size)
-{
-}
+public record MemoryEntryDto(
+    string Key,
+    string Value,
+    string Namespace,
+    string Type,
+    int Size);
 

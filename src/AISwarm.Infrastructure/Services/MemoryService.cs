@@ -1,5 +1,6 @@
 ﻿using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AISwarm.Infrastructure;
@@ -38,18 +39,25 @@ public class MemoryService(
 
     public async Task<MemoryEntryDto?> ReadMemoryAsync(string key, string? @namespace)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.CreateWriteScope();
 
         var namespaceName = @namespace ?? "";
         var memoryEntry = await scope.MemoryEntries
-            .Select(x => new MemoryEntryDto(
-                x.Key,
-                x.Value,
-                x.Namespace,
-                x.Type,
-                x.Size))
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
 
-        return memoryEntry;
+        if (memoryEntry == null)
+            return null;
+
+        // Update access tracking
+        memoryEntry.AccessedAt = timeService.UtcNow;
+        memoryEntry.AccessCount++;
+        await scope.SaveChangesAsync();
+
+        return new MemoryEntryDto(
+            memoryEntry.Key,
+            memoryEntry.Value,
+            memoryEntry.Namespace,
+            memoryEntry.Type,
+            memoryEntry.Size);
     }
 }

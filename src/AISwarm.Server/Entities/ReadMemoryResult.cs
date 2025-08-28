@@ -1,4 +1,4 @@
-using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure.Entities;
 
 namespace AISwarm.Server.Entities;
 
@@ -9,7 +9,7 @@ public record ReadMemoryResult(
     string? Key,
     string? Namespace,
     string? Type,
-    int? Size = null)
+    int? Size)
 {
 
     public static ReadMemoryResult Failure(string errorMessage) =>
