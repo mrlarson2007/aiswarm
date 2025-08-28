@@ -15,7 +15,7 @@ public class MemoryService(
         var now = timeService.UtcNow;
         var namespaceName = @namespace ?? "";
         var valueBytes = System.Text.Encoding.UTF8.GetBytes(value);
-        
+
         var memoryEntry = new MemoryEntry
         {
             Id = Guid.NewGuid().ToString(),
@@ -31,22 +31,24 @@ public class MemoryService(
             AccessedAt = null,
             AccessCount = 0
         };
-        
+
         scope.MemoryEntries.Add(memoryEntry);
         await scope.SaveChangesAsync();
     }
 
-    public async Task<(bool Found, string? Value)> ReadMemoryAsync(string key, string? @namespace)
+    public async Task<MemoryEntryDto?> ReadMemoryAsync(string key, string? @namespace)
     {
         using var scope = scopeService.CreateReadScope();
-        
+
         var namespaceName = @namespace ?? "";
         var memoryEntry = await scope.MemoryEntries
+            .Select(x => new MemoryEntryDto(
+                x.Key,
+                x.Value,
+                x.Namespace,
+                x.Type))
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
-        
-        if (memoryEntry == null)
-            return (false, null);
-            
-        return (true, memoryEntry.Value);
+
+        return memoryEntry;
     }
 }

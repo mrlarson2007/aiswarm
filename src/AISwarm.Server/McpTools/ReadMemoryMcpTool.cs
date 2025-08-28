@@ -19,13 +19,10 @@ public class ReadMemoryMcpTool(IMemoryService memoryService)
             return ReadMemoryResult.Failure("key required");
         }
 
-        var (found, value) = await memoryService.ReadMemoryAsync(key, @namespace);
-        
-        if (!found)
-        {
-            return ReadMemoryResult.Failure("memory not found");
-        }
+        var entry = await memoryService.ReadMemoryAsync(key, @namespace);
 
-        return ReadMemoryResult.SuccessResult(key, value!, @namespace);
+        return entry == null
+            ? ReadMemoryResult.Failure("memory not found")
+            : ReadMemoryResult.SuccessResult(entry);
     }
 }

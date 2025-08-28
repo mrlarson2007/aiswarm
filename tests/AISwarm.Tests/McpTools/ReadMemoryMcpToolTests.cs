@@ -72,38 +72,39 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             const string key = "test-key";
             const string value = "test-value";
             const string @namespace = "";
-            
+            var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
+            {
+                Id = Guid.NewGuid().ToString(),
+                Namespace = @namespace,
+                Key = key,
+                Value = value,
+                Type = "text",
+                Metadata = null,
+                IsCompressed = false,
+                Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
+                CreatedAt = _timeService.UtcNow,
+                LastUpdatedAt = _timeService.UtcNow,
+                AccessedAt = null,
+                AccessCount = 0
+            };
             // Create memory entry directly in database to avoid dependency on SaveMemoryAsync
             using (var scope = _scopeService.CreateWriteScope())
             {
-                var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Namespace = @namespace,
-                    Key = key,
-                    Value = value,
-                    Type = "json",
-                    Metadata = null,
-                    IsCompressed = false,
-                    Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
-                    CreatedAt = _timeService.UtcNow,
-                    LastUpdatedAt = _timeService.UtcNow,
-                    AccessedAt = null,
-                    AccessCount = 0
-                };
+
                 scope.MemoryEntries.Add(memoryEntry);
                 await scope.SaveChangesAsync();
             }
-            
+
             // Act
             var result = await SystemUnderTest.ReadMemoryAsync(key, @namespace);
-            
+
             // Assert
             result.Success.ShouldBeTrue();
             result.ErrorMessage.ShouldBeNull();
-            result.Value.ShouldBe(value);
-            result.Key.ShouldBe(key);
-            result.Namespace.ShouldBe(@namespace);
+            result.Value.ShouldBe(memoryEntry.Value);
+            result.Key.ShouldBe(memoryEntry.Key);
+            result.Namespace.ShouldBe(memoryEntry.Namespace);
+            result.Type.ShouldBe(memoryEntry.Type);
         }
     }
 }
