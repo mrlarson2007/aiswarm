@@ -44,7 +44,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
         public async Task WhenKeyIsEmpty_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemory("", "");
+            var result = await SystemUnderTest.ReadMemoryAsync("", "");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -55,7 +55,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
         public async Task WhenMemoryDoesNotExist_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemory("nonexistent-key", "");
+            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", "");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -73,11 +73,30 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             const string value = "test-value";
             const string @namespace = "";
             
-            // Save memory first
-            await _memoryService.SaveMemoryAsync(key, value, @namespace);
+            // Create memory entry directly in database to avoid dependency on SaveMemoryAsync
+            using (var scope = _scopeService.CreateWriteScope())
+            {
+                var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Namespace = @namespace,
+                    Key = key,
+                    Value = value,
+                    Type = "json",
+                    Metadata = null,
+                    IsCompressed = false,
+                    Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
+                    CreatedAt = _timeService.UtcNow,
+                    LastUpdatedAt = _timeService.UtcNow,
+                    AccessedAt = null,
+                    AccessCount = 0
+                };
+                scope.MemoryEntries.Add(memoryEntry);
+                await scope.SaveChangesAsync();
+            }
             
             // Act
-            var result = await SystemUnderTest.ReadMemory(key, @namespace);
+            var result = await SystemUnderTest.ReadMemoryAsync(key, @namespace);
             
             // Assert
             result.Success.ShouldBeTrue();

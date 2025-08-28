@@ -10,7 +10,7 @@ namespace AISwarm.Server.McpTools;
 public class ReadMemoryMcpTool(IMemoryService memoryService)
 {
     [Description("Reads a stored memory entry from the memory system")]
-    public async Task<ReadMemoryResult> ReadMemory(
+    public async Task<ReadMemoryResult> ReadMemoryAsync(
         [Description("The key of the memory to read")] string key,
         [Description("The namespace of the memory (defaults to empty string)")] string @namespace = "")
     {
