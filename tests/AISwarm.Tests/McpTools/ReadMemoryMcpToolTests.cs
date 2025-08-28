@@ -105,6 +105,7 @@ public class ReadMemoryMcpToolTests : IDisposable, ISystemUnderTest<ReadMemoryMc
             result.Key.ShouldBe(memoryEntry.Key);
             result.Namespace.ShouldBe(memoryEntry.Namespace);
             result.Type.ShouldBe(memoryEntry.Type);
+            result.Size.ShouldBe(memoryEntry.Size);
         }
     }
 }

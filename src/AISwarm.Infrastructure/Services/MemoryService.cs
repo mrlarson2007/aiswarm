@@ -46,7 +46,8 @@ public class MemoryService(
                 x.Key,
                 x.Value,
                 x.Namespace,
-                x.Type))
+                x.Type,
+                x.Size))
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
 
         return memoryEntry;

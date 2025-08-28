@@ -8,11 +8,12 @@ public record ReadMemoryResult(
     string? Value,
     string? Key,
     string? Namespace,
-    string? Type = null)
+    string? Type,
+    int? Size = null)
 {
 
     public static ReadMemoryResult Failure(string errorMessage) =>
-        new(false, errorMessage, null, null, null);
+        new(false, errorMessage, null, null, null, null, null);
 
     public static ReadMemoryResult SuccessResult(MemoryEntryDto entry) =>
         new(Success: true,
@@ -20,5 +21,7 @@ public record ReadMemoryResult(
             Key: entry.Key,
             Value: entry.Value,
             Namespace: entry.Namespace,
-            Type: entry.Type);
+            Type: entry.Type,
+            Size: entry.Size);
+
 }
