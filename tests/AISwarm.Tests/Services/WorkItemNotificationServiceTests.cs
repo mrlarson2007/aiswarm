@@ -470,12 +470,12 @@ public class WorkItemNotificationServiceTests
         eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
     }
 
-    [Fact(Timeout = 50000000)]
+    [Fact(Timeout = 5000)]
     public async Task WhenSubscribingForAllTaskEvents_ShouldReceiveAllTaskLifecycleEventsWithoutFiltering()
     {
         // Arrange
         var service = SystemUnderTest;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(200000));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         var token = cts.Token;
 
         var received = new List<TaskEventEnvelope>();
@@ -483,15 +483,22 @@ public class WorkItemNotificationServiceTests
         // Act
         var readTask = Task.Run(async () =>
         {
-            await foreach (var evt in service.SubscribeForAllTaskEvents(token))
+            try
             {
-                received.Add(evt);
-                if (received.Count >= 5) // Expect all 2 events
-                    break;
+                await foreach (var evt in service.SubscribeForAllTaskEvents(token))
+                {
+                    lock (received) // Thread-safe access
+                    {
+                        received.Add(evt);
+                        if (received.Count >= 5) // Expect all 5 events
+                            break;
+                    }
+                }
             }
+            catch (OperationCanceledException) { /* Expected */ }
         }, token);
 
-        await Task.Delay(5, token); // Give subscription time to start
+        await Task.Delay(50, token); // Give subscription time to start
 
         // Publish various task events - all should be received
         await service.PublishTaskCreated("task-alpha", "agent-1", "reviewer");
@@ -510,13 +517,16 @@ public class WorkItemNotificationServiceTests
         catch (OperationCanceledException) { }
 
         // Assert
-        received.Count.ShouldBe(5);
+        lock (received) // Thread-safe access for assertion
+        {
+            received.Count.ShouldBe(5);
 
-        // Verify all event types are present
-        var eventTypes = received.Select(e => e.Type).ToArray();
-        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(3);
-        eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
-        eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
+            // Verify all event types are present
+            var eventTypes = received.Select(e => e.Type).ToArray();
+            eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(3);
+            eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
+            eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
+        }
 
         // Verify all task IDs are present (no filtering)
         var receivedTaskIds = received.Select(e =>
@@ -544,6 +554,7 @@ public class WorkItemNotificationServiceTests
 
         var received = new List<TaskEventEnvelope>();
         var firstEventReceived = new TaskCompletionSource<bool>();
+        var subscriptionComplete = new TaskCompletionSource<bool>();
 
         // Act
         var readTask = Task.Run(async () =>
@@ -552,7 +563,10 @@ public class WorkItemNotificationServiceTests
             {
                 await foreach (var evt in service.SubscibeForTaskCompletion(taskIds, token))
                 {
-                    received.Add(evt);
+                    lock (received) // Thread-safe access to received list
+                    {
+                        received.Add(evt);
+                    }
 
                     // Signal when first event is received to ensure deterministic ordering
                     if (received.Count == 1)
@@ -563,37 +577,42 @@ public class WorkItemNotificationServiceTests
             {
                 // Expected when cancellation token is triggered
             }
+            finally
+            {
+                subscriptionComplete.SetResult(true);
+            }
         });
 
-        // Wait a moment for subscription to be established (minimal wait)
-        await Task.Delay(5, CancellationToken.None);
+        // Wait longer for subscription to be properly established
+        await Task.Delay(50, CancellationToken.None);
 
         // Publish first event (should be received) - using TaskFailed which matches the subscription filter
         await service.PublishTaskFailed("cancel-test-1", "agent-1", "cancelled");
 
-        // Wait for first event to be processed
-        await firstEventReceived.Task;
+        // Wait for first event to be processed with timeout
+        using var firstEventTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        await firstEventReceived.Task.WaitAsync(firstEventTimeout.Token);
 
-        // Cancel subscription immediately after confirming first event received
+        // Cancel subscription after confirming first event received
         await cts.CancelAsync();
 
-        // Wait for the async enumeration to complete
-        try
-        {
-            await readTask;
-        }
-        catch (OperationCanceledException) { }
+        // Wait for the async enumeration to complete with timeout
+        using var completionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        await subscriptionComplete.Task.WaitAsync(completionTimeout.Token);
 
         // Now publish second event after cancellation (should NOT be received)
         await service.PublishTaskFailed("cancel-test-2", "agent-2", "cancelled");
 
-        // Brief wait to allow any potential (incorrect) delivery
-        await Task.Delay(10, CancellationToken.None);
+        // Longer wait to ensure no late delivery after cancellation
+        await Task.Delay(100, CancellationToken.None);
 
         // Assert
-        received.Count.ShouldBe(1, "Should only receive the first event, not the second after cancellation");
-        var payload = (TaskFailedPayload)received[0].Payload;
-        payload.TaskId.ShouldBe("cancel-test-1");
+        lock (received) // Thread-safe access for assertion
+        {
+            received.Count.ShouldBe(1, "Should only receive the first event, not the second after cancellation");
+            var payload = (TaskFailedPayload)received[0].Payload;
+            payload.TaskId.ShouldBe("cancel-test-1");
+        }
     }
 
 
