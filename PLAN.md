@@ -197,3 +197,25 @@ Decision lean: start with the await tool (Gemini-friendly), keep resource subscr
 - Unassigned tasks with a `PersonaId` are claimable only by agents with matching `Agent.PersonaId`.
 - Unassigned tasks with no `PersonaId` remain claimable by any agent.
 
+---
+
+## PROGRESS UPDATE: Memory System Implementation (Completed by Accident)
+
+### What Happened
+While working on the event bus feature, we accidentally implemented a complete memory system following TDD methodology. This was valuable work but not the original goal.
+
+### Memory System Completed (7 tests passing)
+- **SaveMemoryMcpTool**: Complete with validation, metadata, type support (3 tests)
+- **ReadMemoryMcpTool**: Complete with validation, access tracking, metadata support (4 tests)
+- **MemoryService**: Full CRUD with access tracking (AccessedAt, AccessCount)
+- **MemoryEntryDto**: Client-focused DTO (Key, Value, Namespace, Type, Size, Metadata)
+- **Database Integration**: Via DatabaseScopeService with in-memory testing
+- **Enhanced MemoryEntry**: All Claude Flow-inspired fields
+- **Documentation**: ADR-0006 superseding ADR-0005
+
+### Back to Original Goal: Event Bus Implementation
+Need to resume implementing basic event logging for:
+- **Task Events**: TaskCreated, TaskAssigned, TaskCompleted, TaskFailed
+- **Agent Events**: AgentRegistered, AgentKilled, AgentStatusChanged
+- **Event Bus Core**: In-memory event bus for notifications
+
