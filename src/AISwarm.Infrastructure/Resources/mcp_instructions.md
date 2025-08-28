@@ -22,15 +22,16 @@ When tasks ask you to "save memory" or "use memory tools", they are referring to
 #### Memory and Data Persistence
 
 - **✅ CORRECT**: Use `save_memory` MCP tool to save analysis results
-- **❌ WRONG**: Do NOT use Gemini's built-in memory or create .md files
-- **✅ CORRECT**: Use `read_memory` MCP tool to retrieve saved analysis
+- **❌ WRONG**: Do NOT use Gemini's built-in `save_memory` - use the AISwarm MCP tool instead
+- **✅ CORRECT**: Use `read_memory` MCP tool to retrieve saved analysis  
 - **❌ WRONG**: Do NOT create local files like gemini.md, analysis.md, etc.
+- **✅ CRITICAL**: Include memory keys/IDs in your task result message so other agents can access the data
 
 #### Communication and Results
 
 - **✅ CORRECT**: Use MCP tools to share data between agents
 - **❌ WRONG**: Do NOT save results to local files that other agents cannot access
-- **✅ CORRECT**: Report results using `report_task_completion` with summary
+- **✅ CORRECT**: Report results using `report_task_completion` with summary AND memory keys
 - **❌ WRONG**: Do NOT assume other agents can read your local files
 
 **Remember: You are part of a multi-agent system. All data sharing must use MCP tools so other agents can access your work.**

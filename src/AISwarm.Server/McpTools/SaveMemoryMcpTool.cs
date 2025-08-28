@@ -8,6 +8,7 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class SaveMemoryMcpTool(IMemoryService memoryService)
 {
+    [McpServerTool(Name = "save_memory")]
     [Description("Save data to memory for agent communication and state persistence")]
     public async Task<SaveMemoryResult> SaveMemory([Description("Key for the memory entry")] string key,
         [Description("Value to store")] string value,

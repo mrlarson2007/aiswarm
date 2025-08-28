@@ -8,6 +8,7 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class ReadMemoryMcpTool(IMemoryService memoryService)
 {
+    [McpServerTool(Name = "read_memory")]
     [Description("Reads a stored memory entry from the memory system")]
     public async Task<ReadMemoryResult> ReadMemoryAsync(
         [Description("The key of the memory to read")] string key,
