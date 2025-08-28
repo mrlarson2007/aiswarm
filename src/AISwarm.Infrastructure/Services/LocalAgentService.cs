@@ -1,5 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Shared.Constants;
 
 namespace AISwarm.Infrastructure;
 
@@ -12,7 +13,7 @@ namespace AISwarm.Infrastructure;
 public class LocalAgentService(
     ITimeService timeService,
     IDatabaseScopeService scopeService,
-    IProcessTerminationService processTerminationService)
+    IAgentStateService agentStateService)
     : ILocalAgentService
 {
     /// <summary>
@@ -60,9 +61,9 @@ public class LocalAgentService(
             // If agent is starting and actively polling for tasks, transition to running
             if (agent.Status == AgentStatus.Starting)
             {
-                agent.Status = AgentStatus.Running;
+                await agentStateService.ActivateAsync(agentId, timeService.UtcNow);
             }
-
+            
             await scope.SaveChangesAsync();
             scope.Complete();
             return true;
@@ -75,35 +76,7 @@ public class LocalAgentService(
     /// </summary>
     public async Task KillAgentAsync(string agentId)
     {
-        using var scope = scopeService.CreateWriteScope();
-
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent != null)
-        {
-            // Attempt to kill the actual process if we have a process ID and termination service
-            if (!string.IsNullOrEmpty(agent.ProcessId))
-            {
-                await processTerminationService.KillProcessAsync(agent.ProcessId);
-            }
-
-            agent.Kill(timeService.UtcNow);
-
-            // Handle dangling tasks when agent is killed
-            var inProgressTasks = scope.Tasks
-                .Where(t => t.AgentId == agentId)
-                .Where(t => t.Status == DataLayer.Entities.TaskStatus.InProgress)
-                .ToList();
-
-            foreach (var task in inProgressTasks)
-            {
-                task.Status = DataLayer.Entities.TaskStatus.Failed;
-                task.Result = "Agent terminated";
-                task.CompletedAt = timeService.UtcNow;
-            }
-
-            await scope.SaveChangesAsync();
-            scope.Complete();
-        }
+        await agentStateService.KillAsync(agentId, timeService.UtcNow);
     }
 }
 

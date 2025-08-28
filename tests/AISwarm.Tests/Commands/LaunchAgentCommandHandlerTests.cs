@@ -16,7 +16,7 @@ public class LaunchAgentCommandHandlerTests
     private readonly PassThroughProcessLauncher _process;
     private readonly FakeFileSystemService _fs;
     private readonly IGeminiService _gemini;
-    private readonly Mock<IProcessTerminationService> _mockProcessTerminationService;
+    private readonly Mock<IAgentStateService> _mockAgentStateService;
     private readonly ILocalAgentService _localAgentService;
     private readonly TestLogger _logger;
     private readonly TestEnvironmentService _env;
@@ -59,12 +59,12 @@ public class LaunchAgentCommandHandlerTests
         var terminalService = new WindowsTerminalService(_process);
         _gemini = new GeminiService(terminalService, _logger, _fs);
 
-        _mockProcessTerminationService = new Mock<IProcessTerminationService>();
+        _mockAgentStateService = new Mock<IAgentStateService>();
         // Create real LocalAgentService with test doubles for dependencies
         _localAgentService = new LocalAgentService(
             _timeService,
             scopeService,
-            _mockProcessTerminationService.Object);
+            _mockAgentStateService.Object);
     }
 
     public class DryRunTests : LaunchAgentCommandHandlerTests

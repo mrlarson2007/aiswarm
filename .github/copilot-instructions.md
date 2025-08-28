@@ -283,4 +283,27 @@ public Task<Result> ValidateInput(string key, string value)
 - **Logging**: Structured logging via `IAppLogger` interface for testability
 - **Configuration**: Environment-based configuration with clear interfaces
 
-**Essential Rule**: All new code follows TDD cycle. Tests pass after every change. Refactoring preserves existing behavior while improving structure.
+## Refactoring Discipline
+
+- **Preserve Functionality Only**: Refactoring must NEVER add new features or anticipate future needs
+- **Evidence-Based Changes**: Only refactor based on actual duplication found in existing code
+- **YAGNI Principle**: You Aren't Gonna Need It - don't create patterns that aren't immediately used
+- **Conservative Approach**: Make minimal changes that eliminate existing duplication
+- **Verify Usage**: Every refactored pattern must be actually used, not just potentially useful
+- **No Speculation**: Don't create builder patterns, configuration objects, or abstractions unless tests already demonstrate the need
+
+### Refactoring Anti-Patterns to Avoid
+```csharp
+// WRONG: Creating unused builder patterns
+public class AgentBuilder { } // Never used in tests = dead code
+
+// WRONG: Over-engineered configuration objects  
+public class McpToolConfiguration { } // Not needed = complexity
+
+// RIGHT: Only extract what's actually duplicated
+public abstract class Result<T> { } // Used by 10+ existing Result classes
+```
+
+**Critical Refactoring Rule**: If you create something during refactoring that isn't immediately used by existing code, it's over-engineering and should be removed.
+
+**Essential Rule**: All new code follows TDD cycle. Tests pass after every change. Refactoring preserves existing behavior while improving structure without adding unused abstractions.

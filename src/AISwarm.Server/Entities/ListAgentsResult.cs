@@ -1,28 +1,13 @@
+using AISwarm.Shared.Models;
+
 namespace AISwarm.Server.Entities;
 
-public class ListAgentsResult
+public class ListAgentsResult : Result<ListAgentsResult>
 {
-    public bool Success
-    {
-        get;
-        init;
-    }
-
-    public string? ErrorMessage
-    {
-        get;
-        init;
-    }
-
     public AgentInfo[]? Agents
     {
         get;
         init;
-    }
-
-    public static ListAgentsResult Failure(string message)
-    {
-        return new ListAgentsResult { Success = false, ErrorMessage = message };
     }
 
     public static ListAgentsResult SuccessWith(AgentInfo[] agents)

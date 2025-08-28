@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\AISwarm.Server\AISwarm.Server.csproj" />
+    <ProjectReference Include="..\..\src\AISwarm.Shared\AISwarm.Shared.csproj" />
   </ItemGroup>
 
 </Project>

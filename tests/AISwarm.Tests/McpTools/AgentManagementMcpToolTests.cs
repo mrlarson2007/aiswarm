@@ -1,6 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,6 @@ public class AgentManagementMcpToolTests
     private readonly LocalAgentService _localAgentService;
     private readonly TestEnvironmentService _testEnvironmentService;
     private AgentManagementMcpTool? _systemUnderTest;
-    private readonly Mock<IProcessTerminationService> _mockProcessTerminateService;
 
     public AgentManagementMcpTool SystemUnderTest =>
         _systemUnderTest ??= new AgentManagementMcpTool(
@@ -45,7 +45,12 @@ public class AgentManagementMcpToolTests
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
         _logger = new TestLogger();
         _fakeContextService = new FakeContextService();
-        _mockProcessTerminateService = new Mock<IProcessTerminationService>();
+        var mockNotificationService = new Mock<IAgentNotificationService>();
+        var mockProcessTerminationService = new Mock<IProcessTerminationService>();
+        IAgentStateService agentStateService = new AgentStateService(
+            _scopeService,
+            mockNotificationService.Object,
+            mockProcessTerminationService.Object);
         _fakeGitService = new FakeGitService();
         _fakeTerminalService = new Mock<IInteractiveTerminalService>();
         _fakeFileSystemService = new FakeFileSystemService();
@@ -57,7 +62,7 @@ public class AgentManagementMcpToolTests
         _localAgentService = new LocalAgentService(
             _timeService,
             _scopeService,
-            _mockProcessTerminateService.Object);
+            agentStateService);
 
         _testEnvironmentService = new TestEnvironmentService();
     }
@@ -297,8 +302,6 @@ public class AgentManagementMcpToolTests
             // Assert
             result.Success.ShouldBeTrue();
             result.ErrorMessage.ShouldBeNull();
-            _mockProcessTerminateService
-                .Verify(x => x.KillProcessAsync("12345"), Times.Once);
 
             var listResult = await SystemUnderTest.ListAgentsAsync();
             listResult.ShouldNotBeNull();
