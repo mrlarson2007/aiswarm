@@ -14,7 +14,6 @@ namespace AISwarm.Tests.McpTools;
 public class GetNextTaskMcpToolTests
     : IDisposable, ISystemUnderTest<GetNextTaskMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly Mock<ILocalAgentService> _mockLocalAgentService;
@@ -22,6 +21,7 @@ public class GetNextTaskMcpToolTests
         new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
     private readonly IWorkItemNotificationService _notifier;
     private GetNextTaskMcpTool? _systemUnderTest;
+    private readonly IDbContextFactory<CoordinationDbContext> _contextFactory;
 
     public GetNextTaskMcpTool SystemUnderTest =>
         _systemUnderTest ??= CreateSystemUnderTest();
@@ -40,8 +40,9 @@ public class GetNextTaskMcpToolTests
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
+        
+        _contextFactory = new TestDbContextFactory(options);
+        _scopeService = new DatabaseScopeService(_contextFactory);
 
         _mockLocalAgentService = new Mock<ILocalAgentService>();
         _mockLocalAgentService.Setup(x => x.UpdateHeartbeatAsync(It.IsAny<string>()))
@@ -52,7 +53,7 @@ public class GetNextTaskMcpToolTests
 
     public void Dispose()
     {
-        _dbContext.Dispose();
+        // Context factory handles disposal
     }
 
     public class TaskRetrievalNoTasksAvailableTests : GetNextTaskMcpToolTests
@@ -737,5 +738,19 @@ public class GetNextTaskMcpToolTests
         scope.Complete();
         return taskId;
     }
+}
 
+public class TestDbContextFactory : IDbContextFactory<CoordinationDbContext>
+{
+    private readonly DbContextOptions<CoordinationDbContext> _options;
+
+    public TestDbContextFactory(DbContextOptions<CoordinationDbContext> options)
+    {
+        _options = options;
+    }
+
+    public CoordinationDbContext CreateDbContext()
+    {
+        return new CoordinationDbContext(_options);
+    }
 }

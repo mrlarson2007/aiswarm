@@ -33,6 +33,8 @@ public static class ServiceRegistration
         // Eventing defaults (unbounded) and high-level notification service
         services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ => new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
         services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
+        services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ => new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
+        services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
         return services;
     }
 
@@ -71,12 +73,20 @@ public static class ServiceRegistration
             // Replace the default IEventBus with a bounded instance
             services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
                 new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options));
+            services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
+                new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>(options));
         }
         else
         {
             services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
                 new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
+            services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
+                new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
         }
+
+        // High-level notification services (after event bus configuration)
+        services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
+        services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
 
         return services;
     }
