@@ -26,6 +26,9 @@ public static class ServiceRegistration
         services.AddSingleton<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
 
+        // Register scoped database service for per-request transaction coordination
+        services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
+
         // Initialize database after registration
         using var tempServiceProvider = services.BuildServiceProvider();
         using var scope = tempServiceProvider.CreateScope();

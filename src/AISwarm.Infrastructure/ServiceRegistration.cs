@@ -37,6 +37,7 @@ public static class ServiceRegistration
         services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
         services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ => new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
         services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
+        
         return services;
     }
 
