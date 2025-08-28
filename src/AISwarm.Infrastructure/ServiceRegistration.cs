@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Channels;
 using AISwarm.Infrastructure.Eventing;
+using AISwarm.Infrastructure.Services;
 
 namespace AISwarm.Infrastructure;
 
@@ -30,7 +31,7 @@ public static class ServiceRegistration
                 : new UnixTerminalService(proc);
         });
         services.AddSingleton<ITimeService, SystemTimeService>();
-        services.AddSingleton<IMemoryService, MemoryService>();
+        services.AddScoped<IMemoryService, ScopedMemoryService>();
 
         // Eventing defaults (unbounded) and high-level notification service
         services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ => new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
