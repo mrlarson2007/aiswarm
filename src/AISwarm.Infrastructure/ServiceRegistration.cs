@@ -30,6 +30,7 @@ public static class ServiceRegistration
                 : new UnixTerminalService(proc);
         });
         services.AddSingleton<ITimeService, SystemTimeService>();
+        services.AddSingleton<IMemoryService, MemoryService>();
 
         // Eventing defaults (unbounded) and high-level notification service
         services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ => new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
