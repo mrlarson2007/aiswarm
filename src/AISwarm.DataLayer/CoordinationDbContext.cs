@@ -57,5 +57,18 @@ public class CoordinationDbContext(
             entity.Property(e => e.Priority).HasConversion<string>().HasDefaultValue(TaskPriority.Normal);
             entity.Property(e => e.Result);
         });
+
+        // Configure MemoryEntry entity
+        modelBuilder.Entity<MemoryEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50);
+            entity.Property(e => e.Namespace).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Key).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Value).IsRequired();
+            entity.Property(e => e.Type).HasMaxLength(50).HasDefaultValue("json");
+            entity.Property(e => e.Metadata);
+            entity.HasIndex(e => new { e.Namespace, e.Key }).IsUnique();
+        });
     }
 }
