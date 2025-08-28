@@ -11,7 +11,10 @@ public class SaveMemoryMcpTool(IMemoryService memoryService)
     [Description("Save data to memory for agent communication and state persistence")]
     public async Task<SaveMemoryResult> SaveMemory([Description("Key for the memory entry")] string key,
         [Description("Value to store")] string value,
-        [Description("Content type (json, text, binary, etc.)")] string? type = null,
+        [Description("Content type (json, text, binary, etc.)")]
+        string? type = null,
+        [Description("JSON metadata for extensibility and rich queries")]
+        string? metadata = null,
         [Description("Optional namespace for organization (default: 'default')")]
         string? @namespace = null)
     {
@@ -25,7 +28,7 @@ public class SaveMemoryMcpTool(IMemoryService memoryService)
             return SaveMemoryResult.Failure("Error: value cannot be empty");
         }
 
-        await memoryService.SaveMemoryAsync(key, value, @namespace, type);
+        await memoryService.SaveMemoryAsync(key, value, @namespace, type, metadata);
         return SaveMemoryResult.SuccessResult(key, @namespace);
     }
 }

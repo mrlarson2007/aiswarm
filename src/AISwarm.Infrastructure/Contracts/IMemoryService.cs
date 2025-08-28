@@ -2,5 +2,5 @@
 
 public interface IMemoryService
 {
-    Task SaveMemoryAsync(string key, string value, string? @namespace, string? type = null);
+    Task SaveMemoryAsync(string key, string value, string? @namespace, string? type = null, string? metadata = null);
 }

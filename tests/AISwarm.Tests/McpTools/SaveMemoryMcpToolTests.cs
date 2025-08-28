@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
@@ -54,6 +55,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         }
     }
 
+    private record TestMetadata(string Prop1, string Prop2);
     public class SuccessTests : SaveMemoryMcpToolTests
     {
         [Fact]
@@ -62,11 +64,13 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             var key = Guid.NewGuid().ToString();
             var value = Guid.NewGuid().ToString();
             var memoryNamespace = Guid.NewGuid().ToString();
+            var testMetadata = new TestMetadata("test1", "test2");
             var expectedType = "text";
             var result = await SystemUnderTest.SaveMemory(
                 key: key,
                 value: value,
                 type: expectedType,
+                metadata: JsonSerializer.Serialize(testMetadata),
                 @namespace: memoryNamespace);
 
             result.Success.ShouldBeTrue();
@@ -84,7 +88,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 
             // Verify new fields are populated correctly
             memoryEntry.Type.ShouldBe(expectedType);
-            memoryEntry.Metadata.ShouldBeNull();
+            memoryEntry.Metadata.ShouldBe(JsonSerializer.Serialize(testMetadata));
             memoryEntry.IsCompressed.ShouldBeFalse();
             memoryEntry.Size.ShouldBeGreaterThan(0);
             memoryEntry.CreatedAt.ShouldBe(_timeService.UtcNow);

@@ -7,7 +7,7 @@ public class MemoryService(
     IDatabaseScopeService scopeService,
     ITimeService timeService) : IMemoryService
 {
-    public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null)
+    public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null, string? metadata = null)
     {
         using var scope = scopeService.CreateWriteScope();
 
@@ -22,7 +22,7 @@ public class MemoryService(
             Key = key,
             Value = value,
             Type = type ?? "json",
-            Metadata = null,
+            Metadata = metadata,
             IsCompressed = false,
             Size = valueBytes.Length,
             CreatedAt = now,
