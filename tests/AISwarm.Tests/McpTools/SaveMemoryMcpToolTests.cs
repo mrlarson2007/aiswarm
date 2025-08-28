@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -17,13 +18,15 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             .Options;
 
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
+        _scopedDbService = new ScopedDatabaseService(_scopeService);
     }
     // setup database context factory for testing, and Memory Service
     private readonly DatabaseScopeService _scopeService;
+    private readonly IScopedDatabaseService _scopedDbService;
     private readonly ITimeService _timeService = new FakeTimeService();
 
     public SaveMemoryMcpTool SystemUnderTest => new (
-        new MemoryService(_scopeService, _timeService));
+        new MemoryService(_scopedDbService, _timeService));
 
     public class ValidationTests : SaveMemoryMcpToolTests
     {

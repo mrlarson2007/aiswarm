@@ -12,7 +12,7 @@ namespace AISwarm.Tests.Services;
 /// Tests for the scoped database service pattern that enables per-request transaction coordination.
 /// This pattern eliminates nested transaction issues by caching database scopes within DI scopes.
 /// </summary>
-public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<ScopedMemoryService>
+public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemoryService>
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly ITimeService _timeService;
@@ -30,14 +30,14 @@ public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<ScopedMe
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
         services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
         services.AddSingleton<ITimeService, FakeTimeService>();
-        services.AddScoped<IMemoryService, ScopedMemoryService>();
+        services.AddScoped<IMemoryService, MemoryService>();
         
         _serviceProvider = services.BuildServiceProvider();
         _timeService = _serviceProvider.GetRequiredService<ITimeService>();
     }
 
-    public ScopedMemoryService SystemUnderTest => 
-        _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<ScopedMemoryService>();
+    public MemoryService SystemUnderTest => 
+        _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<MemoryService>();
 
     /// <summary>
     /// Verifies that multiple service calls within the same DI scope share the same database transaction.

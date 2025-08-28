@@ -1,78 +1,112 @@
-﻿using AISwarm.DataLayer;
+using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace AISwarm.Infrastructure;
+namespace AISwarm.Infrastructure.Services;
 
-public class MemoryService(
-    IDatabaseScopeService scopeService,
-    ITimeService timeService) : IMemoryService
+/// <summary>
+/// Memory service that uses per-request transaction coordination.
+/// Uses IScopedDatabaseService to automatically coordinate transactions across multiple operations.
+/// </summary>
+public class MemoryService : IMemoryService
 {
+    private readonly IScopedDatabaseService _scopedDbService;
+    private readonly ITimeService _timeService;
+
+    public MemoryService(
+        IScopedDatabaseService scopedDbService,
+        ITimeService timeService)
+    {
+        _scopedDbService = scopedDbService;
+        _timeService = timeService;
+    }
+
     public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null, string? metadata = null)
     {
-        using var scope = scopeService.CreateWriteScope();
-
-        var now = timeService.UtcNow;
+        // Get scoped write scope - creates new scope or returns cached one
+        var scope = _scopedDbService.GetWriteScope();
+        var now = _timeService.UtcNow;
         var namespaceName = @namespace ?? "";
         var valueBytes = System.Text.Encoding.UTF8.GetBytes(value);
 
-        var memoryEntry = new MemoryEntry
-        {
-            Id = Guid.NewGuid().ToString(),
-            Namespace = namespaceName,
-            Key = key,
-            Value = value,
-            Type = type ?? "json",
-            Metadata = metadata,
-            IsCompressed = false,
-            Size = valueBytes.Length,
-            CreatedAt = now,
-            LastUpdatedAt = now,
-            AccessedAt = null,
-            AccessCount = 0
-        };
+        var entity = await scope.MemoryEntries
+            .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
 
-        scope.MemoryEntries.Add(memoryEntry);
+        if (entity == null)
+        {
+            entity = new MemoryEntry
+            {
+                Id = Guid.NewGuid().ToString(),
+                Namespace = namespaceName,
+                Key = key,
+                Value = value,
+                Type = type ?? "json",
+                Metadata = metadata,
+                IsCompressed = false,
+                Size = valueBytes.Length,
+                CreatedAt = now,
+                LastUpdatedAt = now,
+                AccessedAt = null,
+                AccessCount = 0
+            };
+            scope.MemoryEntries.Add(entity);
+        }
+        else
+        {
+            entity.Value = value;
+            entity.Type = type ?? entity.Type;
+            entity.Metadata = metadata ?? entity.Metadata;
+            entity.Size = valueBytes.Length;
+            entity.LastUpdatedAt = now;
+        }
+
         await scope.SaveChangesAsync();
-        scope.Complete(); // Commit the transaction
+        
+        // Complete transaction - this will be cached until DI scope disposal
+        await _scopedDbService.CompleteAsync();
     }
 
     public async Task<MemoryEntryDto?> ReadMemoryAsync(string key, string? @namespace)
     {
-        using var scope = scopeService.CreateReadScope();
-
+        // Get scoped read scope - creates new scope or returns cached one
+        var scope = _scopedDbService.GetReadScope();
         var namespaceName = @namespace ?? "";
-        var memoryEntry = await scope.MemoryEntries
+
+        var entity = await scope.MemoryEntries
+            .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
 
-        if (memoryEntry == null)
+        if (entity == null)
             return null;
 
         return new MemoryEntryDto(
-            memoryEntry.Key,
-            memoryEntry.Value,
-            memoryEntry.Namespace,
-            memoryEntry.Type,
-            memoryEntry.Size,
-            memoryEntry.Metadata);
+            entity.Key,
+            entity.Value,
+            entity.Namespace,
+            entity.Type,
+            entity.Size,
+            entity.Metadata);
     }
 
     public async Task UpdateMemoryAccessAsync(string key, string? @namespace)
     {
-        using var scope = scopeService.CreateWriteScope();
-
+        // Get scoped write scope for access time update
+        var scope = _scopedDbService.GetWriteScope();
         var namespaceName = @namespace ?? "";
-        var memoryEntry = await scope.MemoryEntries
+
+        var entity = await scope.MemoryEntries
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);
 
-        if (memoryEntry == null)
+        if (entity == null)
             return;
 
         // Update access tracking
-        memoryEntry.AccessedAt = timeService.UtcNow;
-        memoryEntry.AccessCount++;
+        entity.AccessedAt = _timeService.UtcNow;
+        entity.AccessCount++;
         await scope.SaveChangesAsync();
-        scope.Complete(); // Commit the transaction
+        
+        // Complete transaction
+        await _scopedDbService.CompleteAsync();
     }
 }

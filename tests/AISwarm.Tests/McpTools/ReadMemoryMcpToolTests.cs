@@ -1,5 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace AISwarm.Tests.McpTools;
 public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 {
     private readonly IDatabaseScopeService _scopeService;
+    private readonly IScopedDatabaseService _scopedDbService;
     private readonly FakeTimeService _timeService;
 
     public ReadMemoryMcpTool SystemUnderTest { get; }
@@ -22,7 +24,8 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 
         _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
-        IMemoryService memoryService = new MemoryService(_scopeService, _timeService);
+        _scopedDbService = new ScopedDatabaseService(_scopeService);
+        IMemoryService memoryService = new MemoryService(_scopedDbService, _timeService);
         SystemUnderTest = new ReadMemoryMcpTool(memoryService);
     }
 
