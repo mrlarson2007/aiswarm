@@ -62,9 +62,11 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             var key = Guid.NewGuid().ToString();
             var value = Guid.NewGuid().ToString();
             var memoryNamespace = Guid.NewGuid().ToString();
+            var expectedType = "text";
             var result = await SystemUnderTest.SaveMemory(
                 key: key,
                 value: value,
+                type: expectedType,
                 @namespace: memoryNamespace);
 
             result.Success.ShouldBeTrue();
@@ -79,9 +81,9 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             memoryEntry.Key.ShouldBe(key);
             memoryEntry.Value.ShouldBe(value);
             memoryEntry.Namespace.ShouldBe(memoryNamespace);
-            
+
             // Verify new fields are populated correctly
-            memoryEntry.Type.ShouldBe("json");
+            memoryEntry.Type.ShouldBe(expectedType);
             memoryEntry.Metadata.ShouldBeNull();
             memoryEntry.IsCompressed.ShouldBeFalse();
             memoryEntry.Size.ShouldBeGreaterThan(0);
