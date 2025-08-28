@@ -1,7 +1,7 @@
 # ADR-0005: Memory Table System for Agent Communication
 
 ## Status
-Proposed
+Superseded by ADR-0006: Practical Memory System Implementation
 
 ## Context
 We need a persistent memory system for agents to communicate results, share state, and coordinate activities. The current system only handles task lifecycle events but lacks a mechanism for agents to store and retrieve arbitrary data.

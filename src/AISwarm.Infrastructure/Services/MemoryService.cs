@@ -11,15 +11,26 @@ public class MemoryService(
     {
         using var scope = scopeService.CreateWriteScope();
 
+        var now = timeService.UtcNow;
+        var namespaceName = @namespace ?? "default";
+        var valueBytes = System.Text.Encoding.UTF8.GetBytes(value);
+        
         var memoryEntry = new MemoryEntry
         {
             Id = Guid.NewGuid().ToString(),
-            Namespace = @namespace ?? string.Empty,
+            Namespace = namespaceName,
             Key = key,
             Value = value,
-            LastUpdatedAt = timeService.UtcNow
+            Type = "json",
+            Metadata = null,
+            IsCompressed = false,
+            Size = valueBytes.Length,
+            CreatedAt = now,
+            LastUpdatedAt = now,
+            AccessedAt = null,
+            AccessCount = 0
         };
-
+        
         scope.MemoryEntries.Add(memoryEntry);
         await scope.SaveChangesAsync();
     }

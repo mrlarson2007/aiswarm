@@ -79,7 +79,16 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             memoryEntry.Key.ShouldBe(key);
             memoryEntry.Value.ShouldBe(value);
             memoryEntry.Namespace.ShouldBe(memoryNamespace);
+            
+            // Verify new fields are populated correctly
+            memoryEntry.Type.ShouldBe("json");
+            memoryEntry.Metadata.ShouldBeNull();
+            memoryEntry.IsCompressed.ShouldBeFalse();
+            memoryEntry.Size.ShouldBeGreaterThan(0);
+            memoryEntry.CreatedAt.ShouldBe(_timeService.UtcNow);
             memoryEntry.LastUpdatedAt.ShouldBe(_timeService.UtcNow);
+            memoryEntry.AccessedAt.ShouldBeNull();
+            memoryEntry.AccessCount.ShouldBe(0);
         }
     }
 

@@ -30,9 +30,43 @@ public class MemoryEntry
     [Required]
     public string Value { get; set; } = string.Empty;
 
-    public DateTimeOffset LastUpdatedAt
-    {
-        get;
-        set;
-    } = default;
+    /// <summary>
+    /// Content type (json, text, binary, etc.)
+    /// </summary>
+    public string Type { get; set; } = "json";
+
+    /// <summary>
+    /// JSON metadata for extensibility and rich queries
+    /// </summary>
+    public string? Metadata { get; set; }
+
+    /// <summary>
+    /// Whether the content is compressed
+    /// </summary>
+    public bool IsCompressed { get; set; }
+
+    /// <summary>
+    /// Size of the content in bytes
+    /// </summary>
+    public int Size { get; set; }
+
+    /// <summary>
+    /// When the entry was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the entry was last updated
+    /// </summary>
+    public DateTime LastUpdatedAt { get; set; }
+
+    /// <summary>
+    /// When the entry was last accessed (for analytics)
+    /// </summary>
+    public DateTime? AccessedAt { get; set; }
+
+    /// <summary>
+    /// Number of times the entry has been accessed
+    /// </summary>
+    public int AccessCount { get; set; }
 }
