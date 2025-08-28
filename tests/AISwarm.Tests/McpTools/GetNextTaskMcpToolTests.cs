@@ -124,7 +124,7 @@ public class GetNextTaskMcpToolTests
             var taskId = await CreateUnassignedTaskAsync(persona, description);
 
             // Simulate another agent claiming the task first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 var task = await scope.Tasks.FindAsync(taskId);
                 task!.AgentId = otherAgentId; // Other agent claims it
@@ -146,7 +146,7 @@ public class GetNextTaskMcpToolTests
             result.Message.ShouldContain("call this tool again");
 
             // Verify the task is still assigned to the other agent
-            using var readScope = _scopeService.CreateReadScope();
+            using var readScope = _scopeService.GetReadScope();
             var claimedTask = await readScope.Tasks.FindAsync(taskId);
             claimedTask.ShouldNotBeNull();
             claimedTask.AgentId.ShouldBe(otherAgentId);
@@ -213,7 +213,7 @@ public class GetNextTaskMcpToolTests
             result.Description.ShouldBe(highPriorityDescription);
 
             // Verify the task is now assigned to the requesting agent
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var claimedTask = await scope.Tasks.FindAsync(highPriorityTaskId);
             claimedTask.ShouldNotBeNull();
             claimedTask.AgentId.ShouldBe(agentId);
@@ -288,7 +288,7 @@ public class GetNextTaskMcpToolTests
             result.Description.ShouldBe(assignedDescription);
 
             // Verify the unassigned task is still unassigned and available for claiming
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var unassignedTask = await scope.Tasks.FindAsync(unassignedTaskId);
             unassignedTask.ShouldNotBeNull();
             unassignedTask.AgentId.ShouldBe(string.Empty);
@@ -320,7 +320,7 @@ public class GetNextTaskMcpToolTests
             result.Message.ShouldContain("call this tool again");
 
             // Verify the task is now assigned to the requesting agent
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var claimedTask = await scope.Tasks.FindAsync(unassignedTaskId);
             claimedTask.ShouldNotBeNull();
             claimedTask.AgentId.ShouldBe(agentId);
@@ -348,7 +348,7 @@ public class GetNextTaskMcpToolTests
             nonMatchingResult.TaskId!.ShouldStartWith("system:");
 
             // Verify task remains unassigned
-            using (var readScope = _scopeService.CreateReadScope())
+            using (var readScope = _scopeService.GetReadScope())
             {
                 var task = await readScope.Tasks.FindAsync(taskId);
                 task.ShouldNotBeNull();
@@ -377,7 +377,7 @@ public class GetNextTaskMcpToolTests
             result.Description.ShouldBe(expectedDescription);
 
             // Verify in DB that the task is now assigned to the agent
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var claimed = await scope.Tasks.FindAsync(unassignedTaskId);
             claimed.ShouldNotBeNull();
             claimed.AgentId.ShouldBe(agentId);
@@ -393,7 +393,7 @@ public class GetNextTaskMcpToolTests
             var agentId = "agent-no-tasks";
 
             // Create a running agent with no tasks
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -433,7 +433,7 @@ public class GetNextTaskMcpToolTests
             var expectedDescription = "Review the authentication module for security vulnerabilities";
 
             // Create a running agent first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -474,7 +474,7 @@ public class GetNextTaskMcpToolTests
         {
             // Arrange
             var agentId = "agent-heartbeat-test";
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -503,7 +503,7 @@ public class GetNextTaskMcpToolTests
             var agentId = "agent-polling-timeout";
 
             // Create a running agent with no tasks
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -547,7 +547,7 @@ public class GetNextTaskMcpToolTests
             var expectedDescription = "Review the authentication module for security vulnerabilities";
 
             // Create a running agent with no initial tasks
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -594,7 +594,7 @@ public class GetNextTaskMcpToolTests
 
     private async Task CreateRunningAgentAsync(string agentId, string personaId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var agent = new Agent
         {
             Id = agentId,
@@ -610,7 +610,7 @@ public class GetNextTaskMcpToolTests
 
     private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {
@@ -630,7 +630,7 @@ public class GetNextTaskMcpToolTests
     private async Task<string> CreatePendingTaskUsingNewScopeAsync(string agentId, string persona, string description)
     {
         // Create a completely new scope service to simulate external process
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {
@@ -649,7 +649,7 @@ public class GetNextTaskMcpToolTests
 
     private async Task<string> CreateUnassignedTaskAsync(string personaId, string description)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {
@@ -669,7 +669,7 @@ public class GetNextTaskMcpToolTests
 
     private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, TaskPriority priority)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {
@@ -690,7 +690,7 @@ public class GetNextTaskMcpToolTests
 
     private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description, TaskPriority priority)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var taskId = Guid.NewGuid().ToString();
         var task = new WorkItem
         {

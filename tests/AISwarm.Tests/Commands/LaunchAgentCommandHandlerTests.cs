@@ -475,7 +475,7 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Verify agent was actually registered in database
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var agents = await scope.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
@@ -511,7 +511,7 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            using var scope2 = _scopeService.CreateReadScope();
+            using var scope2 = _scopeService.GetReadScope();
             var agents = await scope2.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
@@ -556,7 +556,7 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            using var scope3 = _scopeService.CreateReadScope();
+            using var scope3 = _scopeService.GetReadScope();
             var agents = await scope3.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
@@ -594,7 +594,7 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            using var scope4 = _scopeService.CreateReadScope();
+            using var scope4 = _scopeService.GetReadScope();
             var agents = await scope4.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();

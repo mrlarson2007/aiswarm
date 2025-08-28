@@ -117,7 +117,7 @@ public class GetNextTaskMcpTool(
 
     private async Task<AgentInfo?> GetAgentInfoAsync(string agentId)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent == null)
             return null;
@@ -128,7 +128,7 @@ public class GetNextTaskMcpTool(
         AgentInfo agentInfo,
         string? preferredTaskId = null)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
 
         // If we received an event for a specific task, try to honor it first
         if (!string.IsNullOrWhiteSpace(preferredTaskId))
@@ -190,7 +190,7 @@ public class GetNextTaskMcpTool(
         string taskId,
         string agentId)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
 
         // Re-fetch the task to ensure it's still unassigned (race condition protection)
         var task = await scope.Tasks.FindAsync(taskId);

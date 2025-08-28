@@ -78,7 +78,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
                 AccessCount = 0
             };
             // Create memory entry directly in database to avoid dependency on SaveMemoryAsync
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
 
                 scope.MemoryEntries.Add(memoryEntry);
@@ -125,7 +125,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
             };
 
             // Create memory entry directly in database
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.MemoryEntries.Add(memoryEntry);
                 await scope.SaveChangesAsync();
@@ -139,7 +139,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
             var result = await SystemUnderTest.ReadMemoryAsync(key, @namespace);
 
             // Assert - Check database directly for access tracking updates
-            using (var scope = _scopeService.CreateReadScope())
+            using (var scope = _scopeService.GetReadScope())
             {
                 var updatedEntry = await scope.MemoryEntries
                     .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == @namespace);

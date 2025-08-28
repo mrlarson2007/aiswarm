@@ -78,7 +78,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             result.Key.ShouldBe(key);
             result.Namespace.ShouldBe(memoryNamespace);
 
-            using var readScope = _scopeService.CreateReadScope();
+            using var readScope = _scopeService.GetReadScope();
             var memoryEntry = await readScope.MemoryEntries
                 .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == memoryNamespace, CancellationToken.None);
             memoryEntry.ShouldNotBeNull();

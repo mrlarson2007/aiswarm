@@ -21,7 +21,7 @@ public class LocalAgentService(
     /// </summary>
     public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
 
         var agentId = Guid.NewGuid().ToString();
         var currentTime = timeService.UtcNow;
@@ -50,7 +50,7 @@ public class LocalAgentService(
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {

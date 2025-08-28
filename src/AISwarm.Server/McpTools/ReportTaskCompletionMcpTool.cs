@@ -22,7 +22,7 @@ public class ReportTaskCompletionMcpTool(
         [Description("Result of the completed task")]
         string result)
     {
-        using var scope = databaseScopeService.CreateWriteScope();
+        using var scope = databaseScopeService.GetWriteScope();
 
         var task = await scope.Tasks.FindAsync(taskId);
         if (task == null)
@@ -53,7 +53,7 @@ public class ReportTaskCompletionMcpTool(
         [Description("Error message for the failed task")]
         string errorMessage)
     {
-        using var scope = databaseScopeService.CreateWriteScope();
+        using var scope = databaseScopeService.GetWriteScope();
 
         var task = await scope.Tasks.FindAsync(taskId);
         if (task == null)

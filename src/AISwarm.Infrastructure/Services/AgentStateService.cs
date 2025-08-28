@@ -36,7 +36,7 @@ public class AgentStateService(
     /// <inheritdoc/>
     public async Task<bool> KillAsync(string agentId, DateTime timestamp)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
         var agent = await scope.Agents.FindAsync(agentId);
 
         if (agent == null || !agent.Status.CanBeKilled())
@@ -78,7 +78,7 @@ public class AgentStateService(
     /// <inheritdoc/>
     public async Task<bool> ActivateAsync(string agentId, DateTime timestamp)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
         var agent = await scope.Agents.FindAsync(agentId);
 
         if (agent == null || agent.Status != AgentStatus.Starting)

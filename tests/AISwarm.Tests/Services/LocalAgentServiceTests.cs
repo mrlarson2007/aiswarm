@@ -63,7 +63,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Assert - Check database directly instead of using service API
             agentId.ShouldNotBeNullOrEmpty();
 
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var agentInDb = await scope.Agents.FindAsync(agentId);
             agentInDb.ShouldNotBeNull();
             agentInDb.Id.ShouldBe(agentId);
@@ -100,7 +100,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             agentId2.ShouldNotBeNullOrEmpty();
 
             // Assert - Check database directly instead of using service API
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var agent1InDb = await scope.Agents.FindAsync(agentId1);
             var agent2InDb = await scope.Agents.FindAsync(agentId2);
 
@@ -133,7 +133,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             var agentId = await SystemUnderTest.RegisterAgentAsync(request);
 
             // Assert
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var agent = await assertScope.Agents.FindAsync(agentId);
             agent.ShouldNotBeNull();
             agent.PersonaId.ShouldBe("tester");
@@ -152,7 +152,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
         {
             var agentId = Guid.NewGuid().ToString();
             // Arrange
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -175,7 +175,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Assert
             success.ShouldBeTrue();
 
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var updatedAgent = await assertScope.Agents.FindAsync(agentId);
             updatedAgent!.Status.ShouldBe(AgentStatus.Running);
             updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
@@ -186,7 +186,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
         {
             var agentId = Guid.NewGuid().ToString();
 
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -209,7 +209,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Assert
             success.ShouldBeTrue();
 
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var updatedAgent = await assertScope.Agents.FindAsync(agentId);
             updatedAgent!.Status.ShouldBe(AgentStatus.Running);
             updatedAgent.LastHeartbeat.ShouldBe(_timeService.UtcNow);
@@ -228,7 +228,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             await SystemUnderTest.KillAgentAsync(unknownAgentId);
 
             // Assert - No exception thrown, database remains empty
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var totalAgents = await assertScope.Agents.CountAsync();
             totalAgents.ShouldBe(0);
         }
@@ -238,7 +238,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
         {
             // Arrange
             var agentId = Guid.NewGuid().ToString();
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -260,7 +260,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             await SystemUnderTest.KillAgentAsync(agentId);
 
             // Assert
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var agent = await assertScope.Agents.FindAsync(agentId);
             agent!.Status.ShouldBe(AgentStatus.Killed);
             agent.StoppedAt.ShouldBe(_timeService.UtcNow);
@@ -272,7 +272,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Arrange
             var agentId = Guid.NewGuid().ToString();
             var processId = "98765";
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -300,7 +300,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
         {
             // Arrange
             var agentId = Guid.NewGuid().ToString();
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -348,7 +348,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             };
 
             // Setup task data
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Tasks.AddRange(task1, task2, task3);
                 await scope.SaveChangesAsync();
@@ -358,7 +358,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             await SystemUnderTest.KillAgentAsync(agentId);
 
             // Assert
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var updatedTask1 = await assertScope.Tasks.FindAsync("task-1");
             var updatedTask2 = await assertScope.Tasks.FindAsync("task-2");
             var updatedTask3 = await assertScope.Tasks.FindAsync("task-3");

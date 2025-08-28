@@ -38,7 +38,7 @@ public class CreateTaskMcpTool(
         [Description("Priority of the task: Low, Normal, High, or Critical")]
         TaskPriority priority = TaskPriority.Normal)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
 
         // Only validate agent if agentId is provided (for assigned tasks)
         if (!string.IsNullOrEmpty(agentId))

@@ -319,7 +319,7 @@ public class AgentManagementMcpToolTests
         AgentStatus status,
         string? processId = null)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var agent = new Agent
         {
             Id = agentId,

@@ -370,7 +370,7 @@ public class GetTaskMcpToolTests
         TaskStatus status,
         string? agentId = null)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,
@@ -395,7 +395,7 @@ public class GetTaskMcpToolTests
         string description,
         string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var id = Guid.NewGuid().ToString();
         var status = Enum.Parse<TaskStatus>(statusName);
 

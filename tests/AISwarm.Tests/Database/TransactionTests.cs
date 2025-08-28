@@ -34,7 +34,7 @@ public class DatabaseScopeTests : IDisposable
         };
 
         // Arrange - Setup test data
-        using (var setupScope = _scopeService.CreateWriteScope())
+        using (var setupScope = _scopeService.GetWriteScope())
         {
             setupScope.Agents.Add(agent);
             await setupScope.SaveChangesAsync();
@@ -43,7 +43,7 @@ public class DatabaseScopeTests : IDisposable
 
         // Act
         Agent? retrievedAgent;
-        using (var scope = _scopeService.CreateReadScope())
+        using (var scope = _scopeService.GetReadScope())
         {
             retrievedAgent = await scope.Agents.FindAsync("read-test-agent");
         }
@@ -58,7 +58,7 @@ public class DatabaseScopeTests : IDisposable
     {
         // Arrange & Act
         string agentId;
-        using (var scope = _scopeService.CreateWriteScope())
+        using (var scope = _scopeService.GetWriteScope())
         {
             var agent = new Agent
             {
@@ -77,7 +77,7 @@ public class DatabaseScopeTests : IDisposable
         }
 
         // Assert - Verify agent was saved
-        using var assertScope = _scopeService.CreateReadScope();
+        using var assertScope = _scopeService.GetReadScope();
         var savedAgent = await assertScope.Agents.FindAsync(agentId);
         savedAgent.ShouldNotBeNull();
         savedAgent.PersonaId.ShouldBe("implementer");
@@ -90,7 +90,7 @@ public class DatabaseScopeTests : IDisposable
         // This test verifies that TransactionScope doesn't throw exceptions with in-memory database
 
         // Act & Assert - Should not throw
-        using (var scope = _scopeService.CreateWriteScope())
+        using (var scope = _scopeService.GetWriteScope())
         {
             var agent = new Agent
             {
@@ -108,7 +108,7 @@ public class DatabaseScopeTests : IDisposable
         }
 
         // Verify the agent was saved
-        using var verifyScope = _scopeService.CreateReadScope();
+        using var verifyScope = _scopeService.GetReadScope();
         var savedAgent = await verifyScope.Agents.FindAsync("transaction-scope-test");
         savedAgent.ShouldNotBeNull();
     }

@@ -5,32 +5,36 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-///     Database scope service that provides reading and writing scopes using dispose pattern.
-///     When registered as scoped in DI, provides automatic caching and transaction coordination
-///     across multiple service calls within the same operation.
+/// Database scope service that provides cached read and write scopes for transaction coordination.
+/// Implements per-request caching to avoid nested transactions and supports both read-only and full access patterns.
 /// </summary>
-public class DatabaseScopeService(
-    IDbContextFactory<CoordinationDbContext> contextFactory) : IDatabaseScopeService, IDisposable
+public class DatabaseScopeService : IDatabaseScopeService
 {
+    private readonly IDbContextFactory<CoordinationDbContext> _contextFactory;
     private IWriteScope? _cachedWriteScope;
     private IReadScope? _cachedReadScope;
     private bool _disposed;
     private bool _completed;
 
+    public DatabaseScopeService(IDbContextFactory<CoordinationDbContext> contextFactory)
+    {
+        _contextFactory = contextFactory;
+    }
+
     /// <summary>
     ///     Creates a read-only scope for database operations
     /// </summary>
-    public IReadScope CreateReadScope()
+    private IReadScope CreateReadScope()
     {
-        return new ReadScope(contextFactory.CreateDbContext(), ownsContext: true);
+        return new ReadScope(_contextFactory.CreateDbContext(), ownsContext: true);
     }
 
     /// <summary>
     ///     Creates a write scope with TransactionScope for automatic transaction handling
     /// </summary>
-    public IWriteScope CreateWriteScope()
+    private IWriteScope CreateWriteScope()
     {
-        return new WriteScope(contextFactory.CreateDbContext(), ownsContext: true);
+        return new WriteScope(_contextFactory.CreateDbContext(), ownsContext: true);
     }
 
     /// <summary>
@@ -40,6 +44,12 @@ public class DatabaseScopeService(
     public IWriteScope GetWriteScope()
     {
         ThrowIfDisposed();
+        
+        // If cached scope is disposed, clear the cache and create a new one
+        if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope))
+        {
+            _cachedWriteScope = null;
+        }
         
         if (_cachedWriteScope == null)
         {
@@ -56,6 +66,12 @@ public class DatabaseScopeService(
     public IReadScope GetReadScope()
     {
         ThrowIfDisposed();
+        
+        // If cached scope is disposed, clear the cache and create a new one
+        if (_cachedReadScope != null && IsDisposed(_cachedReadScope))
+        {
+            _cachedReadScope = null;
+        }
         
         if (_cachedReadScope == null)
         {
@@ -98,6 +114,32 @@ public class DatabaseScopeService(
         {
             throw new ObjectDisposedException(nameof(DatabaseScopeService));
         }
+    }
+
+    private static bool IsDisposed(IDisposable scope)
+    {
+        // For ReadScope and WriteScope, we can check if the context is disposed
+        try
+        {
+            if (scope is ReadScope readScope)
+            {
+                // Try to access a property that would throw if disposed
+                _ = readScope.Context.Model;
+                return false;
+            }
+            if (scope is WriteScope writeScope)
+            {
+                // Try to access a property that would throw if disposed
+                _ = writeScope.Context.Model;
+                return false;
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            return true;
+        }
+        
+        return false;
     }
 }
 

@@ -60,7 +60,7 @@ public class ReportTaskCompletionMcpToolTests
             result.Message.ShouldContain("Task completed successfully");
 
             // Assert - Check database directly instead of using service API
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
             task.Status.ShouldBe(TaskStatus.Completed);
@@ -119,7 +119,7 @@ public class ReportTaskCompletionMcpToolTests
             // Assert
             result.IsSuccess.ShouldBeTrue();
 
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
             task.Status.ShouldBe(TaskStatus.Completed);
@@ -177,7 +177,7 @@ public class ReportTaskCompletionMcpToolTests
             result.IsSuccess.ShouldBeTrue();
 
             // Assert - Check database directly instead of using service API
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
             task.Status.ShouldBe(TaskStatus.Failed);
@@ -216,7 +216,7 @@ public class ReportTaskCompletionMcpToolTests
             result.IsSuccess.ShouldBeTrue();
 
             // Assert - Check database directly instead of using service API
-            using var scope = _scopeService.CreateReadScope();
+            using var scope = _scopeService.GetReadScope();
             var task = await scope.Tasks.FindAsync(taskId);
             task.ShouldNotBeNull();
             task.Status.ShouldBe(TaskStatus.Failed);
@@ -257,7 +257,7 @@ public class ReportTaskCompletionMcpToolTests
 
     private async Task CreateRunningAgentAsync(string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var agent = new Agent
         {
             Id = agentId,
@@ -274,7 +274,7 @@ public class ReportTaskCompletionMcpToolTests
 
     private async Task CreatePendingTaskAsync(string taskId, string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,
@@ -292,7 +292,7 @@ public class ReportTaskCompletionMcpToolTests
 
     private async Task CreateInProgressTaskAsync(string taskId, string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,
@@ -311,7 +311,7 @@ public class ReportTaskCompletionMcpToolTests
 
     private async Task CreateCompletedTaskAsync(string taskId, string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,
@@ -331,7 +331,7 @@ public class ReportTaskCompletionMcpToolTests
 
     private async Task CreateFailedTaskAsync(string taskId, string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,

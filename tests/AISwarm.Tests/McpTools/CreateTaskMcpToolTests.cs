@@ -79,7 +79,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var description = "Review the authentication module for security vulnerabilities";
 
             // Create a running agent first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -101,7 +101,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var taskInDb = await assertScope.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.Id.ShouldBe(result.TaskId);
@@ -125,7 +125,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var description = "Review code while agent is starting up";
 
             // Create a starting agent first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -147,7 +147,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            using var assertScope = _scopeService.CreateReadScope();
+            using var assertScope = _scopeService.GetReadScope();
             var taskInDb = await assertScope.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBe(agentId);
@@ -171,7 +171,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly instead of using service API
-            using var assertScope2 = _scopeService.CreateReadScope();
+            using var assertScope2 = _scopeService.GetReadScope();
             var taskInDb = await assertScope2.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.AgentId.ShouldBeNull();
@@ -188,7 +188,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var persona = "You are a security expert.";
             var description = "Critical security vulnerability fix";
 
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -210,7 +210,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.TaskId.ShouldNotBeNull();
 
             // Assert - Check database directly for priority setting
-            using var assertScope3 = _scopeService.CreateReadScope();
+            using var assertScope3 = _scopeService.GetReadScope();
             var taskInDb = await assertScope3.Tasks.FindAsync(result.TaskId);
             taskInDb.ShouldNotBeNull();
             taskInDb.Priority.ShouldBe(TaskPriority.Critical);
@@ -239,7 +239,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.ErrorMessage.ShouldContain(nonExistentAgentId);
 
             // Assert - Verify no task was created in database
-            using var assertScope4 = _scopeService.CreateReadScope();
+            using var assertScope4 = _scopeService.GetReadScope();
             var totalTasks = await assertScope4.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }
@@ -253,7 +253,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var description = "Review code";
 
             // Create a stopped agent first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -280,7 +280,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.ErrorMessage.ShouldContain("Stopped");
 
             // Assert - Verify no task was created in database
-            using var assertScope5 = _scopeService.CreateReadScope();
+            using var assertScope5 = _scopeService.GetReadScope();
             var totalTasks = await assertScope5.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }
@@ -294,7 +294,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var description = "Review code";
 
             // Create a killed agent first
-            using (var scope = _scopeService.CreateWriteScope())
+            using (var scope = _scopeService.GetWriteScope())
             {
                 scope.Agents.Add(new Agent
                 {
@@ -321,7 +321,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             result.ErrorMessage.ShouldContain("Killed");
 
             // Assert - Verify no task was created in database
-            using var assertScope6 = _scopeService.CreateReadScope();
+            using var assertScope6 = _scopeService.GetReadScope();
             var totalTasks = await assertScope6.Tasks.CountAsync();
             totalTasks.ShouldBe(0);
         }

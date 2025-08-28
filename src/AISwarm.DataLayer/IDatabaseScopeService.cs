@@ -4,39 +4,17 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-///     Database scope service that provides reading and writing scopes using dispose pattern.
-///     When registered as scoped in DI, provides automatic caching and transaction coordination
-///     across multiple service calls within the same operation.
+/// Full database scope service that provides both read and write operations with cached transaction coordination.
+/// Inherits read-only operations and adds write capabilities.
 /// </summary>
-public interface IDatabaseScopeService
+public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 {
     /// <summary>
-    ///     Creates a read-only scope for database operations
+    /// Gets a cached write scope for database operations. If no cached scope exists, creates a new one.
+    /// Multiple calls return the same cached instance.
     /// </summary>
-    IReadScope CreateReadScope();
-
-    /// <summary>
-    ///     Creates a write scope with TransactionScope for automatic transaction handling
-    /// </summary>
-    IWriteScope CreateWriteScope();
-
-    /// <summary>
-    /// Gets or creates a write scope for the current DI scope.
-    /// The first call creates the scope, subsequent calls return the same instance.
-    /// </summary>
+    /// <returns>A write scope for database operations</returns>
     IWriteScope GetWriteScope();
-
-    /// <summary>
-    /// Gets or creates a read scope for the current DI scope.
-    /// The first call creates the scope, subsequent calls return the same instance.
-    /// </summary>
-    IReadScope GetReadScope();
-
-    /// <summary>
-    /// Commits any active write scope transaction.
-    /// Call this at the end of successful operations to persist changes.
-    /// </summary>
-    Task CompleteAsync();
 }
 
 /// <summary>
@@ -77,39 +55,8 @@ public interface IReadScope : IDisposable
 /// <summary>
 ///     Write scope that provides access to database operations with automatic transaction handling
 /// </summary>
-public interface IWriteScope : IDisposable
+public interface IWriteScope : IReadScope
 {
-    /// <summary>
-    ///     Database context for advanced operations
-    /// </summary>
-    CoordinationDbContext Context
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     Agents DbSet for direct access
-    /// </summary>
-    DbSet<Agent> Agents
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     Tasks DbSet for direct access
-    /// </summary>
-    DbSet<WorkItem> Tasks
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     MemoryEntries DbSet for direct access
-    /// </summary>
-    DbSet<MemoryEntry> MemoryEntries
-    {
-        get;
-    }
 
     /// <summary>
     ///     Save changes to the database
