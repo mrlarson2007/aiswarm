@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using AISwarm.Infrastructure;
+using AISwarm.Server.Entities;
 using ModelContextProtocol.Server;
 
 namespace AISwarm.Server.McpTools;
@@ -8,11 +8,11 @@ namespace AISwarm.Server.McpTools;
 public class SaveMemoryMcpTool()
 {
     [Description("Save data to memory for agent communication and state persistence")]
-    public Task<string> SaveMemory(
+    public Task<SaveMemoryResult> SaveMemory(
         [Description("Key for the memory entry")] string key,
         [Description("Value to store")] string value,
         [Description("Optional namespace for organization (default: 'default')")] string? @namespace = null)
     {
-        return Task.FromResult("Error: key cannot be empty");
+        return Task.FromResult(SaveMemoryResult.Failure("Error: key cannot be empty"));
     }
 }

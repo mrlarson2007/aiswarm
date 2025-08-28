@@ -22,8 +22,9 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
                 value: "test-value");
 
             // Assert
-            result.ShouldContain("Error");
-            result.ShouldContain("key");
+            result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
+            result.ErrorMessage.ShouldContain("key");
         }
     }
 }
