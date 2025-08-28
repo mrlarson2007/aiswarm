@@ -10,6 +10,7 @@ public class ScopedDatabaseService : IScopedDatabaseService, IDisposable
     private IWriteScope? _cachedWriteScope;
     private IReadScope? _cachedReadScope;
     private bool _disposed;
+    private bool _completed;
 
     public ScopedDatabaseService(IDatabaseScopeService scopeService)
     {
@@ -56,9 +57,10 @@ public class ScopedDatabaseService : IScopedDatabaseService, IDisposable
     {
         ThrowIfDisposed();
         
-        if (_cachedWriteScope != null)
+        if (_cachedWriteScope != null && !_completed)
         {
             _cachedWriteScope.Complete();
+            _completed = true;
         }
         
         return Task.CompletedTask;

@@ -21,8 +21,14 @@ public class ReadMemoryMcpTool(IMemoryService memoryService)
 
         var entry = await memoryService.ReadMemoryAsync(key, @namespace);
 
-        return entry == null
-            ? ReadMemoryResult.Failure("memory not found")
-            : ReadMemoryResult.SuccessResult(entry);
+        if (entry == null)
+        {
+            return ReadMemoryResult.Failure("memory not found");
+        }
+
+        // Update access tracking when memory is successfully read
+        await memoryService.UpdateMemoryAccessAsync(key, @namespace);
+
+        return ReadMemoryResult.SuccessResult(entry);
     }
 }

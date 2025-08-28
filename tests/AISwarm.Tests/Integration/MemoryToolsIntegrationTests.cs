@@ -34,6 +34,7 @@ public class MemoryToolsIntegrationTests : IDisposable
         // Add Database services
         services.AddSingleton<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
+        services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
 
         // Add Infrastructure services
         services.AddInfrastructureServices();
