@@ -46,21 +46,23 @@ public class LocalAgentService(
     }
 
     /// <summary>
-    /// Update agent heartbeat and transition Starting agents to Running
+    /// Update the heartbeat timestamp for an agent
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
         using var scope = scopeService.CreateWriteScope();
-
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.UpdateHeartbeat(timeService.UtcNow);
 
             // If agent is starting and actively polling for tasks, transition to running
+            // Handle this inline to avoid nested transactions
             if (agent.Status == AgentStatus.Starting)
             {
-                await agentStateService.ActivateAsync(agentId, timeService.UtcNow);
+                agent.Status = AgentStatus.Running;
+                if (agent.StartedAt == default)
+                    agent.StartedAt = timeService.UtcNow;
             }
 
             await scope.SaveChangesAsync();

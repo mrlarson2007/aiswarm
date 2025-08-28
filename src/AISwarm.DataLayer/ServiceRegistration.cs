@@ -19,7 +19,7 @@ public static class ServiceRegistration
 
         var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
         services.AddDbContextFactory<CoordinationDbContext>(options =>
-            options.UseSqlite($"Data Source={databasePath}")
+            options.UseSqlite($"Data Source={databasePath};Cache=Shared")
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));
 
         // Register scope service explicitly using the factory-based constructor to avoid ambiguity
