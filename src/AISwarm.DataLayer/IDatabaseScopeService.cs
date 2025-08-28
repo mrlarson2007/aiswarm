@@ -22,13 +22,6 @@ public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 /// </summary>
 public interface IReadScope : IDisposable
 {
-    /// <summary>
-    ///     Database context for advanced operations
-    /// </summary>
-    CoordinationDbContext Context
-    {
-        get;
-    }
 
     /// <summary>
     ///     Agents DbSet for direct access
@@ -47,6 +40,11 @@ public interface IReadScope : IDisposable
     }
 
     DbSet<MemoryEntry> MemoryEntries
+    {
+        get;
+    }
+
+    DbSet<EventLog> EventLogs
     {
         get;
     }

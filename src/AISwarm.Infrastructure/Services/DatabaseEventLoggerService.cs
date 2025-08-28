@@ -1,0 +1,294 @@
+using System.Text.Json;
+using AISwarm.DataLayer;
+using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure.Eventing;
+
+namespace AISwarm.Infrastructure.Services;
+
+/// <summary>
+/// Service that subscribes to system events and logs them to the database for audit and observability
+/// </summary>
+public interface IEventLoggerService
+{
+    /// <summary>
+    /// Starts subscribing to events and logging them to the database
+    /// </summary>
+    Task StartAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stops subscribing to events
+    /// </summary>
+    Task StopAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Implementation that logs both task and agent events to the EventLog table
+/// </summary>
+public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
+{
+    private readonly IDatabaseScopeService _scopeService;
+    private readonly IWorkItemNotificationService _taskNotifications;
+    private readonly IAgentNotificationService _agentNotifications;
+    private readonly ITimeService _timeService;
+    private readonly IAppLogger _logger;
+
+    private CancellationTokenSource? _cancellationTokenSource;
+    private Task? _taskEventLoggingTask;
+    private Task? _agentEventLoggingTask;
+
+    public DatabaseEventLoggerService(
+        IDatabaseScopeService scopeService,
+        IWorkItemNotificationService taskNotifications,
+        IAgentNotificationService agentNotifications,
+        ITimeService timeService,
+        IAppLogger logger)
+    {
+        _scopeService = scopeService;
+        _taskNotifications = taskNotifications;
+        _agentNotifications = agentNotifications;
+        _timeService = timeService;
+        _logger = logger;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cancellationTokenSource != null)
+        {
+            _logger.Warn("Event logger is already running");
+            return Task.CompletedTask;
+        }
+
+        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var token = _cancellationTokenSource.Token;
+
+        _logger.Info("Starting database event logger service");
+
+        // Start task event logging
+        _taskEventLoggingTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var taskEvent in _taskNotifications.SubscribeForAllTaskEvents(token))
+                {
+                    await LogTaskEventAsync(taskEvent, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Info("Task event logging cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error in task event logging: {ex.Message}");
+            }
+        }, token);
+
+        // Start agent event logging
+        _agentEventLoggingTask = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var agentEvent in _agentNotifications.SubscribeForAllAgentEvents(token))
+                {
+                    await LogAgentEventAsync(agentEvent, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Info("Agent event logging cancelled");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error in agent event logging: {ex.Message}");
+            }
+        }, token);
+
+        _logger.Info("Database event logger service started successfully");
+        return Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cancellationTokenSource == null)
+        {
+            return;
+        }
+
+        _logger.Info("Stopping database event logger service");
+
+        await _cancellationTokenSource.CancelAsync();
+
+        // Wait for logging tasks to complete
+        if (_taskEventLoggingTask != null)
+        {
+            try
+            {
+                await _taskEventLoggingTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancelling
+            }
+        }
+
+        if (_agentEventLoggingTask != null)
+        {
+            try
+            {
+                await _agentEventLoggingTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancelling
+            }
+        }
+
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
+        _taskEventLoggingTask = null;
+        _agentEventLoggingTask = null;
+
+        _logger.Info("Database event logger service stopped");
+    }
+
+    private async Task LogTaskEventAsync(TaskEventEnvelope taskEvent, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeService.GetWriteScope();
+
+            var eventLog = new EventLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EventType = $"Task{taskEvent.Type}",
+                Timestamp = _timeService.UtcNow,
+                Actor = ExtractActorFromTaskEvent(taskEvent),
+                CorrelationId = null, // Event envelopes don't have correlation IDs
+                Payload = JsonSerializer.Serialize((object?)taskEvent.Payload, new JsonSerializerOptions { WriteIndented = false }),
+                EntityId = ExtractEntityIdFromTaskEvent(taskEvent),
+                EntityType = "Task",
+                Severity = GetSeverityFromTaskEvent(taskEvent),
+                Tags = BuildTagsFromTaskEvent(taskEvent)
+            };
+
+            scope.EventLogs.Add(eventLog);
+            await scope.SaveChangesAsync();
+            scope.Complete();
+
+            _logger.Info($"Logged task event: {taskEvent.Type} for task {eventLog.EntityId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to log task event {taskEvent.Type}: {ex.Message}");
+        }
+    }
+
+    private async Task LogAgentEventAsync(AgentEventEnvelope agentEvent, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeService.GetWriteScope();
+
+            var eventLog = new EventLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EventType = $"Agent{agentEvent.Type}",
+                Timestamp = _timeService.UtcNow,
+                Actor = ExtractActorFromAgentEvent(agentEvent),
+                CorrelationId = null, // Event envelopes don't have correlation IDs
+                Payload = JsonSerializer.Serialize(agentEvent.Payload, new JsonSerializerOptions { WriteIndented = false }),
+                EntityId = agentEvent.Payload.AgentId,
+                EntityType = "Agent",
+                Severity = GetSeverityFromAgentEvent(agentEvent),
+                Tags = BuildTagsFromAgentEvent(agentEvent)
+            };
+
+            scope.EventLogs.Add(eventLog);
+            await scope.SaveChangesAsync();
+            scope.Complete();
+
+                        _logger.Info($"Logged agent event: {agentEvent.Type} for agent {eventLog.EntityId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Failed to log agent event {agentEvent.Type}: {ex.Message}");
+        }
+    }
+
+    private static string? ExtractActorFromTaskEvent(TaskEventEnvelope taskEvent)
+    {
+        return taskEvent.Payload switch
+        {
+            TaskCreatedPayload created => created.AgentId,
+            TaskCompletedPayload completed => completed.AgentId,
+            TaskFailedPayload failed => failed.AgentId,
+            _ => null
+        };
+    }
+
+    private static string? ExtractEntityIdFromTaskEvent(TaskEventEnvelope taskEvent)
+    {
+        return taskEvent.Payload switch
+        {
+            TaskCreatedPayload created => created.TaskId,
+            TaskCompletedPayload completed => completed.TaskId,
+            TaskFailedPayload failed => failed.TaskId,
+            _ => null
+        };
+    }
+
+    private static string? ExtractActorFromAgentEvent(AgentEventEnvelope agentEvent)
+    {
+        // For agent events, the actor is typically the system or the agent itself
+        return agentEvent.Payload.AgentId;
+    }
+
+    private static string GetSeverityFromTaskEvent(TaskEventEnvelope taskEvent)
+    {
+        return taskEvent.Type switch
+        {
+            TaskEventType.Failed => "Warning",
+            TaskEventType.Created => "Information",
+            TaskEventType.Completed => "Information",
+            _ => "Information"
+        };
+    }
+
+    private static string GetSeverityFromAgentEvent(AgentEventEnvelope agentEvent)
+    {
+        return agentEvent.Type switch
+        {
+            AgentEventType.Killed => "Warning",
+            AgentEventType.Registered => "Information",
+            AgentEventType.StatusChanged => "Information",
+            _ => "Information"
+        };
+    }
+
+    private static string? BuildTagsFromTaskEvent(TaskEventEnvelope taskEvent)
+    {
+        var tags = new List<string>();
+
+        if (taskEvent.Payload is TaskCreatedPayload created && !string.IsNullOrEmpty(created.PersonaId))
+        {
+            tags.Add($"persona:{created.PersonaId}");
+        }
+
+        return tags.Count > 0 ? string.Join(",", tags) : null;
+    }
+
+    private static string? BuildTagsFromAgentEvent(AgentEventEnvelope agentEvent)
+    {
+        var tags = new List<string>();
+
+        // Add relevant tags based on agent event type
+        tags.Add($"event:{agentEvent.Type}");
+
+        return tags.Count > 0 ? string.Join(",", tags) : null;
+    }
+
+    public void Dispose()
+    {
+        StopAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+    }
+}

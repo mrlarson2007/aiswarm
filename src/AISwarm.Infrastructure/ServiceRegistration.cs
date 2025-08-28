@@ -39,6 +39,9 @@ public static class ServiceRegistration
         services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ => new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
         services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
         
+        // Event logging service
+        services.AddSingleton<IEventLoggerService, DatabaseEventLoggerService>();
+        
         return services;
     }
 
@@ -91,6 +94,9 @@ public static class ServiceRegistration
         // High-level notification services (after event bus configuration)
         services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
         services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
+
+        // Event logging service
+        services.AddSingleton<IEventLoggerService, DatabaseEventLoggerService>();
 
         return services;
     }
