@@ -13,10 +13,6 @@ public class SaveMemoryMcpTool()
         [Description("Value to store")] string value,
         [Description("Optional namespace for organization (default: 'default')")] string? @namespace = null)
     {
-        if (string.IsNullOrEmpty(key))
-        {
-            return Task.FromResult(SaveMemoryResult.Failure("Error: key cannot be empty"));
-        }
 
         if (string.IsNullOrEmpty(value))
         {
