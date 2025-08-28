@@ -18,15 +18,13 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             .Options;
 
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
-        _scopedDbService = new ScopedDatabaseService(_scopeService);
     }
     // setup database context factory for testing, and Memory Service
     private readonly DatabaseScopeService _scopeService;
-    private readonly IScopedDatabaseService _scopedDbService;
     private readonly ITimeService _timeService = new FakeTimeService();
 
     public SaveMemoryMcpTool SystemUnderTest => new (
-        new MemoryService(_scopedDbService, _timeService));
+        new MemoryService(_scopeService, _timeService));
 
     public class ValidationTests : SaveMemoryMcpToolTests
     {

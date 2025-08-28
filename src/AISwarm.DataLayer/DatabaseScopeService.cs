@@ -5,11 +5,18 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-///     Database scope service that provides reading and writing scopes using dispose pattern
+///     Database scope service that provides reading and writing scopes using dispose pattern.
+///     When registered as scoped in DI, provides automatic caching and transaction coordination
+///     across multiple service calls within the same operation.
 /// </summary>
 public class DatabaseScopeService(
-    IDbContextFactory<CoordinationDbContext> contextFactory) : IDatabaseScopeService
+    IDbContextFactory<CoordinationDbContext> contextFactory) : IDatabaseScopeService, IDisposable
 {
+    private IWriteScope? _cachedWriteScope;
+    private IReadScope? _cachedReadScope;
+    private bool _disposed;
+    private bool _completed;
+
     /// <summary>
     ///     Creates a read-only scope for database operations
     /// </summary>
@@ -24,6 +31,73 @@ public class DatabaseScopeService(
     public IWriteScope CreateWriteScope()
     {
         return new WriteScope(contextFactory.CreateDbContext(), ownsContext: true);
+    }
+
+    /// <summary>
+    /// Gets or creates a write scope for the current DI scope.
+    /// The first call creates the scope, subsequent calls return the same instance.
+    /// </summary>
+    public IWriteScope GetWriteScope()
+    {
+        ThrowIfDisposed();
+        
+        if (_cachedWriteScope == null)
+        {
+            _cachedWriteScope = CreateWriteScope();
+        }
+
+        return _cachedWriteScope;
+    }
+
+    /// <summary>
+    /// Gets or creates a read scope for the current DI scope.
+    /// The first call creates the scope, subsequent calls return the same instance.
+    /// </summary>
+    public IReadScope GetReadScope()
+    {
+        ThrowIfDisposed();
+        
+        if (_cachedReadScope == null)
+        {
+            _cachedReadScope = CreateReadScope();
+        }
+
+        return _cachedReadScope;
+    }
+
+    /// <summary>
+    /// Commits any active write scope transaction.
+    /// Call this at the end of successful operations to persist changes.
+    /// </summary>
+    public Task CompleteAsync()
+    {
+        ThrowIfDisposed();
+        
+        if (_cachedWriteScope != null && !_completed)
+        {
+            _cachedWriteScope.Complete();
+            _completed = true;
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _cachedWriteScope?.Dispose();
+            _cachedReadScope?.Dispose();
+            _disposed = true;
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+        {
+            throw new ObjectDisposedException(nameof(DatabaseScopeService));
+        }
     }
 }
 

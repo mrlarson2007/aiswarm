@@ -7,15 +7,15 @@ namespace AISwarm.Infrastructure.Services;
 
 /// <summary>
 /// Memory service that uses per-request transaction coordination.
-/// Uses IScopedDatabaseService to automatically coordinate transactions across multiple operations.
+/// Uses IDatabaseScopeService to automatically coordinate transactions across multiple operations.
 /// </summary>
 public class MemoryService : IMemoryService
 {
-    private readonly IScopedDatabaseService _scopedDbService;
+    private readonly IDatabaseScopeService _scopedDbService;
     private readonly ITimeService _timeService;
 
     public MemoryService(
-        IScopedDatabaseService scopedDbService,
+        IDatabaseScopeService scopedDbService,
         ITimeService timeService)
     {
         _scopedDbService = scopedDbService;

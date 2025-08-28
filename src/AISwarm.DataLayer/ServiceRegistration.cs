@@ -22,12 +22,9 @@ public static class ServiceRegistration
             options.UseSqlite($"Data Source={databasePath};Cache=Shared")
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));
 
-        // Register scope service explicitly using the factory-based constructor to avoid ambiguity
-        services.AddSingleton<IDatabaseScopeService>(sp =>
+        // Register scope service as scoped for per-request transaction coordination
+        services.AddScoped<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
-
-        // Register scoped database service for per-request transaction coordination
-        services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
 
         // Initialize database after registration
         using var tempServiceProvider = services.BuildServiceProvider();

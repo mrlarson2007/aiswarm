@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-///     Database scope service that provides reading and writing scopes using dispose pattern
+///     Database scope service that provides reading and writing scopes using dispose pattern.
+///     When registered as scoped in DI, provides automatic caching and transaction coordination
+///     across multiple service calls within the same operation.
 /// </summary>
 public interface IDatabaseScopeService
 {
@@ -17,6 +19,24 @@ public interface IDatabaseScopeService
     ///     Creates a write scope with TransactionScope for automatic transaction handling
     /// </summary>
     IWriteScope CreateWriteScope();
+
+    /// <summary>
+    /// Gets or creates a write scope for the current DI scope.
+    /// The first call creates the scope, subsequent calls return the same instance.
+    /// </summary>
+    IWriteScope GetWriteScope();
+
+    /// <summary>
+    /// Gets or creates a read scope for the current DI scope.
+    /// The first call creates the scope, subsequent calls return the same instance.
+    /// </summary>
+    IReadScope GetReadScope();
+
+    /// <summary>
+    /// Commits any active write scope transaction.
+    /// Call this at the end of successful operations to persist changes.
+    /// </summary>
+    Task CompleteAsync();
 }
 
 /// <summary>

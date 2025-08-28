@@ -9,15 +9,15 @@ using AISwarm.Tests.TestDoubles;
 namespace AISwarm.Tests.Services;
 
 /// <summary>
-/// Tests for the scoped database service pattern that enables per-request transaction coordination.
+/// Tests for the database scope service pattern that enables per-request transaction coordination.
 /// This pattern eliminates nested transaction issues by caching database scopes within DI scopes.
 /// </summary>
-public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemoryService>
+public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemoryService>
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly ITimeService _timeService;
 
-    public ScopedDatabaseServiceTests()
+    public DatabaseScopeServiceTests()
     {
         var services = new ServiceCollection();
         
@@ -26,9 +26,8 @@ public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemorySe
             options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         
         // Register all required services
-        services.AddSingleton<IDatabaseScopeService>(sp =>
+        services.AddScoped<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
-        services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
         services.AddSingleton<ITimeService, FakeTimeService>();
         services.AddScoped<IMemoryService, MemoryService>();
         
@@ -43,7 +42,7 @@ public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemorySe
     /// Verifies that multiple service calls within the same DI scope share the same database transaction.
     /// This is the core behavior that eliminates nested transaction issues.
     /// </summary>
-    public class ScopeCoordinationTests : ScopedDatabaseServiceTests
+    public class ScopeCoordinationTests : DatabaseScopeServiceTests
     {
         [Fact]
         public async Task WhenMultipleServiceCallsInSameScope_ShouldShareSameTransaction()
@@ -51,7 +50,7 @@ public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemorySe
             // Arrange - Create a DI scope that will coordinate transactions
             using var scope = _serviceProvider.CreateScope();
             var memoryService = scope.ServiceProvider.GetRequiredService<IMemoryService>();
-            var scopedDbService = scope.ServiceProvider.GetRequiredService<IScopedDatabaseService>();
+            var scopedDbService = scope.ServiceProvider.GetRequiredService<IDatabaseScopeService>();
 
             // Act - Multiple service calls within the same DI scope
             await memoryService.SaveMemoryAsync("key1", "value1", "test-namespace");
@@ -81,7 +80,7 @@ public class ScopedDatabaseServiceTests : IDisposable, ISystemUnderTest<MemorySe
             using (var scope1 = _serviceProvider.CreateScope())
             {
                 var memoryService1 = scope1.ServiceProvider.GetRequiredService<IMemoryService>();
-                var scopedDbService1 = scope1.ServiceProvider.GetRequiredService<IScopedDatabaseService>();
+                var scopedDbService1 = scope1.ServiceProvider.GetRequiredService<IDatabaseScopeService>();
 
                 await memoryService1.SaveMemoryAsync("scope1-key", "scope1-value", "test");
                 await scopedDbService1.CompleteAsync();

@@ -11,7 +11,6 @@ namespace AISwarm.Tests.McpTools;
 public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 {
     private readonly IDatabaseScopeService _scopeService;
-    private readonly IScopedDatabaseService _scopedDbService;
     private readonly FakeTimeService _timeService;
 
     public ReadMemoryMcpTool SystemUnderTest { get; }
@@ -24,8 +23,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 
         _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
-        _scopedDbService = new ScopedDatabaseService(_scopeService);
-        IMemoryService memoryService = new MemoryService(_scopedDbService, _timeService);
+        IMemoryService memoryService = new MemoryService(_scopeService, _timeService);
         SystemUnderTest = new ReadMemoryMcpTool(memoryService);
     }
 

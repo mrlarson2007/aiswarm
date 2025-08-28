@@ -32,9 +32,8 @@ public class MemoryToolsIntegrationTests : IDisposable
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));
 
         // Add Database services
-        services.AddSingleton<IDatabaseScopeService>(sp =>
+        services.AddScoped<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
-        services.AddScoped<IScopedDatabaseService, ScopedDatabaseService>();
 
         // Add Infrastructure services
         services.AddInfrastructureServices();
