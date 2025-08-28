@@ -77,7 +77,7 @@ public class GetNextTaskMcpToolTests
             // Assert - Should find the task without waiting the full timeout period
             result.Success.ShouldBeTrue("Should find existing task in database");
             result.TaskId.ShouldBe(taskId);
-            result.Persona.ShouldBe(persona);
+            result.PersonaId.ShouldBe(persona);
             result.Description.ShouldBe(description);
 
             // Should not take the full timeout - should be much faster than 200ms
@@ -139,7 +139,7 @@ public class GetNextTaskMcpToolTests
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldNotBeNull();
             result.TaskId!.ShouldStartWith("system:");
-            result.Persona.ShouldNotBeNull();
+            result.PersonaId.ShouldNotBeNull();
             result.Description.ShouldNotBeNull();
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("No tasks available");
@@ -209,7 +209,7 @@ public class GetNextTaskMcpToolTests
             // Assert - Should get the high priority task despite being newer
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(highPriorityTaskId);
-            result.Persona.ShouldBe(highPriorityPersona);
+            result.PersonaId.ShouldBe(highPriorityPersona);
             result.Description.ShouldBe(highPriorityDescription);
 
             // Verify the task is now assigned to the requesting agent
@@ -252,7 +252,7 @@ public class GetNextTaskMcpToolTests
             // Assert - Should get the high priority task despite being newer
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(highPriorityTaskId);
-            result.Persona.ShouldBe(highPriorityPersona);
+            result.PersonaId.ShouldBe(highPriorityPersona);
             result.Description.ShouldBe(highPriorityDescription);
         }
 
@@ -284,7 +284,7 @@ public class GetNextTaskMcpToolTests
             // Assert - Should get the assigned task despite unassigned having higher priority
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(assignedTaskId);
-            result.Persona.ShouldBe(assignedPersona);
+            result.PersonaId.ShouldBe(assignedPersona);
             result.Description.ShouldBe(assignedDescription);
 
             // Verify the unassigned task is still unassigned and available for claiming
@@ -314,7 +314,7 @@ public class GetNextTaskMcpToolTests
             // Assert
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(unassignedTaskId);
-            result.Persona.ShouldBe(expectedPersona);
+            result.PersonaId.ShouldBe(expectedPersona);
             result.Description.ShouldBe(expectedDescription);
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("call this tool again");
@@ -373,7 +373,7 @@ public class GetNextTaskMcpToolTests
             // Assert - should claim and return the matching task
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(unassignedTaskId);
-            result.Persona.ShouldBe(expectedPersona);
+            result.PersonaId.ShouldBe(expectedPersona);
             result.Description.ShouldBe(expectedDescription);
 
             // Verify in DB that the task is now assigned to the agent
@@ -414,7 +414,7 @@ public class GetNextTaskMcpToolTests
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldNotBeNull();
             result.TaskId.ShouldStartWith("system:");
-            result.Persona.ShouldNotBeNull();
+            result.PersonaId.ShouldNotBeNull();
             result.Description.ShouldNotBeNull();
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("No tasks available");
@@ -456,7 +456,7 @@ public class GetNextTaskMcpToolTests
             // Assert
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(taskId);
-            result.Persona.ShouldBe(expectedPersona);
+            result.PersonaId.ShouldBe(expectedPersona);
             result.Description.ShouldBe(expectedDescription);
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("call this tool again");
@@ -531,7 +531,7 @@ public class GetNextTaskMcpToolTests
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldNotBeNull();
             result.TaskId!.ShouldStartWith("system:");
-            result.Persona.ShouldNotBeNull();
+            result.PersonaId.ShouldNotBeNull();
             result.Description.ShouldNotBeNull();
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("No tasks available");
@@ -583,7 +583,7 @@ public class GetNextTaskMcpToolTests
             // Assert
             result.Success.ShouldBeTrue();
             result.TaskId.ShouldBe(taskId);
-            result.Persona.ShouldBe(expectedPersona);
+            result.PersonaId.ShouldBe(expectedPersona);
             result.Description.ShouldBe(expectedDescription);
             result.Message.ShouldNotBeNull();
             result.Message.ShouldContain("call this tool again");
