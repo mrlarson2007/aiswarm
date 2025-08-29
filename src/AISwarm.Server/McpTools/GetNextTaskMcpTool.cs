@@ -82,14 +82,14 @@ public class GetNextTaskMcpTool(
         {
             const int maxRetries = 10; // Prevent infinite loops in race conditions
             int retryCount = 0;
-            
+
             do
             {
                 preferredTaskId = await TryGetNextTaskIdAsync(agentInfo, cts.Token);
                 var result = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
                 if (result != null)
                     return result;
-                
+
                 retryCount++;
                 if (retryCount >= maxRetries)
                 {

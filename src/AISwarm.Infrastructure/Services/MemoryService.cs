@@ -12,7 +12,7 @@ namespace AISwarm.Infrastructure.Services;
 public class MemoryService : IMemoryService
 {
     private const string DefaultContentType = "text";
-    
+
     private readonly IDatabaseScopeService _scopedDbService;
     private readonly ITimeService _timeService;
 
