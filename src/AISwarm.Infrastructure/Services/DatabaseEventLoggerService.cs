@@ -251,9 +251,18 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
 
             _logger.Info($"Logged agent event: {agentEvent.Type} for agent {eventLog.EntityId}");
         }
+        catch (DbUpdateException ex)
+        {
+            _logger.Error($"Database update failed when logging agent event {agentEvent.Type}: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.Error($"JSON serialization failed when logging agent event {agentEvent.Type}: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            _logger.Error($"Failed to log agent event {agentEvent.Type}: {ex.Message}");
+            _logger.Error($"Unexpected error when logging agent event {agentEvent.Type}: {ex.Message}");
+            throw; // Rethrow to allow upper-level handlers to take appropriate action
         }
     }
 
