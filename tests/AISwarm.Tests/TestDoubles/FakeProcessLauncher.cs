@@ -27,7 +27,7 @@ public class FakeProcessLauncher : IProcessLauncher
     {
         // Create a fake process that appears to be running but doesn't actually start anything
         var fakeProcess = new Process();
-        
+
         // Modify the start info to point to a fake executable to avoid actually launching anything
         var fakeStartInfo = new ProcessStartInfo
         {
@@ -39,11 +39,11 @@ public class FakeProcessLauncher : IProcessLauncher
             RedirectStandardError = startInfo.RedirectStandardError,
             CreateNoWindow = startInfo.CreateNoWindow
         };
-        
+
         fakeProcess.StartInfo = fakeStartInfo;
-        
+
         _launchedProcesses.Add(fakeProcess);
-        
+
         return fakeProcess;
     }
 
@@ -54,7 +54,7 @@ public class FakeProcessLauncher : IProcessLauncher
     {
         // Simulate a small delay
         await Task.Delay(10);
-        
+
         // Record the launch attempt
         var fakeStartInfo = new ProcessStartInfo
         {
@@ -66,10 +66,10 @@ public class FakeProcessLauncher : IProcessLauncher
             RedirectStandardError = captureOutput,
             CreateNoWindow = true
         };
-        
+
         var fakeProcess = new Process { StartInfo = fakeStartInfo };
         _launchedProcesses.Add(fakeProcess);
-        
+
         // Return a fake successful result
         return new ProcessResult(
             IsSuccess: true,
@@ -91,10 +91,10 @@ public class FakeProcessLauncher : IProcessLauncher
             WorkingDirectory = workingDirectory,
             UseShellExecute = true
         };
-        
+
         var fakeProcess = new Process { StartInfo = fakeStartInfo };
         _launchedProcesses.Add(fakeProcess);
-        
+
         // Always return true to simulate successful start
         return true;
     }

@@ -98,11 +98,11 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             catch (IOException ex)
             {
                 _logger.Error($"IO error in task event logging: {ex.Message}");
-           }
-           catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
-           {
-               _logger.Error($"Database update error in task event logging: {ex.Message}");
-           }
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                _logger.Error($"Database update error in task event logging: {ex.Message}");
+            }
         }, token);
 
         // Start agent event logging

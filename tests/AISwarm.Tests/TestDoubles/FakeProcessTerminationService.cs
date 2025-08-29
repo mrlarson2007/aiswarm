@@ -24,10 +24,10 @@ public class FakeProcessTerminationService : IProcessTerminationService
     {
         // Simulate a small delay
         await Task.Delay(10);
-        
+
         // Record the termination attempt
         _terminatedProcessIds.Add(processId);
-        
+
         // Always return true to simulate successful termination
         return true;
     }

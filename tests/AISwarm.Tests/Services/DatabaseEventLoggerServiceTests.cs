@@ -89,16 +89,16 @@ public class TaskEventLoggingTests : DatabaseEventLoggerServiceTestBase
     {
         // Arrange
         var eventLogger = SystemUnderTest;
-        
+
         // Test data for TaskCreated
         var taskId1 = "test-task-1";
         var agentId1 = "test-agent-1";
         var personaId = "implementer";
-        
+
         // Test data for TaskCompleted
         var taskId2 = "test-task-2";
         var agentId2 = "test-agent-2";
-        
+
         // Test data for TaskFailed
         var taskId3 = "test-task-3";
         var agentId3 = "test-agent-3";

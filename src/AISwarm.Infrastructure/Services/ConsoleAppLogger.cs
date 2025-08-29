@@ -17,7 +17,7 @@ public class ConsoleAppLogger : IAppLogger, IDisposable
             builder
                 .AddConsole()
                 .SetMinimumLevel(LogLevel.Information));
-        
+
         _logger = _loggerFactory.CreateLogger<ConsoleAppLogger>();
     }
 
