@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AISwarm.DataLayer;
+using Microsoft.EntityFrameworkCore;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Eventing;
 
@@ -90,10 +91,18 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 _logger.Info("Task event logging cancelled");
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
-                _logger.Error($"Error in task event logging: {ex.Message}");
+                _logger.Error($"Invalid operation in task event logging: {ex.Message}");
             }
+            catch (IOException ex)
+            {
+                _logger.Error($"IO error in task event logging: {ex.Message}");
+           }
+           catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+           {
+               _logger.Error($"Database update error in task event logging: {ex.Message}");
+           }
         }, token);
 
         // Start agent event logging
@@ -118,9 +127,17 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 _logger.Info("Agent event logging cancelled");
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
-                _logger.Error($"Error in agent event logging: {ex.Message}");
+                _logger.Error($"Invalid operation in agent event logging: {ex.Message}");
+            catch (IOException ex)
+            {
+                _logger.Error($"IO error in agent event logging: {ex.Message}");
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                _logger.Error($"Database update error in agent event logging: {ex.Message}");
+            }
             }
         }, token);
 
