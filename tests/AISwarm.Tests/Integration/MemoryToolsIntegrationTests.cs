@@ -59,7 +59,8 @@ public class MemoryToolsIntegrationTests : IDisposable
     public void Dispose()
     {
         // Dispose service provider first to close all database connections
-        if (_serviceProvider is IDisposable disposable) disposable.Dispose();
+        if (_serviceProvider is IDisposable disposable)
+            disposable.Dispose();
     }
 
     [Fact]

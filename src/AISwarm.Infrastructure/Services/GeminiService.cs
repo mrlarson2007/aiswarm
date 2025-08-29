@@ -30,7 +30,8 @@ public class GeminiService(
             var workDir = workingDirectory ?? Environment.CurrentDirectory;
 
             // If agent settings are provided, create Gemini configuration file
-            if (agentSettings != null) await CreateGeminiConfigurationAsync(workDir, agentSettings);
+            if (agentSettings != null)
+                await CreateGeminiConfigurationAsync(workDir, agentSettings);
 
             var arguments = BuildGeminiArguments(contextFilePath, model, yolo);
             logger.Info("Launching Gemini CLI...");

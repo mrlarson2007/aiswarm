@@ -31,7 +31,8 @@ public class LaunchAgentCommandHandler(
             logger.Info($"Agent: {agentType}");
             logger.Info($"Model: {model ?? "Gemini CLI default"}");
             logger.Info("Workspace: Current branch");
-            if (!string.IsNullOrWhiteSpace(worktree)) logger.Info($"Worktree (planned): {worktree}");
+            if (!string.IsNullOrWhiteSpace(worktree))
+                logger.Info($"Worktree (planned): {worktree}");
             logger.Info($"Working directory: {workingDirectory}");
             logger.Info($"Monitor: {monitor}");
             var planned = Path.Combine(workingDirectory, agentType + "_context.md");
@@ -63,7 +64,10 @@ public class LaunchAgentCommandHandler(
                 logger.Info("Registering agent in database for monitoring...");
                 var request = new AgentRegistrationRequest
                 {
-                    PersonaId = agentType, WorkingDirectory = workDir, Model = model, WorktreeName = worktree
+                    PersonaId = agentType,
+                    WorkingDirectory = workDir,
+                    Model = model,
+                    WorktreeName = worktree
                 };
 
                 agentId = await localAgentService.RegisterAgentAsync(request);
@@ -82,7 +86,8 @@ public class LaunchAgentCommandHandler(
             contextPath = await contextService.CreateContextFile(agentType, workDir);
 
             // If monitoring is enabled, append agent ID information to context
-            if (monitor && agentId != null) await AppendAgentIdToContextAsync(contextPath, agentId);
+            if (monitor && agentId != null)
+                await AppendAgentIdToContextAsync(contextPath, agentId);
         }
         catch (Exception ex)
         {
@@ -101,7 +106,8 @@ public class LaunchAgentCommandHandler(
                 logger.Info("Configuring Gemini with agent settings");
                 var agentSettings = new AgentSettings
                 {
-                    AgentId = agentId, McpServerUrl = "http://localhost:5000/sse" // Updated to use correct port
+                    AgentId = agentId,
+                    McpServerUrl = "http://localhost:5000/sse" // Updated to use correct port
                 };
                 success = await geminiService.LaunchInteractiveAsync(
                     contextPath,

@@ -119,7 +119,10 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Arrange
             var request = new AgentRegistrationRequest
             {
-                PersonaId = "tester", WorkingDirectory = "/test/minimal-path", Model = null, WorktreeName = null
+                PersonaId = "tester",
+                WorkingDirectory = "/test/minimal-path",
+                Model = null,
+                WorktreeName = null
             };
 
             // Act

@@ -37,13 +37,15 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
             _subs.Clear();
         }
 
-        foreach (var ch in channels) ch.Writer.TryComplete();
+        foreach (var ch in channels)
+            ch.Writer.TryComplete();
     }
 
     public IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter,
         CancellationToken ct = default)
     {
-        if (_disposed) return Empty<EventEnvelope<TType, TPayload>>();
+        if (_disposed)
+            return Empty<EventEnvelope<TType, TPayload>>();
 
         var channel = _boundedOptions is null
             ? Channel.CreateUnbounded<EventEnvelope<TType, TPayload>>()
@@ -81,7 +83,8 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
                 .ToList();
         }
 
-        foreach (var channel in targets) await channel.Writer.WriteAsync(evt, ct);
+        foreach (var channel in targets)
+            await channel.Writer.WriteAsync(evt, ct);
     }
 
     private static async IAsyncEnumerable<T> Empty<T>()
@@ -104,8 +107,8 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
         Channel<EventEnvelope<TType, TPayload>> ch)
     {
         while (await ch.Reader.WaitToReadAsync())
-        while (ch.Reader.TryRead(out var item))
-            yield return item;
+            while (ch.Reader.TryRead(out var item))
+                yield return item;
     }
 
     private static bool Matches(EventFilter<TType, TPayload> f, EventEnvelope<TType, TPayload> e)

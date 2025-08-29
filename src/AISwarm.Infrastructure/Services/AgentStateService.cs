@@ -41,7 +41,8 @@ public class AgentStateService(
             return false;
 
         // Terminate process if available
-        if (!string.IsNullOrEmpty(agent.ProcessId)) await processTerminationService.KillProcessAsync(agent.ProcessId);
+        if (!string.IsNullOrEmpty(agent.ProcessId))
+            await processTerminationService.KillProcessAsync(agent.ProcessId);
 
         var oldStatus = agent.Status;
         agent.Kill(timestamp);

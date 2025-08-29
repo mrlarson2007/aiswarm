@@ -58,7 +58,8 @@ public static class ServiceRegistration
         int? capacity = null;
         var capacityString = configuration["EventBus:Capacity"];
         if (!string.IsNullOrWhiteSpace(capacityString) && int.TryParse(capacityString, out var parsedCap) &&
-            parsedCap > 0) capacity = parsedCap;
+            parsedCap > 0)
+            capacity = parsedCap;
         var fullModeString = configuration["EventBus:FullMode"]; // Wait | DropOldest | DropNewest | DropWrite
 
         if (capacity is > 0)
@@ -70,7 +71,9 @@ public static class ServiceRegistration
 
             var options = new BoundedChannelOptions(capacity.Value)
             {
-                FullMode = mode, SingleReader = false, SingleWriter = false
+                FullMode = mode,
+                SingleReader = false,
+                SingleWriter = false
             };
 
             // Replace the default IEventBus with a bounded instance

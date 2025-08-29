@@ -287,7 +287,8 @@ public class GetNextTaskMcpToolTests
             // Ensure default config has long timeout, so param takes effect
             tool.Configuration = new GetNextTaskConfiguration
             {
-                TimeToWaitForTask = TimeSpan.FromSeconds(10), PollingInterval = TimeSpan.FromMilliseconds(5)
+                TimeToWaitForTask = TimeSpan.FromSeconds(10),
+                PollingInterval = TimeSpan.FromMilliseconds(5)
             };
 
             // Act

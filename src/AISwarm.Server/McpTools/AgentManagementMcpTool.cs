@@ -27,7 +27,8 @@ public class AgentManagementMcpTool(
 
         var query = scope.Agents.AsQueryable();
 
-        if (!string.IsNullOrEmpty(personaFilter)) query = query.Where(a => a.PersonaId == personaFilter);
+        if (!string.IsNullOrEmpty(personaFilter))
+            query = query.Where(a => a.PersonaId == personaFilter);
 
         var agents = await query
             .Select(a => new AgentInfo
@@ -117,7 +118,10 @@ public class AgentManagementMcpTool(
             logger.Info("[MCP] Registering agent in database...");
             var registrationRequest = new AgentRegistrationRequest
             {
-                PersonaId = persona, WorkingDirectory = workingDirectory, Model = model, WorktreeName = worktreeName
+                PersonaId = persona,
+                WorkingDirectory = workingDirectory,
+                Model = model,
+                WorktreeName = worktreeName
             };
 
             var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
@@ -169,14 +173,16 @@ public class AgentManagementMcpTool(
         [Description("ID of the agent to kill")]
         string agentId)
     {
-        if (string.IsNullOrWhiteSpace(agentId)) return KillAgentResult.Failure("Agent ID is required");
+        if (string.IsNullOrWhiteSpace(agentId))
+            return KillAgentResult.Failure("Agent ID is required");
 
         try
         {
             // Check if agent exists first
             using var scope = scopeService.GetReadScope();
             var agent = await scope.Agents.FindAsync(agentId);
-            if (agent == null) return KillAgentResult.Failure($"Agent not found: {agentId}");
+            if (agent == null)
+                return KillAgentResult.Failure($"Agent not found: {agentId}");
 
             // Use the local agent service to handle process termination and database updates
             await localAgentService.KillAgentAsync(agentId);

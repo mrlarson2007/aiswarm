@@ -16,7 +16,8 @@ public class WorkItemNotificationServiceTests
     private static async Task WaitForCountAsync(List<TaskEventEnvelope> list, int expected, CancellationToken ct)
     {
         var sw = Stopwatch.StartNew();
-        while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500)) await Task.Delay(5, ct);
+        while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500))
+            await Task.Delay(5, ct);
     }
 
     [Fact(Timeout = 5000)]
@@ -261,7 +262,8 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, token)) received.Add(evt);
+                await foreach (var evt in service.SubscribeForAgent(agentId, token))
+                    received.Add(evt);
             }
             catch (OperationCanceledException)
             {
@@ -380,7 +382,8 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, token)) received.Add(evt);
+                await foreach (var evt in service.SubscribeForAgent(agentId, token))
+                    received.Add(evt);
                 completed = true;
             }
             catch (OperationCanceledException ex)

@@ -12,6 +12,7 @@ public static class EventConversion
         where TEventType : struct, Enum
         where TPayload : class, IEventPayload
     {
-        await foreach (var e in source) yield return factory(e.Type, e.Timestamp, e.Payload);
+        await foreach (var e in source)
+            yield return factory(e.Type, e.Timestamp, e.Payload);
     }
 }

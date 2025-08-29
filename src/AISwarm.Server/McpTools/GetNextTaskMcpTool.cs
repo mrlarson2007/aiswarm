@@ -104,7 +104,8 @@ public class GetNextTaskMcpTool(
         }
         finally
         {
-            if (!cts.IsCancellationRequested) await cts.CancelAsync();
+            if (!cts.IsCancellationRequested)
+                await cts.CancelAsync();
         }
 
         return GetNextTaskResult.NoTasksAvailable();

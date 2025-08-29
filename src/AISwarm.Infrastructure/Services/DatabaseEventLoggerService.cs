@@ -76,7 +76,8 @@ public class DatabaseEventLoggerService(
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
                     _readyTaskCompletionSource.SetResult();
 
-                await foreach (var taskEvent in subscription) await LogTaskEventAsync(taskEvent, token);
+                await foreach (var taskEvent in subscription)
+                    await LogTaskEventAsync(taskEvent, token);
             }
             catch (OperationCanceledException)
             {
@@ -107,7 +108,8 @@ public class DatabaseEventLoggerService(
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
                     _readyTaskCompletionSource.SetResult();
 
-                await foreach (var agentEvent in subscription) await LogAgentEventAsync(agentEvent, token);
+                await foreach (var agentEvent in subscription)
+                    await LogAgentEventAsync(agentEvent, token);
             }
             catch (OperationCanceledException)
             {
@@ -135,7 +137,8 @@ public class DatabaseEventLoggerService(
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        if (_cancellationTokenSource == null) return;
+        if (_cancellationTokenSource == null)
+            return;
 
         _logger.Info("Stopping database event logger service");
 

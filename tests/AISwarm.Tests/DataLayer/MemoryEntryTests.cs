@@ -107,7 +107,10 @@ public class MemoryEntryTests
             // Arrange
             var memoryEntry = new MemoryEntry
             {
-                Id = "test-id", Namespace = "test-namespace", Key = "test-key", Value = "test-value"
+                Id = "test-id",
+                Namespace = "test-namespace",
+                Key = "test-key",
+                Value = "test-value"
             };
 
             // Act

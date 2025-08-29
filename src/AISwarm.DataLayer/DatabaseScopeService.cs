@@ -24,7 +24,8 @@ public class DatabaseScopeService(IDbContextFactory<CoordinationDbContext> conte
         ThrowIfDisposed();
 
         // If cached scope is disposed, clear the cache and create a new one
-        if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope)) _cachedWriteScope = null;
+        if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope))
+            _cachedWriteScope = null;
 
         _cachedWriteScope ??= CreateWriteScope();
 
@@ -40,7 +41,8 @@ public class DatabaseScopeService(IDbContextFactory<CoordinationDbContext> conte
         ThrowIfDisposed();
 
         // If cached scope is disposed, clear the cache and create a new one
-        if (_cachedReadScope != null && IsDisposed(_cachedReadScope)) _cachedReadScope = null;
+        if (_cachedReadScope != null && IsDisposed(_cachedReadScope))
+            _cachedReadScope = null;
 
         _cachedReadScope ??= CreateReadScope();
 
@@ -92,7 +94,8 @@ public class DatabaseScopeService(IDbContextFactory<CoordinationDbContext> conte
 
     private void ThrowIfDisposed()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(DatabaseScopeService));
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(DatabaseScopeService));
     }
 
     private static bool IsDisposed(IDisposable scope)

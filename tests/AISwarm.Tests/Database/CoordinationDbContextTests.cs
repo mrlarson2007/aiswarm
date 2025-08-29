@@ -75,7 +75,9 @@ public class CoordinationDbContextTests : IDisposable
         // Arrange
         var agent = new Agent
         {
-            Id = "agent-123", PersonaId = "planner", LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
+            Id = "agent-123",
+            PersonaId = "planner",
+            LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
         };
 
         _context.Agents.Add(agent);
