@@ -11,7 +11,7 @@ namespace AISwarm.Tests.TestDoubles;
 /// </summary>
 public class FakeProcessLauncher : IProcessLauncher
 {
-    private readonly ConcurrentBag<Process> _launchedProcesses = new();
+    private readonly ConcurrentBag<Process> _launchedProcesses = [];
 
     /// <summary>
     /// Gets the collection of processes that were "launched" (but not actually started).

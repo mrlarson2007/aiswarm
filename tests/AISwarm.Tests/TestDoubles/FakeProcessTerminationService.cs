@@ -8,7 +8,7 @@ namespace AISwarm.Tests.TestDoubles;
 /// </summary>
 public class FakeProcessTerminationService : IProcessTerminationService
 {
-    private readonly List<string> _terminatedProcessIds = new();
+    private readonly List<string> _terminatedProcessIds = [];
 
     /// <summary>
     /// Gets the list of process IDs that were "terminated" (but not actually killed).

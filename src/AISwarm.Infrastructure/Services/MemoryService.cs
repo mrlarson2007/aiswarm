@@ -26,7 +26,7 @@ public class MemoryService : IMemoryService
 
     public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null, string? metadata = null)
     {
-        // Get scoped write scope - creates new scope or returns cached one
+        // Get scoped write scope - uses existing transaction scope if available, creates new one if needed
         var scope = _scopedDbService.GetWriteScope();
         var now = _timeService.UtcNow;
         var namespaceName = @namespace ?? "";

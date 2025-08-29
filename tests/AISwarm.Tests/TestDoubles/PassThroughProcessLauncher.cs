@@ -10,7 +10,7 @@ namespace AISwarm.Tests.TestDoubles;
 /// </summary>
 public sealed class PassThroughProcessLauncher : IProcessLauncher
 {
-    private readonly ConcurrentQueue<Expectation> _expectations = new();
+    private readonly ConcurrentQueue<Expectation> _expectations = [];
     public readonly List<Invocation> Invocations = [];
 
     public Task<ProcessResult> RunAsync(

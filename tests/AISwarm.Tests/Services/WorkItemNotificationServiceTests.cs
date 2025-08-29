@@ -444,7 +444,7 @@ public class WorkItemNotificationServiceTests
             await foreach (var evt in service.SubscibeForTaskCompletion(targetTaskIds, token))
             {
                 received.Add(evt);
-                if (received.Count >= 4) // Expect 4 events: 2 created, 1 completed, 1 failed
+                if (received.Count >= 2) // Expect 2 events: 1 completed, 1 failed (no created events)
                     break;
             }
         }, token);
@@ -486,7 +486,7 @@ public class WorkItemNotificationServiceTests
 
         // Verify we got the expected event types
         var eventTypes = received.Select(e => e.Type).ToArray();
-        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(0);
+        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(0); // SubscibeForTaskCompletion doesn't include Created events
         eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
         eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
     }

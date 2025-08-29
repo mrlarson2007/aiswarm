@@ -29,14 +29,20 @@ public class GetNextTaskMcpTool(
     ///     Gets the next pending task for the specified agent
     /// </summary>
     /// <param name="agentId">ID of the agent requesting a task</param>
-    /// <param name="timeoutMs">Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result</param>
+    /// <param name="timeoutMs">Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result. 
+    /// Valid range: 0 to Int32.MaxValue (2,147,483,647ms ≈ 24.8 days). 
+    /// - null (default): No wait, returns immediately if no tasks available
+    /// - 0: No wait, same as null
+    /// - Positive values: Wait up to specified milliseconds for new tasks
+    /// - Negative values: Treated as 0 (no wait)
+    /// Returns synthetic 'system:requery:...' task ID when timeout expires without finding tasks.</param>
     /// <returns>Result with task information or error message</returns>
     [McpServerTool(Name = "get_next_task")]
     [Description("Gets the next pending task for the specified agent")]
     public async Task<GetNextTaskResult> GetNextTaskAsync(
         [Description("ID of the agent requesting a task")]
         string agentId,
-        [Description("Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result")]
+        [Description("Optional timeout in milliseconds (0-2147483647) to wait for tasks. null/0 = no wait, positive = wait duration")]
         int? timeoutMs = null)
     {
         var effective = new GetNextTaskConfiguration
