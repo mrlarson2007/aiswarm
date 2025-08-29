@@ -11,10 +11,7 @@ public static class CommandFactory
     {
         var agentOption = new Option<string?>(
             "--agent",
-            "The type of agent to launch")
-        {
-            IsRequired = false
-        };
+            "The type of agent to launch") { IsRequired = false };
         agentOption.AddAlias("-a");
 
         var contextService = serviceProvider.GetRequiredService<IContextService>();
@@ -24,63 +21,39 @@ public static class CommandFactory
 
         var modelOption = new Option<string?>(
             "--model",
-            "The Gemini model to use (uses Gemini CLI default if not specified)")
-        {
-            IsRequired = false
-        };
+            "The Gemini model to use (uses Gemini CLI default if not specified)") { IsRequired = false };
         modelOption.AddAlias("-m");
 
         var worktreeOption = new Option<string?>(
             "--worktree",
-            "Create a git worktree with the specified name")
-        {
-            IsRequired = false
-        };
+            "Create a git worktree with the specified name") { IsRequired = false };
         worktreeOption.AddAlias("-w");
 
         var directoryOption = new Option<string?>(
             "--directory",
-            "The working directory for the agent (defaults to current directory)")
-        {
-            IsRequired = false
-        };
+            "The working directory for the agent (defaults to current directory)") { IsRequired = false };
         directoryOption.AddAlias("-d");
 
         var listOption = new Option<bool>(
             "--list",
-            "List available agent types")
-        {
-            IsRequired = false
-        };
+            "List available agent types") { IsRequired = false };
         listOption.AddAlias("-l");
 
         var listWorktreesOption = new Option<bool>(
             "--list-worktrees",
-            "List existing git worktrees")
-        {
-            IsRequired = false
-        };
+            "List existing git worktrees") { IsRequired = false };
 
         var dryRunOption = new Option<bool>(
             "--dry-run",
-            "Create context file but don't launch Gemini CLI")
-        {
-            IsRequired = false
-        };
+            "Create context file but don't launch Gemini CLI") { IsRequired = false };
 
         var initOption = new Option<bool>(
             "--init",
-            "Initialize .aiswarm directory with template persona files")
-        {
-            IsRequired = false
-        };
+            "Initialize .aiswarm directory with template persona files") { IsRequired = false };
 
         var monitorOption = new Option<bool>(
             "--monitor",
-            "Register agent in database and monitor its lifecycle")
-        {
-            IsRequired = false
-        };
+            "Register agent in database and monitor its lifecycle") { IsRequired = false };
 
         var rootCommand =
             new RootCommand("AI Swarm Agent Launcher - Launch Gemini CLI agents with personas and worktrees");

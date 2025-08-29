@@ -29,20 +29,23 @@ public class GetNextTaskMcpTool(
     ///     Gets the next pending task for the specified agent
     /// </summary>
     /// <param name="agentId">ID of the agent requesting a task</param>
-    /// <param name="timeoutMs">Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result. 
-    /// Valid range: 0 to Int32.MaxValue (2,147,483,647ms ≈ 24.8 days). 
-    /// - null (default): No wait, returns immediately if no tasks available
-    /// - 0: No wait, same as null
-    /// - Positive values: Wait up to specified milliseconds for new tasks
-    /// - Negative values: Treated as 0 (no wait)
-    /// Returns synthetic 'system:requery:...' task ID when timeout expires without finding tasks.</param>
+    /// <param name="timeoutMs">
+    ///     Optional timeout in milliseconds to wait for a task before returning a synthetic no-task result.
+    ///     Valid range: 0 to Int32.MaxValue (2,147,483,647ms ≈ 24.8 days).
+    ///     - null (default): No wait, returns immediately if no tasks available
+    ///     - 0: No wait, same as null
+    ///     - Positive values: Wait up to specified milliseconds for new tasks
+    ///     - Negative values: Treated as 0 (no wait)
+    ///     Returns synthetic 'system:requery:...' task ID when timeout expires without finding tasks.
+    /// </param>
     /// <returns>Result with task information or error message</returns>
     [McpServerTool(Name = "get_next_task")]
     [Description("Gets the next pending task for the specified agent")]
     public async Task<GetNextTaskResult> GetNextTaskAsync(
         [Description("ID of the agent requesting a task")]
         string agentId,
-        [Description("Optional timeout in milliseconds (0-2147483647) to wait for tasks. null/0 = no wait, positive = wait duration")]
+        [Description(
+            "Optional timeout in milliseconds (0-2147483647) to wait for tasks. null/0 = no wait, positive = wait duration")]
         int? timeoutMs = null)
     {
         var effective = new GetNextTaskConfiguration
@@ -67,13 +70,11 @@ public class GetNextTaskMcpTool(
     {
         var agentInfo = await GetAgentInfoAsync(agentId);
         if (agentInfo == null)
-        {
             return GetNextTaskResult
                 .Failure($"Agent not found: {agentId}");
-        }
 
         var preferredTaskId = await workItemNotifications.TryConsumeTaskCreatedAsync(
-                agentId, agentInfo.PersonaId, CancellationToken.None);
+            agentId, agentInfo.PersonaId, CancellationToken.None);
 
         // Update agent heartbeat since the agent is actively requesting tasks
         await localAgentService.UpdateHeartbeatAsync(agentId);
@@ -86,7 +87,7 @@ public class GetNextTaskMcpTool(
         using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
         try
         {
-            int retryCount = 0;
+            var retryCount = 0;
 
             do
             {
@@ -97,18 +98,13 @@ public class GetNextTaskMcpTool(
 
                 retryCount++;
                 if (retryCount >= configuration.MaxRetries)
-                {
                     // Break out of potential infinite loop after max retries
                     break;
-                }
             } while (preferredTaskId != null);
         }
         finally
         {
-            if (!cts.IsCancellationRequested)
-            {
-                await cts.CancelAsync();
-            }
+            if (!cts.IsCancellationRequested) await cts.CancelAsync();
         }
 
         return GetNextTaskResult.NoTasksAvailable();
@@ -153,19 +149,15 @@ public class GetNextTaskMcpTool(
             if (evtTask != null && evtTask.Status == TaskStatus.Pending)
             {
                 if (evtTask.AgentId == agentInfo.AgentId)
-                {
                     return GetNextTaskResult.SuccessWithTask(
                         evtTask.Id,
                         evtTask.PersonaId ?? string.Empty,
                         evtTask.Description);
-                }
 
                 // If unassigned and persona matches (or no persona), try to claim this exact task
                 if (string.IsNullOrEmpty(evtTask.AgentId) &&
                     (string.IsNullOrEmpty(evtTask.PersonaId) || evtTask.PersonaId == agentInfo.PersonaId))
-                {
                     return await ClaimUnassignedTaskAsync(evtTask.Id, agentInfo.AgentId);
-                }
             }
         }
 
@@ -178,12 +170,10 @@ public class GetNextTaskMcpTool(
             .FirstOrDefaultAsync();
 
         if (inProgressTask != null)
-        {
             return GetNextTaskResult.SuccessWithTask(
                 inProgressTask.Id,
                 inProgressTask.PersonaId ?? string.Empty,
                 inProgressTask.Description);
-        }
 
         // Then check for pending tasks assigned to this agent
         var pendingTask = await scope.Tasks
@@ -194,10 +184,8 @@ public class GetNextTaskMcpTool(
             .FirstOrDefaultAsync();
 
         if (pendingTask != null)
-        {
             // Mark the assigned task as in progress when agent picks it up
             return await StartAssignedTaskAsync(pendingTask.Id, agentInfo.AgentId);
-        }
 
         var unassignedTask = await scope.Tasks
             .Where(t => t.AgentId == null || t.AgentId == string.Empty)
@@ -291,5 +279,5 @@ public class GetNextTaskMcpTool(
             task.Description);
     }
 
-    record AgentInfo(string AgentId, string PersonaId);
+    private record AgentInfo(string AgentId, string PersonaId);
 }

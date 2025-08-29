@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Threading.Channels;
 using AISwarm.Infrastructure.Eventing;
 using Shouldly;
 
@@ -8,15 +10,13 @@ public class WorkItemNotificationServiceTests
     // Per-test-instance setup (xUnit creates a new class instance per test)
     private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
         new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
+
     private IWorkItemNotificationService SystemUnderTest => new WorkItemNotificationService(_bus);
 
     private static async Task WaitForCountAsync(List<TaskEventEnvelope> list, int expected, CancellationToken ct)
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500))
-        {
-            await Task.Delay(5, ct);
-        }
+        var sw = Stopwatch.StartNew();
+        while (list.Count < expected && sw.Elapsed < TimeSpan.FromMilliseconds(500)) await Task.Delay(5, ct);
     }
 
     [Fact(Timeout = 5000)]
@@ -43,8 +43,8 @@ public class WorkItemNotificationServiceTests
         }, token);
 
         await Task.Delay(5, token);
-        await service.PublishTaskCreated("t-agent", agentId, persona: null, CancellationToken.None);
-        await service.PublishTaskCreated("t-persona", agentId: null, persona: persona, CancellationToken.None);
+        await service.PublishTaskCreated("t-agent", agentId, null, CancellationToken.None);
+        await service.PublishTaskCreated("t-persona", null, persona, CancellationToken.None);
 
         await WaitForCountAsync(received, 2, token);
         await cts.CancelAsync();
@@ -85,6 +85,7 @@ public class WorkItemNotificationServiceTests
         // Note: publishing before subscribing won't be observed by TryConsume,
         // since subscriptions are not retroactive.
     }
+
     [Fact]
     public void WhenSubscribingWithNullPersona_ShouldThrowArgumentException()
     {
@@ -103,10 +104,7 @@ public class WorkItemNotificationServiceTests
     public async Task PublishAsync_WithSlowSubscriberAndBoundedChannel_AppliesBackpressure()
     {
         // Arrange: bounded capacity 1 and slow subscriber
-        var options = new System.Threading.Channels.BoundedChannelOptions(1)
-        {
-            FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait
-        };
+        var options = new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait };
 
         var bus = new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options);
         var service = new WorkItemNotificationService(bus);
@@ -119,10 +117,10 @@ public class WorkItemNotificationServiceTests
         var stream = service.SubscribeForAgent(agentId, token);
 
         // Act: publish first event to fill buffer
-        await service.PublishTaskCreated("t1", agentId, persona: null, CancellationToken.None);
+        await service.PublishTaskCreated("t1", agentId, null, CancellationToken.None);
 
         // Second publish should block until we release the reader
-        var secondPublish = service.PublishTaskCreated("t2", agentId, persona: null, CancellationToken.None).AsTask();
+        var secondPublish = service.PublishTaskCreated("t2", agentId, null, CancellationToken.None).AsTask();
 
         // Assert: verify it hasn't completed quickly (indicating backpressure)
         await Task.Delay(100, token);
@@ -139,8 +137,10 @@ public class WorkItemNotificationServiceTests
         {
             await e.DisposeAsync();
         }
+
         await secondPublish;
     }
+
     [Fact(Timeout = 5000)]
     public async Task WhenBusIsDisposed_SubscriptionsComplete_AndFurtherPublishesFail()
     {
@@ -161,6 +161,7 @@ public class WorkItemNotificationServiceTests
                 {
                     // consume until completion
                 }
+
                 completed = true;
             }
             catch (OperationCanceledException)
@@ -190,7 +191,7 @@ public class WorkItemNotificationServiceTests
         // Publishing after disposal should fail
         await Should.ThrowAsync<ObjectDisposedException>(async () =>
         {
-            await service.PublishTaskCreated("post-dispose", agentId, persona: null);
+            await service.PublishTaskCreated("post-dispose", agentId, null);
         });
     }
 
@@ -260,10 +261,7 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, token))
-                {
-                    received.Add(evt);
-                }
+                await foreach (var evt in service.SubscribeForAgent(agentId, token)) received.Add(evt);
             }
             catch (OperationCanceledException)
             {
@@ -275,13 +273,13 @@ public class WorkItemNotificationServiceTests
         await Task.Delay(5, cts.Token);
 
         // Publish first event (should be received)
-        await service.PublishTaskCreated(taskId: "t1", agentId: agentId, persona: "reviewer", CancellationToken.None);
+        await service.PublishTaskCreated("t1", agentId, "reviewer", CancellationToken.None);
         await WaitForCountAsync(received, 1, cts.Token);
 
         // Cancel subscription and then publish another event (should NOT be received)
         await cts.CancelAsync();
         await Task.Delay(10, CancellationToken.None);
-        await service.PublishTaskCreated(taskId: "t2", agentId: agentId, persona: "reviewer", CancellationToken.None);
+        await service.PublishTaskCreated("t2", agentId, "reviewer", CancellationToken.None);
 
         // Wait for reader to finish
         try
@@ -324,10 +322,10 @@ public class WorkItemNotificationServiceTests
         await Task.Delay(5, cts.Token);
 
         // Agent-assigned with same persona (should NOT be delivered to persona subscriber)
-        await service.PublishTaskCreated(taskId: "t-agent", agentId: "agent-99", persona: persona);
+        await service.PublishTaskCreated("t-agent", "agent-99", persona);
 
         // Unassigned with same persona (should be delivered)
-        await service.PublishTaskCreated(taskId: "t-unassigned", agentId: null, persona: persona);
+        await service.PublishTaskCreated("t-unassigned", null, persona);
 
         // Wait briefly for deliveries
         await WaitForCountAsync(received, 1, cts.Token);
@@ -357,7 +355,7 @@ public class WorkItemNotificationServiceTests
         var service = SystemUnderTest;
 
         // Act
-        var act = () => service.PublishTaskCreated(taskId: null!, agentId: null, persona: null).AsTask();
+        var act = () => service.PublishTaskCreated(null!, null, null).AsTask();
 
         // Assert
         var ex = Should.Throw<ArgumentException>(() => act());
@@ -374,7 +372,7 @@ public class WorkItemNotificationServiceTests
         var token = cts.Token;
 
         var received = new List<TaskEventEnvelope>();
-        bool completed = false;
+        var completed = false;
         Exception? captured = null;
 
         // Act
@@ -382,10 +380,7 @@ public class WorkItemNotificationServiceTests
         {
             try
             {
-                await foreach (var evt in service.SubscribeForAgent(agentId, token))
-                {
-                    received.Add(evt);
-                }
+                await foreach (var evt in service.SubscribeForAgent(agentId, token)) received.Add(evt);
                 completed = true;
             }
             catch (OperationCanceledException ex)
@@ -395,7 +390,7 @@ public class WorkItemNotificationServiceTests
         });
 
         await Task.Delay(5, cts.Token);
-        await service.PublishTaskCreated("t1", agentId, persona: null);
+        await service.PublishTaskCreated("t1", agentId, null);
 
         await WaitForCountAsync(received, 1, cts.Token);
 
@@ -453,7 +448,7 @@ public class WorkItemNotificationServiceTests
 
         // Publish events - some matching, some not
         await service.PublishTaskCreated("task-1", "agent-a", "reviewer"); // Should match
-        await service.PublishTaskCreated("task-2", "agent-b", "planner");  // Should NOT match
+        await service.PublishTaskCreated("task-2", "agent-b", "planner"); // Should NOT match
         await service.PublishTaskCreated("task-3", "agent-c", "implementer"); // Should match
         await service.PublishTaskCompleted("task-1", "agent-a"); // Should match
         await service.PublishTaskFailed("task-3", "agent-c", "error"); // Should match
@@ -486,7 +481,8 @@ public class WorkItemNotificationServiceTests
 
         // Verify we got the expected event types
         var eventTypes = received.Select(e => e.Type).ToArray();
-        eventTypes.Count(t => t == TaskEventType.Created).ShouldBe(0); // SubscibeForTaskCompletion doesn't include Created events
+        eventTypes.Count(t => t == TaskEventType.Created)
+            .ShouldBe(0); // SubscibeForTaskCompletion doesn't include Created events
         eventTypes.Count(t => t == TaskEventType.Completed).ShouldBe(1);
         eventTypes.Count(t => t == TaskEventType.Failed).ShouldBe(1);
     }
@@ -507,16 +503,17 @@ public class WorkItemNotificationServiceTests
             try
             {
                 await foreach (var evt in service.SubscribeForAllTaskEvents(token))
-                {
                     lock (received) // Thread-safe access
                     {
                         received.Add(evt);
                         if (received.Count >= 5) // Expect all 5 events
                             break;
                     }
-                }
             }
-            catch (OperationCanceledException) { /* Expected */ }
+            catch (OperationCanceledException)
+            {
+                /* Expected */
+            }
         }, token);
 
         await Task.Delay(50, token); // Give subscription time to start
@@ -638,8 +635,4 @@ public class WorkItemNotificationServiceTests
             payload.TaskId.ShouldBe("cancel-test-1");
         }
     }
-
-
-
-
 }

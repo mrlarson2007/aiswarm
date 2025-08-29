@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure.Eventing;
 
 /// <summary>
-/// Base interface for all event payloads in the system
+///     Base interface for all event payloads in the system
 /// </summary>
 public interface IEventPayload
 {

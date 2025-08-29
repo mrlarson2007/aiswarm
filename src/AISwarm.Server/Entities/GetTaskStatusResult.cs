@@ -4,40 +4,59 @@ public class GetTaskStatusResult
 {
     public bool Success
     {
-        get; init;
-    }
-    public string? ErrorMessage
-    {
-        get; init;
-    }
-    public string? TaskId
-    {
-        get; init;
-    }
-    public string? Status
-    {
-        get; init;
-    }
-    public string? AgentId
-    {
-        get; init;
-    }
-    public DateTime? StartedAt
-    {
-        get; init;
-    }
-    public DateTime? CompletedAt
-    {
-        get; init;
+        get;
+        init;
     }
 
-    public static GetTaskStatusResult Failure(string message) => new() { Success = false, ErrorMessage = message };
+    public string? ErrorMessage
+    {
+        get;
+        init;
+    }
+
+    public string? TaskId
+    {
+        get;
+        init;
+    }
+
+    public string? Status
+    {
+        get;
+        init;
+    }
+
+    public string? AgentId
+    {
+        get;
+        init;
+    }
+
+    public DateTime? StartedAt
+    {
+        get;
+        init;
+    }
+
+    public DateTime? CompletedAt
+    {
+        get;
+        init;
+    }
+
+    public static GetTaskStatusResult Failure(string message)
+    {
+        return new GetTaskStatusResult { Success = false, ErrorMessage = message };
+    }
+
     public static GetTaskStatusResult SuccessWith(
         string? taskId,
         string? status,
         string? agentId,
         DateTime? startedAt,
-        DateTime? completedAt) => new()
+        DateTime? completedAt)
+    {
+        return new GetTaskStatusResult
         {
             Success = true,
             TaskId = taskId,
@@ -46,4 +65,5 @@ public class GetTaskStatusResult
             StartedAt = startedAt,
             CompletedAt = completedAt
         };
+    }
 }

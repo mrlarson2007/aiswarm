@@ -6,7 +6,3 @@ public record EventEnvelope<TType, TPayload>(
     TPayload Payload)
     where TType : struct, Enum
     where TPayload : class, IEventPayload;
-
-
-
-

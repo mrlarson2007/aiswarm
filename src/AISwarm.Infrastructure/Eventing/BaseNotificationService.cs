@@ -1,21 +1,14 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace AISwarm.Infrastructure.Eventing;
 
 /// <summary>
-/// Base class for notification services providing common event publishing functionality
+///     Base class for notification services providing common event publishing functionality
 /// </summary>
-public abstract class BaseNotificationService<TEventType, TPayload, TEventEnvelope>
+public abstract class BaseNotificationService<TEventType, TPayload, TEventEnvelope>(IEventBus<TEventType, TPayload> bus)
     where TEventType : struct, Enum
     where TPayload : class, IEventPayload
     where TEventEnvelope : EventEnvelope<TEventType, TPayload>
 {
-    protected readonly IEventBus<TEventType, TPayload> Bus;
-
-    protected BaseNotificationService(IEventBus<TEventType, TPayload> bus)
-    {
-        Bus = bus;
-    }
+    protected readonly IEventBus<TEventType, TPayload> Bus = bus;
 
     protected ValueTask PublishEventAsync<TConcretePayload>(
         TEventType eventType,

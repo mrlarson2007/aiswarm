@@ -1,7 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Infrastructure.Eventing;
+using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -12,14 +12,14 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 namespace AISwarm.Tests.Integration;
 
 /// <summary>
-/// End-to-end integration tests that validate the complete workflow from agent registration
-/// through task assignment, retrieval, completion, and memory operations using real database
-/// and mocked process launching.
+///     End-to-end integration tests that validate the complete workflow from agent registration
+///     through task assignment, retrieval, completion, and memory operations using real database
+///     and mocked process launching.
 /// </summary>
 public class EndToEndIntegrationTests : IDisposable
 {
-    private readonly ServiceProvider _serviceProvider;
     private readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
+    private readonly ServiceProvider _serviceProvider;
 
     public EndToEndIntegrationTests()
     {
@@ -82,7 +82,14 @@ public class EndToEndIntegrationTests : IDisposable
         // Ensure database is created
         using var context = _dbContextFactory.CreateDbContext();
         context.Database.EnsureCreated();
+    }
 
+    public void Dispose()
+    {
+        // cleanup test database
+        using var context = _dbContextFactory.CreateDbContext();
+        context.Database.EnsureDeleted();
+        _serviceProvider.Dispose();
     }
 
     [Fact]
@@ -145,9 +152,8 @@ public class EndToEndIntegrationTests : IDisposable
             // Debug: log what events we actually have
             var eventTypes = string.Join(", ", events.Select(e => e.EventType));
             if (events.Count != 3)
-            {
-                throw new Exception($"Expected 3 events but found {events.Count}. Types: [{eventTypes}]. Task status: {taskStatus}");
-            }
+                throw new Exception(
+                    $"Expected 3 events but found {events.Count}. Types: [{eventTypes}]. Task status: {taskStatus}");
 
             events.Count.ShouldBe(3);
             events[0].EventType.ShouldBe("TaskCreated");
@@ -197,7 +203,8 @@ public class EndToEndIntegrationTests : IDisposable
         // verify get_next_task returns no task for different persona
         var getTaskResult2 = await getNextTaskTool.GetNextTaskAsync(agentId, 100);
         getTaskResult2.Success.ShouldBeTrue();
-        getTaskResult2.TaskId.ShouldStartWith("system:requery:"); // No task available since the other task is for different persona
+        getTaskResult2.TaskId
+            .ShouldStartWith("system:requery:"); // No task available since the other task is for different persona
 
         // verify first task is completed, second task is still pending in database
         using var context = _dbContextFactory.CreateDbContext();
@@ -299,13 +306,5 @@ public class EndToEndIntegrationTests : IDisposable
         var readResult = await readMemoryTool.ReadMemoryAsync("key1");
         readResult.Success.ShouldBeTrue();
         readResult.Value.ShouldBe("value1");
-    }
-
-    public void Dispose()
-    {
-        // cleanup test database
-        using var context = _dbContextFactory.CreateDbContext();
-        context.Database.EnsureDeleted();
-        _serviceProvider.Dispose();
     }
 }

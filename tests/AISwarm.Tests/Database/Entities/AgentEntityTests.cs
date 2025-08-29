@@ -36,9 +36,7 @@ public class AgentEntityTests
         // Arrange
         var agent = new Agent
         {
-            Id = "agent-123",
-            PersonaId = "planner",
-            LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
+            Id = "agent-123", PersonaId = "planner", LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
         };
         var newHeartbeatTime = DateTime.UtcNow;
 
@@ -53,11 +51,7 @@ public class AgentEntityTests
     public void WhenStoppingAgent_ShouldSetStatusAndStoppedTime()
     {
         // Arrange
-        var agent = new Agent
-        {
-            Id = "agent-123",
-            Status = AgentStatus.Running
-        };
+        var agent = new Agent { Id = "agent-123", Status = AgentStatus.Running };
         var stopTime = DateTime.UtcNow;
 
         // Act
@@ -72,11 +66,7 @@ public class AgentEntityTests
     public void WhenKillingAgent_ShouldSetStatusAndKillTime()
     {
         // Arrange
-        var agent = new Agent
-        {
-            Id = "agent-456",
-            Status = AgentStatus.Running
-        };
+        var agent = new Agent { Id = "agent-456", Status = AgentStatus.Running };
         var killTime = DateTime.UtcNow;
 
         // Act

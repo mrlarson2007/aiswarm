@@ -12,10 +12,15 @@ public class CoordinationDbContextTests : IDisposable
     public CoordinationDbContextTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
         _context = new CoordinationDbContext(options);
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
     }
 
     [Fact]
@@ -70,9 +75,7 @@ public class CoordinationDbContextTests : IDisposable
         // Arrange
         var agent = new Agent
         {
-            Id = "agent-123",
-            PersonaId = "planner",
-            LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
+            Id = "agent-123", PersonaId = "planner", LastHeartbeat = DateTime.UtcNow.AddMinutes(-5)
         };
 
         _context.Agents.Add(agent);
@@ -86,10 +89,5 @@ public class CoordinationDbContextTests : IDisposable
         // Assert
         var updatedAgent = await _context.Agents.FindAsync("agent-123");
         updatedAgent!.LastHeartbeat.ShouldBe(newHeartbeatTime);
-    }
-
-    public void Dispose()
-    {
-        _context.Dispose();
     }
 }

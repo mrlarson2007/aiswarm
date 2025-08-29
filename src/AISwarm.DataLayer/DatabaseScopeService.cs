@@ -5,85 +5,51 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-/// Database scope service that provides cached read and write scopes for transaction coordination.
-/// Implements per-request caching to avoid nested transactions and supports both read-only and full access patterns.
+///     Database scope service that provides cached read and write scopes for transaction coordination.
+///     Implements per-request caching to avoid nested transactions and supports both read-only and full access patterns.
 /// </summary>
-public class DatabaseScopeService : IDatabaseScopeService
+public class DatabaseScopeService(IDbContextFactory<CoordinationDbContext> contextFactory) : IDatabaseScopeService
 {
-    private readonly IDbContextFactory<CoordinationDbContext> _contextFactory;
-    private IWriteScope? _cachedWriteScope;
     private IReadScope? _cachedReadScope;
-    private bool _disposed;
+    private IWriteScope? _cachedWriteScope;
     private bool _completed;
-
-    public DatabaseScopeService(IDbContextFactory<CoordinationDbContext> contextFactory)
-    {
-        _contextFactory = contextFactory;
-    }
+    private bool _disposed;
 
     /// <summary>
-    ///     Creates a read-only scope for database operations
-    /// </summary>
-    private IReadScope CreateReadScope()
-    {
-        return new ReadScope(_contextFactory.CreateDbContext(), ownsContext: true);
-    }
-
-    /// <summary>
-    ///     Creates a write scope with TransactionScope for automatic transaction handling
-    /// </summary>
-    private IWriteScope CreateWriteScope()
-    {
-        return new WriteScope(_contextFactory.CreateDbContext(), ownsContext: true);
-    }
-
-    /// <summary>
-    /// Gets or creates a write scope for the current DI scope.
-    /// The first call creates the scope, subsequent calls return the same instance.
+    ///     Gets or creates a write scope for the current DI scope.
+    ///     The first call creates the scope, subsequent calls return the same instance.
     /// </summary>
     public IWriteScope GetWriteScope()
     {
         ThrowIfDisposed();
 
         // If cached scope is disposed, clear the cache and create a new one
-        if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope))
-        {
-            _cachedWriteScope = null;
-        }
+        if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope)) _cachedWriteScope = null;
 
-        if (_cachedWriteScope == null)
-        {
-            _cachedWriteScope = CreateWriteScope();
-        }
+        _cachedWriteScope ??= CreateWriteScope();
 
         return _cachedWriteScope;
     }
 
     /// <summary>
-    /// Gets or creates a read scope for the current DI scope.
-    /// The first call creates the scope, subsequent calls return the same instance.
+    ///     Gets or creates a read scope for the current DI scope.
+    ///     The first call creates the scope, subsequent calls return the same instance.
     /// </summary>
     public IReadScope GetReadScope()
     {
         ThrowIfDisposed();
 
         // If cached scope is disposed, clear the cache and create a new one
-        if (_cachedReadScope != null && IsDisposed(_cachedReadScope))
-        {
-            _cachedReadScope = null;
-        }
+        if (_cachedReadScope != null && IsDisposed(_cachedReadScope)) _cachedReadScope = null;
 
-        if (_cachedReadScope == null)
-        {
-            _cachedReadScope = CreateReadScope();
-        }
+        _cachedReadScope ??= CreateReadScope();
 
         return _cachedReadScope;
     }
 
     /// <summary>
-    /// Commits any active write scope transaction.
-    /// Call this at the end of successful operations to persist changes.
+    ///     Commits any active write scope transaction.
+    ///     Call this at the end of successful operations to persist changes.
     /// </summary>
     public Task CompleteAsync()
     {
@@ -108,12 +74,25 @@ public class DatabaseScopeService : IDatabaseScopeService
         }
     }
 
+    /// <summary>
+    ///     Creates a read-only scope for database operations
+    /// </summary>
+    private IReadScope CreateReadScope()
+    {
+        return new ReadScope(contextFactory.CreateDbContext());
+    }
+
+    /// <summary>
+    ///     Creates a write scope with TransactionScope for automatic transaction handling
+    /// </summary>
+    private IWriteScope CreateWriteScope()
+    {
+        return new WriteScope(contextFactory.CreateDbContext());
+    }
+
     private void ThrowIfDisposed()
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(DatabaseScopeService));
-        }
+        if (_disposed) throw new ObjectDisposedException(nameof(DatabaseScopeService));
     }
 
     private static bool IsDisposed(IDisposable scope)
@@ -127,6 +106,7 @@ public class DatabaseScopeService : IDatabaseScopeService
                 _ = readScope.Context.Model;
                 return false;
             }
+
             if (scope is WriteScope writeScope)
             {
                 // Try to access a property that would throw if disposed
@@ -148,11 +128,12 @@ public class DatabaseScopeService : IDatabaseScopeService
 /// </summary>
 public class ReadScope(CoordinationDbContext context, bool ownsContext = true) : IReadScope
 {
+    private readonly bool _ownsContext = ownsContext;
+
     public CoordinationDbContext Context
     {
         get;
     } = context;
-    private readonly bool _ownsContext = ownsContext;
 
     public DbSet<Agent> Agents => Context.Agents;
     public DbSet<WorkItem> Tasks => Context.Tasks;
@@ -171,11 +152,12 @@ public class ReadScope(CoordinationDbContext context, bool ownsContext = true) :
 /// </summary>
 public class WriteScope(CoordinationDbContext context, bool ownsContext = true) : IWriteScope
 {
+    private readonly bool _ownsContext = ownsContext;
+
     private readonly IDbContextTransaction? _transaction =
-        (context.Database.ProviderName?.IndexOf("InMemory", StringComparison.OrdinalIgnoreCase) >= 0)
+        context.Database.ProviderName?.IndexOf("InMemory", StringComparison.OrdinalIgnoreCase) >= 0
             ? null
             : context.Database.CurrentTransaction ?? context.Database.BeginTransaction();
-    private readonly bool _ownsContext = ownsContext;
 
     public CoordinationDbContext Context
     {
@@ -190,7 +172,10 @@ public class WriteScope(CoordinationDbContext context, bool ownsContext = true) 
     /// <summary>
     ///     Save changes to the database
     /// </summary>
-    public async Task<int> SaveChangesAsync() => await Context.SaveChangesAsync();
+    public async Task<int> SaveChangesAsync()
+    {
+        return await Context.SaveChangesAsync();
+    }
 
     /// <summary>
     ///     Commits the transaction (call this before disposing to save changes)

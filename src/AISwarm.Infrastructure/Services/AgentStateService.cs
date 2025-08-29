@@ -8,32 +8,30 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Domain service for managing agent state transitions with business rules and event publishing
+///     Domain service for managing agent state transitions with business rules and event publishing
 /// </summary>
 public interface IAgentStateService
 {
-
     /// <summary>
-    /// Kills an agent, handling process termination and task cleanup
+    ///     Kills an agent, handling process termination and task cleanup
     /// </summary>
     Task<bool> KillAsync(string agentId, DateTime timestamp);
 
     /// <summary>
-    /// Transitions agent from Starting to Running with heartbeat update
+    ///     Transitions agent from Starting to Running with heartbeat update
     /// </summary>
     Task<bool> ActivateAsync(string agentId, DateTime timestamp);
 }
 
 /// <summary>
-/// Implementation of agent state service with centralized business logic
+///     Implementation of agent state service with centralized business logic
 /// </summary>
 public class AgentStateService(
     IDatabaseScopeService scopeService,
     IAgentNotificationService notificationService,
     IProcessTerminationService processTerminationService) : IAgentStateService
 {
-
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public async Task<bool> KillAsync(string agentId, DateTime timestamp)
     {
         using var scope = scopeService.GetWriteScope();
@@ -43,10 +41,7 @@ public class AgentStateService(
             return false;
 
         // Terminate process if available
-        if (!string.IsNullOrEmpty(agent.ProcessId))
-        {
-            await processTerminationService.KillProcessAsync(agent.ProcessId);
-        }
+        if (!string.IsNullOrEmpty(agent.ProcessId)) await processTerminationService.KillProcessAsync(agent.ProcessId);
 
         var oldStatus = agent.Status;
         agent.Kill(timestamp);
@@ -75,7 +70,7 @@ public class AgentStateService(
         return true;
     }
 
-    /// <inheritdoc/>
+    /// <inheritdoc />
     public async Task<bool> ActivateAsync(string agentId, DateTime timestamp)
     {
         using var scope = scopeService.GetWriteScope();

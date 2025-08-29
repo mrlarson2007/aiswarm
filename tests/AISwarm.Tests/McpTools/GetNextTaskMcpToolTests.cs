@@ -1,36 +1,28 @@
+using System.Diagnostics;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Shouldly;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
-using AISwarm.Infrastructure.Eventing;
 
 namespace AISwarm.Tests.McpTools;
 
 public class GetNextTaskMcpToolTests
     : ISystemUnderTest<GetNextTaskMcpTool>
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly FakeTimeService _timeService;
-    private readonly Mock<ILocalAgentService> _mockLocalAgentService;
     private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
         new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
+
+    private readonly Mock<ILocalAgentService> _mockLocalAgentService;
     private readonly IWorkItemNotificationService _notifier;
+    private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
     private GetNextTaskMcpTool? _systemUnderTest;
-
-    public GetNextTaskMcpTool SystemUnderTest =>
-        _systemUnderTest ??= CreateSystemUnderTest();
-
-    private GetNextTaskMcpTool CreateSystemUnderTest()
-    {
-        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _notifier, _timeService);
-        tool.Configuration = new GetNextTaskConfiguration();
-        return tool;
-    }
 
     protected GetNextTaskMcpToolTests()
     {
@@ -49,12 +41,140 @@ public class GetNextTaskMcpToolTests
         _notifier = new WorkItemNotificationService(_bus);
     }
 
+    public GetNextTaskMcpTool SystemUnderTest =>
+        _systemUnderTest ??= CreateSystemUnderTest();
+
+    private GetNextTaskMcpTool CreateSystemUnderTest()
+    {
+        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _notifier, _timeService);
+        tool.Configuration = new GetNextTaskConfiguration();
+        return tool;
+    }
+
+
+    private async Task CreateRunningAgentAsync(string agentId, string personaId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var agent = new Agent
+        {
+            Id = agentId,
+            PersonaId = personaId,
+            WorkingDirectory = "/test",
+            Status = AgentStatus.Running,
+            LastHeartbeat = _timeService.UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Pending,
+            PersonaId = persona,
+            Description = description,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+    private async Task<string> CreatePendingTaskUsingNewScopeAsync(string agentId, string persona, string description)
+    {
+        // Create a completely new scope service to simulate external process
+        using var scope = _scopeService.GetWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Pending,
+            PersonaId = persona,
+            Description = description,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+    private async Task<string> CreateUnassignedTaskAsync(string personaId, string description)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = string.Empty, // Unassigned task
+            Status = TaskStatus.Pending,
+            PersonaId = personaId,
+            Description = description,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+
+    private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description,
+        TaskPriority priority)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Pending,
+            PersonaId = persona,
+            Description = description,
+            Priority = priority,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
+
+    private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description,
+        TaskPriority priority)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var taskId = Guid.NewGuid().ToString();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = string.Empty, // Unassigned task
+            Status = TaskStatus.Pending,
+            PersonaId = persona,
+            Description = description,
+            Priority = priority,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return taskId;
+    }
+
     public class TaskRetrievalNoTasksAvailableTests : GetNextTaskMcpToolTests
     {
         [Fact]
         public async Task WhenTaskExistsInDatabase_ShouldFindTaskOnFirstCall()
         {
-
             // Arrange - RED: This test reproduces the bug where agents don't pick up existing tasks
             var agentId = "agent-existing-task";
             var persona = "reviewer";
@@ -167,13 +287,12 @@ public class GetNextTaskMcpToolTests
             // Ensure default config has long timeout, so param takes effect
             tool.Configuration = new GetNextTaskConfiguration
             {
-                TimeToWaitForTask = TimeSpan.FromSeconds(10),
-                PollingInterval = TimeSpan.FromMilliseconds(5)
+                TimeToWaitForTask = TimeSpan.FromSeconds(10), PollingInterval = TimeSpan.FromMilliseconds(5)
             };
 
             // Act
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            var result = await tool.GetNextTaskAsync(agentId, timeoutMs: 50);
+            var sw = Stopwatch.StartNew();
+            var result = await tool.GetNextTaskAsync(agentId, 50);
             sw.Stop();
 
             // Assert synthetic no-task result
@@ -199,13 +318,16 @@ public class GetNextTaskMcpToolTests
             await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create low priority task first (older timestamp)
-            var lowPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
+            var lowPriorityTaskId =
+                await CreateUnassignedTaskWithPriorityAsync(lowPriorityPersona, lowPriorityDescription,
+                    TaskPriority.Low);
 
             // Advance time to ensure different timestamps
             _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
             // Create high priority task second (newer timestamp but higher priority)
-            var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona, highPriorityDescription, TaskPriority.Critical);
+            var highPriorityTaskId = await CreateUnassignedTaskWithPriorityAsync(highPriorityPersona,
+                highPriorityDescription, TaskPriority.Critical);
 
             // Act
             var result = await SystemUnderTest.GetNextTaskAsync(agentId);
@@ -242,13 +364,15 @@ public class GetNextTaskMcpToolTests
             await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create low priority assigned task first (older timestamp)
-            _ = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription, TaskPriority.Low);
+            _ = await CreatePendingTaskWithPriorityAsync(agentId, lowPriorityPersona, lowPriorityDescription,
+                TaskPriority.Low);
 
             // Advance time to ensure different timestamps
             _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
             // Create high priority assigned task second (newer timestamp but higher priority)
-            var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona, highPriorityDescription, TaskPriority.High);
+            var highPriorityTaskId = await CreatePendingTaskWithPriorityAsync(agentId, highPriorityPersona,
+                highPriorityDescription, TaskPriority.High);
 
             // Act
             var result = await SystemUnderTest.GetNextTaskAsync(agentId);
@@ -274,13 +398,17 @@ public class GetNextTaskMcpToolTests
             await CreateRunningAgentAsync(agentId, "reviewer");
 
             // Create high priority unassigned task first
-            var unassignedTaskId = await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription, TaskPriority.Critical);
+            var unassignedTaskId =
+                await CreateUnassignedTaskWithPriorityAsync(unassignedPersona, unassignedDescription,
+                    TaskPriority.Critical);
 
             // Advance time to ensure different timestamps
             _timeService.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
             // Create low priority assigned task second
-            var assignedTaskId = await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription, TaskPriority.Low);
+            var assignedTaskId =
+                await CreatePendingTaskWithPriorityAsync(agentId, assignedPersona, assignedDescription,
+                    TaskPriority.Low);
 
             // Act
             var result = await SystemUnderTest.GetNextTaskAsync(agentId);
@@ -524,8 +652,8 @@ public class GetNextTaskMcpToolTests
             // Configure very short polling timeout and interval for fast test
             var configuration = new GetNextTaskConfiguration
             {
-                TimeToWaitForTask = TimeSpan.FromMilliseconds(50),  // Very short timeout
-                PollingInterval = TimeSpan.FromMilliseconds(10)     // Very short polling interval
+                TimeToWaitForTask = TimeSpan.FromMilliseconds(50), // Very short timeout
+                PollingInterval = TimeSpan.FromMilliseconds(10) // Very short polling interval
             };
 
             // Act
@@ -568,7 +696,7 @@ public class GetNextTaskMcpToolTests
             // Configure longer wait so we can simulate arrival
             var configuration = new GetNextTaskConfiguration
             {
-                TimeToWaitForTask = TimeSpan.FromSeconds(1),     // 1 second timeout
+                TimeToWaitForTask = TimeSpan.FromSeconds(1), // 1 second timeout
                 PollingInterval = TimeSpan.FromMilliseconds(100) // No longer used, kept for compatibility
             };
 
@@ -637,128 +765,12 @@ public class GetNextTaskMcpToolTests
             result.TaskId.ShouldBe(taskId);
 
             // Verify TaskClaimed event was published
-            var claimedEvents = receivedEvents.Where(e => e.Type == TaskEventType.Claimed && e.Payload.TaskId == taskId).ToList();
+            var claimedEvents = receivedEvents.Where(e => e.Type == TaskEventType.Claimed && e.Payload.TaskId == taskId)
+                .ToList();
             claimedEvents.ShouldHaveSingleItem();
             var claimedEvent = claimedEvents[0];
             claimedEvent.Payload.TaskId.ShouldBe(taskId);
             claimedEvent.Payload.AgentId.ShouldBe(agentId);
         }
-    }
-
-
-    private async Task CreateRunningAgentAsync(string agentId, string personaId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var agent = new Agent
-        {
-            Id = agentId,
-            PersonaId = personaId,
-            WorkingDirectory = "/test",
-            Status = AgentStatus.Running,
-            LastHeartbeat = _timeService.UtcNow,
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
-
-    private async Task<string> CreatePendingTaskAsync(string agentId, string persona, string description)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var taskId = Guid.NewGuid().ToString();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Pending,
-            PersonaId = persona,
-            Description = description,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return taskId;
-    }
-
-    private async Task<string> CreatePendingTaskUsingNewScopeAsync(string agentId, string persona, string description)
-    {
-        // Create a completely new scope service to simulate external process
-        using var scope = _scopeService.GetWriteScope();
-        var taskId = Guid.NewGuid().ToString();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Pending,
-            PersonaId = persona,
-            Description = description,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return taskId;
-    }
-
-    private async Task<string> CreateUnassignedTaskAsync(string personaId, string description)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var taskId = Guid.NewGuid().ToString();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = string.Empty, // Unassigned task
-            Status = TaskStatus.Pending,
-            PersonaId = personaId,
-            Description = description,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return taskId;
-    }
-
-
-    private async Task<string> CreatePendingTaskWithPriorityAsync(string agentId, string persona, string description, TaskPriority priority)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var taskId = Guid.NewGuid().ToString();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Pending,
-            PersonaId = persona,
-            Description = description,
-            Priority = priority,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return taskId;
-    }
-
-
-    private async Task<string> CreateUnassignedTaskWithPriorityAsync(string persona, string description, TaskPriority priority)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var taskId = Guid.NewGuid().ToString();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = string.Empty, // Unassigned task
-            Status = TaskStatus.Pending,
-            PersonaId = persona,
-            Description = description,
-            Priority = priority,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return taskId;
     }
 }

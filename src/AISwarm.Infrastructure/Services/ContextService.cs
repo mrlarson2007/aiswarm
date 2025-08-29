@@ -5,6 +5,11 @@ namespace AISwarm.Infrastructure;
 /// <inheritdoc />
 public class ContextService : IContextService
 {
+    private const string McpInstructionsResource = "AISwarm.Infrastructure.Resources.mcp_instructions.md";
+
+    private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split
+    private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
+
     private static readonly Dictionary<string, string> AgentResources = new()
     {
         { "planner", "AISwarm.Infrastructure.Resources.planner_prompt.md" },
@@ -12,41 +17,6 @@ public class ContextService : IContextService
         { "reviewer", "AISwarm.Infrastructure.Resources.reviewer_prompt.md" },
         { "tester", "AISwarm.Infrastructure.Resources.tester_prompt.md" }
     };
-
-    private const string McpInstructionsResource = "AISwarm.Infrastructure.Resources.mcp_instructions.md";
-
-    private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split
-    private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
-
-    private string GetAgentPrompt(string agentType)
-    {
-        var personaFiles = GetAllPersonaFiles();
-        if (personaFiles.TryGetValue(agentType.ToLowerInvariant(), out var filePath) && File.Exists(filePath))
-        {
-            return File.ReadAllText(filePath);
-        }
-
-        if (!AgentResources.TryGetValue(agentType.ToLowerInvariant(), out var resourceName))
-            throw new ArgumentException($"Unknown agent type: {agentType}", nameof(agentType));
-
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(resourceName) ??
-            throw new InvalidOperationException($"Resource not found: {resourceName}");
-        using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
-    }
-
-    private string GetMcpInstructions(string agentId)
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        using var stream = assembly.GetManifestResourceStream(McpInstructionsResource) ??
-            throw new InvalidOperationException($"Resource not found: {McpInstructionsResource}");
-        using var reader = new StreamReader(stream);
-        var content = reader.ReadToEnd();
-
-        // Replace placeholders with actual agent ID
-        return content.Replace("{0}", agentId);
-    }
 
     /// <inheritdoc />
     public async Task<string> CreateContextFile(
@@ -122,6 +92,34 @@ Your unique agent ID is: `{agentId}`
         return sources;
     }
 
+    private string GetAgentPrompt(string agentType)
+    {
+        var personaFiles = GetAllPersonaFiles();
+        if (personaFiles.TryGetValue(agentType.ToLowerInvariant(), out var filePath) && File.Exists(filePath))
+            return File.ReadAllText(filePath);
+
+        if (!AgentResources.TryGetValue(agentType.ToLowerInvariant(), out var resourceName))
+            throw new ArgumentException($"Unknown agent type: {agentType}", nameof(agentType));
+
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(resourceName) ??
+                           throw new InvalidOperationException($"Resource not found: {resourceName}");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    private string GetMcpInstructions(string agentId)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(McpInstructionsResource) ??
+                           throw new InvalidOperationException($"Resource not found: {McpInstructionsResource}");
+        using var reader = new StreamReader(stream);
+        var content = reader.ReadToEnd();
+
+        // Replace placeholders with actual agent ID
+        return content.Replace("{0}", agentId);
+    }
+
     private static Dictionary<string, string> GetAllPersonaFiles()
     {
         var personaFiles = new Dictionary<string, string>();
@@ -137,11 +135,10 @@ Your unique agent ID is: `{agentId}`
                     continue;
                 var agentType = fileName[..^"_prompt".Length];
                 if (!personaFiles.ContainsKey(agentType.ToLowerInvariant()))
-                {
                     personaFiles[agentType.ToLowerInvariant()] = file;
-                }
             }
         }
+
         return personaFiles;
     }
 
@@ -149,7 +146,8 @@ Your unique agent ID is: `{agentId}`
     {
         var directories = new List<string>
         {
-            Path.Combine(new[]{Environment.CurrentDirectory}.Concat(DefaultPersonasDirectory.Split('|')).ToArray())
+            Path.Combine(new[] { Environment.CurrentDirectory }.Concat(DefaultPersonasDirectory.Split('|'))
+                .ToArray())
         };
         var envPaths = Environment.GetEnvironmentVariable(PersonasEnvironmentVariable);
         if (!string.IsNullOrEmpty(envPaths))
@@ -157,6 +155,7 @@ Your unique agent ID is: `{agentId}`
             var paths = envPaths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
             directories.AddRange(paths);
         }
+
         return directories;
     }
 }

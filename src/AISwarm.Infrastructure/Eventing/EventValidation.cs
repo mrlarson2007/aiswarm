@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure.Eventing;
 
 /// <summary>
-/// Utility class for common parameter validation in event services
+///     Utility class for common parameter validation in event services
 /// </summary>
 public static class EventValidation
 {

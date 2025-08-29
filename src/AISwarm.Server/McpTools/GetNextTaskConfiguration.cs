@@ -37,8 +37,6 @@ public class GetNextTaskConfiguration
     /// </summary>
     public static GetNextTaskConfiguration Production => new()
     {
-        TimeToWaitForTask = TimeSpan.FromMinutes(5),
-        PollingInterval = TimeSpan.FromSeconds(1),
-        MaxRetries = 10
+        TimeToWaitForTask = TimeSpan.FromMinutes(5), PollingInterval = TimeSpan.FromSeconds(1), MaxRetries = 10
     };
 }

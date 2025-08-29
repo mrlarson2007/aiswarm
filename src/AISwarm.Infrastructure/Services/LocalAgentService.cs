@@ -1,14 +1,13 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
-using AISwarm.Shared.Constants;
 
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Local agent service focused on launcher's specific needs:
-/// - Agent registration and tracking
-/// - Local health monitoring
-/// - Process lifecycle management
+///     Local agent service focused on launcher's specific needs:
+///     - Agent registration and tracking
+///     - Local health monitoring
+///     - Process lifecycle management
 /// </summary>
 public class LocalAgentService(
     ITimeService timeService,
@@ -17,7 +16,7 @@ public class LocalAgentService(
     : ILocalAgentService
 {
     /// <summary>
-    /// Register a new agent with the launcher
+    ///     Register a new agent with the launcher
     /// </summary>
     public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
@@ -46,7 +45,7 @@ public class LocalAgentService(
     }
 
     /// <summary>
-    /// Update the heartbeat timestamp for an agent
+    ///     Update the heartbeat timestamp for an agent
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
@@ -69,11 +68,12 @@ public class LocalAgentService(
             scope.Complete();
             return true;
         }
+
         return false;
     }
 
     /// <summary>
-    /// Forcibly kill an agent and update status
+    ///     Forcibly kill an agent and update status
     /// </summary>
     public async Task KillAgentAsync(string agentId)
     {
@@ -82,18 +82,31 @@ public class LocalAgentService(
 }
 
 /// <summary>
-/// Request model for registering an agent in the launcher
+///     Request model for registering an agent in the launcher
 /// </summary>
 public record AgentRegistrationRequest
 {
-    public string PersonaId { get; init; } = string.Empty;
-    public string WorkingDirectory { get; init; } = string.Empty;
+    public string PersonaId
+    {
+        get;
+        init;
+    } = string.Empty;
+
+    public string WorkingDirectory
+    {
+        get;
+        init;
+    } = string.Empty;
+
     public string? Model
     {
-        get; init;
+        get;
+        init;
     }
+
     public string? WorktreeName
     {
-        get; init;
+        get;
+        init;
     }
 }

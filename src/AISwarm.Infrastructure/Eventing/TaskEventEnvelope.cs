@@ -11,5 +11,5 @@ public enum TaskEventType
     Created,
     Claimed,
     Completed,
-    Failed,
+    Failed
 }

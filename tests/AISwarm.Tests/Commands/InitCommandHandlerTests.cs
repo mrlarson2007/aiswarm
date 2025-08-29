@@ -7,9 +7,9 @@ namespace AISwarm.Tests.Commands;
 public class InitCommandHandlerTests
     : ISystemUnderTest<InitCommandHandler>
 {
-    private readonly TestLogger _logger = new();
-    private readonly FakeFileSystemService _fileSystem = new();
     private readonly TestEnvironmentService _environment = new();
+    private readonly FakeFileSystemService _fileSystem = new();
+    private readonly TestLogger _logger = new();
     private InitCommandHandler? _systemUnderTest;
 
     public InitCommandHandler SystemUnderTest =>
@@ -74,5 +74,4 @@ public class InitCommandHandlerTests
         result.ShouldBeTrue();
         _logger.Warnings.ShouldContain(w => w.Contains("already exists"));
     }
-
 }

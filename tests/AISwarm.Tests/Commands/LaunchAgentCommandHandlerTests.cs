@@ -12,30 +12,21 @@ namespace AISwarm.Tests.Commands;
 public class LaunchAgentCommandHandlerTests
     : ISystemUnderTest<LaunchAgentCommandHandler>
 {
+    private const string ExpectedPromptFormatString =
+        "I've just created \"{0}\". Please read it for your instructions.";
+
     private readonly Mock<IContextService> _context;
-    private readonly PassThroughProcessLauncher _process;
+    private readonly TestEnvironmentService _env;
     private readonly FakeFileSystemService _fs;
     private readonly IGeminiService _gemini;
-    private readonly Mock<IAgentStateService> _mockAgentStateService;
+    private readonly GitService _git;
     private readonly ILocalAgentService _localAgentService;
     private readonly TestLogger _logger;
-    private readonly TestEnvironmentService _env;
-    private readonly GitService _git;
-    private readonly FakeTimeService _timeService;
+    private readonly Mock<IAgentStateService> _mockAgentStateService;
+    private readonly PassThroughProcessLauncher _process;
     private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
     private LaunchAgentCommandHandler? _systemUnderTest;
-
-    private const string ExpectedPromptFormatString = "I've just created \"{0}\". Please read it for your instructions.";
-
-    public LaunchAgentCommandHandler SystemUnderTest =>
-        _systemUnderTest ??= new LaunchAgentCommandHandler(
-            _context.Object,
-            _logger,
-            _env,
-            _git,
-            _gemini,
-            _fs,
-            _localAgentService);
 
     public LaunchAgentCommandHandlerTests()
     {
@@ -48,7 +39,7 @@ public class LaunchAgentCommandHandlerTests
 
         // Set up database with in-memory provider for testing
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         var scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
         _scopeService = scopeService;
@@ -67,6 +58,16 @@ public class LaunchAgentCommandHandlerTests
             _mockAgentStateService.Object);
     }
 
+    public LaunchAgentCommandHandler SystemUnderTest =>
+        _systemUnderTest ??= new LaunchAgentCommandHandler(
+            _context.Object,
+            _logger,
+            _env,
+            _git,
+            _gemini,
+            _fs,
+            _localAgentService);
+
     public class DryRunTests : LaunchAgentCommandHandlerTests
     {
         [Fact]
@@ -74,11 +75,11 @@ public class LaunchAgentCommandHandlerTests
         {
             // Act
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: null,
-                    directory: null,
-                    dryRun: true);
+                "planner",
+                null,
+                null,
+                null,
+                true);
             result.ShouldBeTrue();
 
             // Assert
@@ -94,11 +95,11 @@ public class LaunchAgentCommandHandlerTests
         {
             // Act (no worktree)
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: "gemini-1.5-flash",
-                    worktree: null,
-                    directory: "/custom",
-                    dryRun: true);
+                "planner",
+                "gemini-1.5-flash",
+                null,
+                "/custom",
+                true);
             result.ShouldBeTrue();
 
             // Assert
@@ -118,11 +119,11 @@ public class LaunchAgentCommandHandlerTests
         {
             // Act (with worktree; directory default current)
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: "gemini-1.5-flash",
-                    worktree: "feature_x",
-                    directory: null,
-                    dryRun: true);
+                "planner",
+                "gemini-1.5-flash",
+                "feature_x",
+                null,
+                true);
             result.ShouldBeTrue();
 
             // Assert
@@ -136,11 +137,11 @@ public class LaunchAgentCommandHandlerTests
         public async Task WhenDryRunWithInvalidWorktree_ShouldStillReportPlannedInvalidName()
         {
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "bad?name",
-                    directory: null,
-                    dryRun: true);
+                "planner",
+                null,
+                "bad?name",
+                null,
+                true);
             result.ShouldBeTrue();
 
             _logger.Infos.ShouldContain(i => i.Contains("Worktree (planned): bad?name"));
@@ -151,11 +152,11 @@ public class LaunchAgentCommandHandlerTests
         public async Task WhenDryRunWithModel_ShouldIncludeModelInManualCommand()
         {
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: "gemini-2.0-ultra",
-                    worktree: null,
-                    directory: null,
-                    dryRun: true);
+                "planner",
+                "gemini-2.0-ultra",
+                null,
+                null,
+                true);
             result.ShouldBeTrue();
 
             _logger.Infos.ShouldContain(i => i.Contains("-m gemini-2.0-ultra"));
@@ -168,25 +169,30 @@ public class LaunchAgentCommandHandlerTests
         public async Task WhenWorktreeSpecified_ShouldCreateWorktree_ThenContext_InNewDirectory()
         {
             // Arrange expected git command sequence
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(true, ".git", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"),
+                new ProcessResult(true, "/repo", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree list"),
+                new ProcessResult(true, string.Empty, string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree add"),
+                new ProcessResult(true, "Created", string.Empty, 0));
             _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
                 .ReturnsAsync("/repo-feature_x/planner_context.md")
                 .Callback(() => _fs.AddFile("/repo-feature_x/planner_context.md"));
 
             // Act (non-dry-run)
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "feature_x",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "feature_x",
+                null,
+                false);
             result.ShouldBeTrue();
 
             // Assert (desired future behavior) - these will fail until handler updated
-            _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("feature_x"))), Times.Once);
+            _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("feature_x"))),
+                Times.Once);
         }
 
         [Fact]
@@ -194,11 +200,11 @@ public class LaunchAgentCommandHandlerTests
         {
             // Act
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "bad?name",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "bad?name",
+                null,
+                false);
             result.ShouldBeFalse();
 
             // Assert
@@ -209,17 +215,21 @@ public class LaunchAgentCommandHandlerTests
         [Fact]
         public async Task WhenWorktreeAddFails_ShouldLogErrorAndAbort()
         {
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(false, string.Empty, "fatal: permission denied", 1));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(true, ".git", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"),
+                new ProcessResult(true, "/repo", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree list"),
+                new ProcessResult(true, string.Empty, string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree add"),
+                new ProcessResult(false, string.Empty, "fatal: permission denied", 1));
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "feat_fail",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "feat_fail",
+                null,
+                false);
             result.ShouldBeFalse();
 
             _logger.Errors.ShouldContain(e => e.Contains("Failed to create worktree"));
@@ -233,16 +243,19 @@ public class LaunchAgentCommandHandlerTests
         public async Task WhenWorktreeAlreadyExists_ShouldLogErrorAndAbort()
         {
             var porcelain = "worktree /repo/worktrees/feature_dup\nbranch refs/heads/feature_dup\n";
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, porcelain, string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(true, ".git", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"),
+                new ProcessResult(true, "/repo", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree list"),
+                new ProcessResult(true, porcelain, string.Empty, 0));
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "feature_dup",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "feature_dup",
+                null,
+                false);
             result.ShouldBeFalse();
 
             _logger.Errors.ShouldContain(e => e.Contains("already exists"));
@@ -255,10 +268,14 @@ public class LaunchAgentCommandHandlerTests
         [Fact]
         public async Task WhenWorktreeCreated_ShouldLaunchGeminiFromWorktree()
         {
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(true, ".git", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"),
+                new ProcessResult(true, "/repo", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree list"),
+                new ProcessResult(true, string.Empty, string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree add"),
+                new ProcessResult(true, "Created", string.Empty, 0));
             _context.Setup(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_launch"))))
                 .ReturnsAsync("/repo-feature_launch/planner_context.md")
                 .Callback(() =>
@@ -268,11 +285,11 @@ public class LaunchAgentCommandHandlerTests
                 });
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: "gemini-1.5-pro",
-                    worktree: "feature_launch",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                "gemini-1.5-pro",
+                "feature_launch",
+                null,
+                false);
 
             result.ShouldBeTrue();
 
@@ -281,29 +298,36 @@ public class LaunchAgentCommandHandlerTests
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
                 i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo-feature_launch/planner_context.md")));
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString,
+                    "/repo-feature_launch/planner_context.md")));
         }
 
         [Fact]
         public async Task WhenDirectoryAndWorktreeProvided_WorktreePathShouldOverride()
         {
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(true, ".git", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"), new ProcessResult(true, "/repo", string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree list"), new ProcessResult(true, string.Empty, string.Empty, 0));
-            _process.Enqueue("git", a => a.StartsWith("worktree add"), new ProcessResult(true, "Created", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(true, ".git", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --show-toplevel"),
+                new ProcessResult(true, "/repo", string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree list"),
+                new ProcessResult(true, string.Empty, string.Empty, 0));
+            _process.Enqueue("git", a => a.StartsWith("worktree add"),
+                new ProcessResult(true, "Created", string.Empty, 0));
             _context.Setup(c => c.CreateContextFile("planner", It.IsAny<string>()))
                 .ReturnsAsync("/repo-feature_override/planner_context.md")
                 .Callback(() => _fs.AddFile("/repo-feature_override/planner_context.md"));
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "feature_override",
-                    directory: "/some/other/dir",
-                    dryRun: false);
+                "planner",
+                null,
+                "feature_override",
+                "/some/other/dir",
+                false);
             result.ShouldBeTrue();
 
-            _context.Verify(c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_override"))), Times.Once);
+            _context.Verify(
+                c => c.CreateContextFile("planner", It.Is<string>(p => p.Contains("repo-feature_override"))),
+                Times.Once);
         }
 
         [Fact]
@@ -316,21 +340,21 @@ public class LaunchAgentCommandHandlerTests
             _fs.AddFile("/repo/planner_context.md");
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "  \t  ",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "  \t  ",
+                null,
+                false);
             result.ShouldBeTrue();
 
             _process.Invocations.ShouldNotContain(i => i.Arguments.StartsWith("worktree add"));
 
             // Assert - Check that Gemini was launched without worktree (normal case)
             _process.Invocations.ShouldContain(i =>
-                i.File == "pwsh.exe" &&
-                i.Arguments.Contains("gemini") &&
-                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
-                !i.Arguments.Contains("-m ") // No model specified
+                    i.File == "pwsh.exe" &&
+                    i.Arguments.Contains("gemini") &&
+                    i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
+                    !i.Arguments.Contains("-m ") // No model specified
             );
         }
     }
@@ -349,19 +373,19 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: null,
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                null,
+                null,
+                false);
             result.ShouldBeTrue();
 
             // Assert - Check that Gemini was launched with correct arguments
             _process.Invocations.ShouldContain(i =>
-                i.File == "pwsh.exe" &&
-                i.Arguments.Contains("gemini") &&
-                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
-                !i.Arguments.Contains("-m ") // No model specified
+                    i.File == "pwsh.exe" &&
+                    i.Arguments.Contains("gemini") &&
+                    i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
+                    !i.Arguments.Contains("-m ") // No model specified
             );
         }
 
@@ -377,11 +401,11 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: "gemini-1.5-pro",
-                    worktree: null,
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                null,
+                false);
             result.ShouldBeTrue();
 
             // Assert - Check that Gemini was launched with correct model arguments
@@ -401,11 +425,11 @@ public class LaunchAgentCommandHandlerTests
                 .Callback(() => _fs.AddFile("/customdir/planner_context.md"));
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: null,
-                    directory: "/customdir",
-                    dryRun: false);
+                "planner",
+                null,
+                null,
+                "/customdir",
+                false);
             result.ShouldBeTrue();
 
             _context.Verify(c => c.CreateContextFile("planner", "/customdir"), Times.Once);
@@ -418,11 +442,11 @@ public class LaunchAgentCommandHandlerTests
                 .ReturnsAsync("/repo/planner_context.md");
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: null,
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                null,
+                null,
+                false);
 
             // Should fail because context file doesn't exist
             result.ShouldBeFalse();
@@ -435,14 +459,15 @@ public class LaunchAgentCommandHandlerTests
         [Fact]
         public async Task WhenNotInGitRepo_ShouldLogErrorAndAbort()
         {
-            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"), new ProcessResult(false, string.Empty, "not a repo", 128));
+            _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
+                new ProcessResult(false, string.Empty, "not a repo", 128));
 
             var result = await SystemUnderTest.RunAsync(
-                    agentType: "planner",
-                    model: null,
-                    worktree: "feature_new",
-                    directory: null,
-                    dryRun: false);
+                "planner",
+                null,
+                "feature_new",
+                null,
+                false);
             result.ShouldBeFalse();
 
             _logger.Errors.ShouldContain(e => e.Contains("Not in a git repository") || e.Contains("not a git"));
@@ -464,12 +489,12 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                agentType: "planner",
-                model: "gemini-1.5-pro",
-                worktree: null,
-                directory: "/repo",
-                dryRun: false,
-                monitor: true);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                "/repo",
+                false,
+                true);
 
             // Assert
             result.ShouldBeTrue();
@@ -500,12 +525,12 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                agentType: "planner",
-                model: "gemini-1.5-pro",
-                worktree: null,
-                directory: "/repo",
-                dryRun: false,
-                monitor: true);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                "/repo",
+                false,
+                true);
 
             // Assert
             result.ShouldBeTrue();
@@ -545,12 +570,12 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                agentType: "planner",
-                model: "gemini-1.5-pro",
-                worktree: null,
-                directory: "/repo",
-                dryRun: false,
-                monitor: true);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                "/repo",
+                false,
+                true);
 
             // Assert
             result.ShouldBeTrue();
@@ -583,12 +608,12 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                agentType: "planner",
-                model: "gemini-1.5-pro",
-                worktree: null,
-                directory: "/repo",
-                dryRun: false,
-                monitor: true);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                "/repo",
+                false,
+                true);
 
             // Assert
             result.ShouldBeTrue();
@@ -630,12 +655,12 @@ public class LaunchAgentCommandHandlerTests
 
             // Act
             var result = await SystemUnderTest.RunAsync(
-                agentType: "planner",
-                model: "gemini-1.5-pro",
-                worktree: null,
-                directory: "/repo",
-                dryRun: false,
-                monitor: false);
+                "planner",
+                "gemini-1.5-pro",
+                null,
+                "/repo",
+                false,
+                false);
 
             // Assert
             result.ShouldBeTrue();

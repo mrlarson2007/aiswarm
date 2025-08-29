@@ -32,10 +32,10 @@ public class EventBusConfigurationTests
         var stream = service.SubscribeForAgent(agentId, token);
 
         // Fill capacity
-        await service.PublishTaskCreated("t1", agentId, persona: null, CancellationToken.None);
+        await service.PublishTaskCreated("t1", agentId, null, CancellationToken.None);
 
         // Second publish should be blocked until we read
-        var second = service.PublishTaskCreated("t2", agentId, persona: null, CancellationToken.None).AsTask();
+        var second = service.PublishTaskCreated("t2", agentId, null, CancellationToken.None).AsTask();
         await Task.Delay(100, token);
         second.IsCompleted.ShouldBeFalse();
 

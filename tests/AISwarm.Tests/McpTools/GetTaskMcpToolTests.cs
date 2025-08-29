@@ -15,9 +15,6 @@ public class GetTaskMcpToolTests
     private readonly FakeTimeService _timeService;
     private GetTaskMcpTool? _systemUnderTest;
 
-    public GetTaskMcpTool SystemUnderTest =>
-        _systemUnderTest ??= new GetTaskMcpTool(_scopeService);
-
     protected GetTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
@@ -27,6 +24,61 @@ public class GetTaskMcpToolTests
             .Options;
 
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
+    }
+
+    public GetTaskMcpTool SystemUnderTest =>
+        _systemUnderTest ??= new GetTaskMcpTool(_scopeService);
+
+    private async Task<WorkItem> CreateTaskAsync(
+        string taskId,
+        TaskStatus status,
+        string? agentId = null)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            Status = status,
+            AgentId = agentId,
+            PersonaId = "test",
+            Description = "Test description",
+            CreatedAt = _timeService.UtcNow,
+            StartedAt = status == TaskStatus.InProgress ? _timeService.UtcNow : null,
+            CompletedAt = status == TaskStatus.Completed ? _timeService.UtcNow : null
+        };
+
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return task;
+    }
+
+    private async Task<string> CreateTaskForStatusTestAsync(
+        string statusName,
+        string persona,
+        string description,
+        string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var id = Guid.NewGuid().ToString();
+        var status = Enum.Parse<TaskStatus>(statusName);
+
+        var task = new WorkItem
+        {
+            Id = id,
+            AgentId = agentId,
+            Status = status,
+            PersonaId = "implementer",
+            Description = description,
+            CreatedAt = _timeService.UtcNow,
+            StartedAt = _timeService.UtcNow.AddMinutes(1),
+            CompletedAt = _timeService.UtcNow.AddMinutes(5)
+        };
+
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+        return id;
     }
 
     public class GetTasksByStatusTests : GetTaskMcpToolTests
@@ -167,7 +219,8 @@ public class GetTaskMcpToolTests
         {
             // Arrange
             var expectedAgentId = "test-agent-123";
-            var taskId = await CreateTaskForStatusTestAsync(statusName, "Test persona", "Test description", expectedAgentId);
+            var taskId =
+                await CreateTaskForStatusTestAsync(statusName, "Test persona", "Test description", expectedAgentId);
 
             // Act
             var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
@@ -189,7 +242,8 @@ public class GetTaskMcpToolTests
         public async Task WhenTaskHasEmptyAgentId_ShouldReturnEmptyAgentIdForAllStatuses(string statusName)
         {
             // Arrange
-            var taskId = await CreateTaskForStatusTestAsync(statusName, "Test persona", "Test description", string.Empty);
+            var taskId =
+                await CreateTaskForStatusTestAsync(statusName, "Test persona", "Test description", string.Empty);
 
             // Act
             var result = await SystemUnderTest.GetTaskStatusAsync(taskId);
@@ -363,57 +417,5 @@ public class GetTaskMcpToolTests
             result.Tasks.ShouldNotBeNull();
             result.Tasks.ShouldBeEmpty();
         }
-    }
-
-    private async Task<WorkItem> CreateTaskAsync(
-        string taskId,
-        TaskStatus status,
-        string? agentId = null)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            Status = status,
-            AgentId = agentId,
-            PersonaId = "test",
-            Description = "Test description",
-            CreatedAt = _timeService.UtcNow,
-            StartedAt = status == TaskStatus.InProgress ? _timeService.UtcNow : null,
-            CompletedAt = status == TaskStatus.Completed ? _timeService.UtcNow : null
-        };
-
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return task;
-    }
-
-    private async Task<string> CreateTaskForStatusTestAsync(
-        string statusName,
-        string persona,
-        string description,
-        string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var id = Guid.NewGuid().ToString();
-        var status = Enum.Parse<TaskStatus>(statusName);
-
-        var task = new WorkItem
-        {
-            Id = id,
-            AgentId = agentId,
-            Status = status,
-            PersonaId = "implementer",
-            Description = description,
-            CreatedAt = _timeService.UtcNow,
-            StartedAt = _timeService.UtcNow.AddMinutes(1),
-            CompletedAt = _timeService.UtcNow.AddMinutes(5)
-        };
-
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-        return id;
     }
 }

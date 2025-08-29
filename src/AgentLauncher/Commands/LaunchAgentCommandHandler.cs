@@ -3,7 +3,7 @@ using AISwarm.Infrastructure;
 namespace AgentLauncher.Commands;
 
 /// <summary>
-/// Handles launching an agent conversation (interactive) with optional worktree creation.
+///     Handles launching an agent conversation (interactive) with optional worktree creation.
 /// </summary>
 public class LaunchAgentCommandHandler(
     IContextService contextService,
@@ -31,23 +31,20 @@ public class LaunchAgentCommandHandler(
             logger.Info($"Agent: {agentType}");
             logger.Info($"Model: {model ?? "Gemini CLI default"}");
             logger.Info("Workspace: Current branch");
-            if (!string.IsNullOrWhiteSpace(worktree))
-            {
-                logger.Info($"Worktree (planned): {worktree}");
-            }
+            if (!string.IsNullOrWhiteSpace(worktree)) logger.Info($"Worktree (planned): {worktree}");
             logger.Info($"Working directory: {workingDirectory}");
             logger.Info($"Monitor: {monitor}");
             var planned = Path.Combine(workingDirectory, agentType + "_context.md");
             logger.Info($"Planned context file: {planned}");
             var fileName = Path.GetFileName(planned);
-            var manual = $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \\\"I've just created {fileName}. Please read it for your instructions.\\\"";
+            var manual =
+                $"gemini{(model != null ? $" -m {model}" : string.Empty)} -i \\\"I've just created {fileName}. Please read it for your instructions.\\\"";
             logger.Info("Manual launch: " + manual);
             return true;
         }
 
         var workDir = directory ?? environment.CurrentDirectory;
         if (!string.IsNullOrWhiteSpace(worktree))
-        {
             try
             {
                 logger.Info($"Creating worktree '{worktree}'...");
@@ -58,20 +55,15 @@ public class LaunchAgentCommandHandler(
                 logger.Error($"Failed to create worktree '{worktree}': {ex.Message}");
                 return false;
             }
-        }
 
         string? agentId = null;
         if (monitor && localAgentService != null)
-        {
             try
             {
                 logger.Info("Registering agent in database for monitoring...");
                 var request = new AgentRegistrationRequest
                 {
-                    PersonaId = agentType,
-                    WorkingDirectory = workDir,
-                    Model = model,
-                    WorktreeName = worktree
+                    PersonaId = agentType, WorkingDirectory = workDir, Model = model, WorktreeName = worktree
                 };
 
                 agentId = await localAgentService.RegisterAgentAsync(request);
@@ -82,7 +74,6 @@ public class LaunchAgentCommandHandler(
                 logger.Error($"Failed to register agent for monitoring: {ex.Message}");
                 logger.Info("Continuing without monitoring...");
             }
-        }
 
         string contextPath;
         try
@@ -91,10 +82,7 @@ public class LaunchAgentCommandHandler(
             contextPath = await contextService.CreateContextFile(agentType, workDir);
 
             // If monitoring is enabled, append agent ID information to context
-            if (monitor && agentId != null)
-            {
-                await AppendAgentIdToContextAsync(contextPath, agentId);
-            }
+            if (monitor && agentId != null) await AppendAgentIdToContextAsync(contextPath, agentId);
         }
         catch (Exception ex)
         {
@@ -113,8 +101,7 @@ public class LaunchAgentCommandHandler(
                 logger.Info("Configuring Gemini with agent settings");
                 var agentSettings = new AgentSettings
                 {
-                    AgentId = agentId,
-                    McpServerUrl = "http://localhost:5000/sse" // Updated to use correct port
+                    AgentId = agentId, McpServerUrl = "http://localhost:5000/sse" // Updated to use correct port
                 };
                 success = await geminiService.LaunchInteractiveAsync(
                     contextPath,
@@ -141,6 +128,7 @@ public class LaunchAgentCommandHandler(
             logger.Error($"Gemini launch failed: {ex.Message}");
             return false;
         }
+
         return true;
     }
 

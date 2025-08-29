@@ -19,15 +19,9 @@ public class SaveMemoryMcpTool(IMemoryService memoryService)
         [Description("Optional namespace for organization (default: empty string)")]
         string? @namespace = null)
     {
-        if (string.IsNullOrEmpty(key))
-        {
-            return SaveMemoryResult.Failure("Error: key cannot be empty");
-        }
+        if (string.IsNullOrEmpty(key)) return SaveMemoryResult.Failure("Error: key cannot be empty");
 
-        if (string.IsNullOrEmpty(value))
-        {
-            return SaveMemoryResult.Failure("Error: value cannot be empty");
-        }
+        if (string.IsNullOrEmpty(value)) return SaveMemoryResult.Failure("Error: value cannot be empty");
 
         await memoryService.SaveMemoryAsync(key, value, @namespace, type, metadata);
         return SaveMemoryResult.SuccessResult(key, @namespace);

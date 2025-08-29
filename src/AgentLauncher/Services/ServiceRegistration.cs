@@ -1,7 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
+using AgentLauncher.Commands;
 using AISwarm.DataLayer;
-using Microsoft.Extensions.Configuration;
 using AISwarm.Infrastructure;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AgentLauncher.Services;
 
@@ -17,10 +18,10 @@ public static class ServiceRegistration
         services.AddDataLayerServices(configuration);
 
         // Command handlers
-        services.AddTransient<Commands.LaunchAgentCommandHandler>();
-        services.AddTransient<Commands.ListAgentsCommandHandler>();
-        services.AddTransient<Commands.ListWorktreesCommandHandler>();
-        services.AddTransient<Commands.InitCommandHandler>();
+        services.AddTransient<LaunchAgentCommandHandler>();
+        services.AddTransient<ListAgentsCommandHandler>();
+        services.AddTransient<ListWorktreesCommandHandler>();
+        services.AddTransient<InitCommandHandler>();
 
         return services;
     }

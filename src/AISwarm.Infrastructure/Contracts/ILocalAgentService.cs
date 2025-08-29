@@ -1,7 +1,7 @@
 namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Interface for managing agent lifecycle with database persistence
+///     Interface for managing agent lifecycle with database persistence
 /// </summary>
 public interface ILocalAgentService
 {

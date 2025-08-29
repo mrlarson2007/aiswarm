@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-/// Full database scope service that provides both read and write operations with cached transaction coordination.
-/// Inherits read-only operations and adds write capabilities.
+///     Full database scope service that provides both read and write operations with cached transaction coordination.
+///     Inherits read-only operations and adds write capabilities.
 /// </summary>
 public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 {
     /// <summary>
-    /// Gets a cached write scope for database operations. If no cached scope exists, creates a new one.
-    /// Multiple calls return the same cached instance.
+    ///     Gets a cached write scope for database operations. If no cached scope exists, creates a new one.
+    ///     Multiple calls return the same cached instance.
     /// </summary>
     /// <returns>A write scope for database operations</returns>
     IWriteScope GetWriteScope();
@@ -22,7 +22,6 @@ public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 /// </summary>
 public interface IReadScope : IDisposable
 {
-
     /// <summary>
     ///     Agents DbSet for direct access
     /// </summary>
@@ -55,7 +54,6 @@ public interface IReadScope : IDisposable
 /// </summary>
 public interface IWriteScope : IReadScope
 {
-
     /// <summary>
     ///     Save changes to the database
     /// </summary>

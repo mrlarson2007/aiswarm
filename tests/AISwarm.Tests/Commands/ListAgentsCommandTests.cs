@@ -1,3 +1,4 @@
+using AgentLauncher.Commands;
 using AISwarm.Infrastructure;
 using AISwarm.Tests.TestDoubles;
 using Moq;
@@ -16,14 +17,13 @@ public class ListAgentsCommandTests
         // Arrange
         _contextService.Setup(s => s.GetAgentTypeSources()).Returns(new Dictionary<string, string>
         {
-            {"planner", "Embedded"},
-            {"custom", "External: /tmp/custom_prompt.md"}
+            { "planner", "Embedded" }, { "custom", "External: /tmp/custom_prompt.md" }
         });
         _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(["custom", "planner"]);
 
         var env = new TestEnvironmentService { CurrentDirectory = "/repo" };
         env.SetVar("AISWARM_PERSONAS_PATH", null);
-        var handler = new AgentLauncher.Commands.ListAgentsCommandHandler(_contextService.Object, _logger, env);
+        var handler = new ListAgentsCommandHandler(_contextService.Object, _logger, env);
 
         // Act
         var result = handler.Run();
@@ -38,5 +38,4 @@ public class ListAgentsCommandTests
         var expectedSegment = $"/repo{sep}.aiswarm{sep}personas";
         _logger.Infos.ShouldContain(s => s.Contains(expectedSegment));
     }
-
 }

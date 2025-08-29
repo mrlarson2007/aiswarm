@@ -1,7 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
-using AISwarm.Server.McpTools;
 using AISwarm.Infrastructure.Eventing;
+using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
@@ -11,16 +11,10 @@ namespace AISwarm.Tests.McpTools;
 
 public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
 {
+    private readonly IWorkItemNotificationService _notifier;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
-    private readonly IWorkItemNotificationService _notifier;
     private CreateTaskMcpTool? _systemUnderTest;
-
-    public CreateTaskMcpTool SystemUnderTest =>
-        _systemUnderTest ??= new CreateTaskMcpTool(
-            _scopeService,
-            _timeService,
-            _notifier);
 
     protected CreateTaskMcpToolTests()
     {
@@ -32,6 +26,12 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             .Options;
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
+
+    public CreateTaskMcpTool SystemUnderTest =>
+        _systemUnderTest ??= new CreateTaskMcpTool(
+            _scopeService,
+            _timeService,
+            _notifier);
 
     public class TaskCreationTests : CreateTaskMcpToolTests
     {
@@ -49,7 +49,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             var readTask = Task.Run(async () =>
             {
                 await foreach (var evt in (_notifier as WorkItemNotificationService)!
-                    .SubscribeForPersona(persona, token))
+                               .SubscribeForPersona(persona, token))
                 {
                     received.Add(evt);
                     break;
@@ -70,6 +70,7 @@ public class CreateTaskMcpToolTests : ISystemUnderTest<CreateTaskMcpTool>
             payload.AgentId.ShouldBeNull();
             payload.PersonaId.ShouldBe(persona);
         }
+
         [Fact]
         public async Task WhenCreatingTaskForRunningAgent_ShouldSaveTaskToDatabase()
         {

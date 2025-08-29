@@ -52,14 +52,6 @@ public class FakeGitService : IGitService
         return Task.FromResult(RepositoryRoot);
     }
 
-    public bool IsValidWorktreeName(string name)
-    {
-        if (ShouldFail)
-            throw new InvalidOperationException(FailureMessage);
-
-        return !string.IsNullOrWhiteSpace(name) && !name.Contains(' ');
-    }
-
     public Task<Dictionary<string, string>> GetExistingWorktreesAsync()
     {
         if (ShouldFail)
@@ -74,6 +66,14 @@ public class FakeGitService : IGitService
             throw new InvalidOperationException(FailureMessage);
 
         return Task.FromResult(CreatedWorktreePath);
+    }
+
+    public bool IsValidWorktreeName(string name)
+    {
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
+
+        return !string.IsNullOrWhiteSpace(name) && !name.Contains(' ');
     }
 
     public Task<bool> RemoveWorktreeAsync(string name)

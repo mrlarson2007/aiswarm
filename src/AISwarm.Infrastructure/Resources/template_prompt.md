@@ -11,9 +11,11 @@ This is a template file showing how to create custom persona files for the aiswa
 ## Persona Structure
 
 ### Agent Description
+
 Describe what this agent does and its primary responsibilities.
 
 ### Key Responsibilities
+
 - List the main tasks this agent should handle
 - Include specific areas of expertise
 - Define the scope of work
@@ -29,11 +31,13 @@ When working with the aiswarm tool, you can:
 - Use `--dry-run` to test configurations before launching
 
 ### Example Tasks
+
 - Provide specific examples of tasks this agent should handle
 - Include sample workflows or processes
 - Reference other agents this one might coordinate with
 
 ### Collaboration Guidelines
+
 - Explain how this agent should work with other agents in the swarm
 - Define handoff points and coordination strategies
 - Include workspace and branching conventions

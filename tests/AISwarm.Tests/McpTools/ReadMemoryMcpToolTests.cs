@@ -1,4 +1,6 @@
+using System.Text;
 using AISwarm.DataLayer;
+using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
@@ -13,11 +15,6 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
 
-    public ReadMemoryMcpTool SystemUnderTest
-    {
-        get;
-    }
-
     protected ReadMemoryMcpToolTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
@@ -30,13 +27,18 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
         SystemUnderTest = new ReadMemoryMcpTool(memoryService);
     }
 
+    public ReadMemoryMcpTool SystemUnderTest
+    {
+        get;
+    }
+
     public class ValidationTests : ReadMemoryMcpToolTests
     {
         [Fact]
         public async Task WhenKeyIsEmpty_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("", @namespace: "");
+            var result = await SystemUnderTest.ReadMemoryAsync("", "");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -47,7 +49,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
         public async Task WhenMemoryDoesNotExist_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", @namespace: "");
+            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", "");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -65,7 +67,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
             const string value = "test-value";
             const string @namespace = "mynamespace";
             const string metadata = "{\"source\":\"test\",\"priority\":\"high\"}";
-            var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
+            var memoryEntry = new MemoryEntry
             {
                 Id = Guid.NewGuid().ToString(),
                 Namespace = @namespace,
@@ -74,7 +76,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
                 Type = "text",
                 Metadata = metadata,
                 IsCompressed = false,
-                Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
+                Size = Encoding.UTF8.GetBytes(value).Length,
                 CreatedAt = _timeService.UtcNow,
                 LastUpdatedAt = _timeService.UtcNow,
                 AccessedAt = null,
@@ -83,7 +85,6 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
             // Create memory entry directly in database to avoid dependency on SaveMemoryAsync
             using (var scope = _scopeService.GetWriteScope())
             {
-
                 scope.MemoryEntries.Add(memoryEntry);
                 await scope.SaveChangesAsync();
             }
@@ -111,7 +112,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
             const string @namespace = "mynamespace2";
 
             var initialTime = _timeService.UtcNow;
-            var memoryEntry = new AISwarm.DataLayer.Entities.MemoryEntry
+            var memoryEntry = new MemoryEntry
             {
                 Id = Guid.NewGuid().ToString(),
                 Namespace = @namespace,
@@ -120,7 +121,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
                 Type = "text",
                 Metadata = null,
                 IsCompressed = false,
-                Size = System.Text.Encoding.UTF8.GetBytes(value).Length,
+                Size = Encoding.UTF8.GetBytes(value).Length,
                 CreatedAt = initialTime,
                 LastUpdatedAt = initialTime,
                 AccessedAt = null,

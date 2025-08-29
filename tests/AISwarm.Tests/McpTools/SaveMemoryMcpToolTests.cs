@@ -11,6 +11,10 @@ namespace AISwarm.Tests.McpTools;
 
 public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 {
+    // setup database context factory for testing, and Memory Service
+    private readonly DatabaseScopeService _scopeService;
+    private readonly ITimeService _timeService = new FakeTimeService();
+
     protected SaveMemoryMcpToolTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
@@ -19,9 +23,6 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
 
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
-    // setup database context factory for testing, and Memory Service
-    private readonly DatabaseScopeService _scopeService;
-    private readonly ITimeService _timeService = new FakeTimeService();
 
     public SaveMemoryMcpTool SystemUnderTest => new(
         new MemoryService(_scopeService, _timeService));
@@ -33,8 +34,8 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         {
             // Act
             var result = await SystemUnderTest.SaveMemory(
-                key: string.Empty,
-                value: "test-value");
+                string.Empty,
+                "test-value");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -46,8 +47,8 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
         public async Task WhenSavingMemoryWithEmptyValue_ShouldReturnErrorMessage()
         {
             var result = await SystemUnderTest.SaveMemory(
-                key: "test-key",
-                value: string.Empty);
+                "test-key",
+                string.Empty);
 
             result.Success.ShouldBeFalse();
             result.ErrorMessage.ShouldNotBeNull();
@@ -56,6 +57,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
     }
 
     private record TestMetadata(string Prop1, string Prop2);
+
     public class SuccessTests : SaveMemoryMcpToolTests
     {
         [Fact]
@@ -67,11 +69,11 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             var testMetadata = new TestMetadata("test1", "test2");
             var expectedType = "text";
             var result = await SystemUnderTest.SaveMemory(
-                key: key,
-                value: value,
-                type: expectedType,
-                metadata: JsonSerializer.Serialize(testMetadata),
-                @namespace: memoryNamespace);
+                key,
+                value,
+                expectedType,
+                JsonSerializer.Serialize(testMetadata),
+                memoryNamespace);
 
             result.Success.ShouldBeTrue();
             result.ErrorMessage.ShouldBeNull();
@@ -97,5 +99,4 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
             memoryEntry.AccessCount.ShouldBe(0);
         }
     }
-
 }

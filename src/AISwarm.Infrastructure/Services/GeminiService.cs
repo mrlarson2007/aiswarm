@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace AISwarm.Infrastructure;
 
 /// <inheritdoc />
@@ -6,7 +8,6 @@ public class GeminiService(
     IAppLogger logger,
     IFileSystemService fileSystem) : IGeminiService
 {
-
     private const string GeminiProcessName = "gemini";
     private const string VersionCommand = $"{GeminiProcessName} --version";
 
@@ -29,10 +30,7 @@ public class GeminiService(
             var workDir = workingDirectory ?? Environment.CurrentDirectory;
 
             // If agent settings are provided, create Gemini configuration file
-            if (agentSettings != null)
-            {
-                await CreateGeminiConfigurationAsync(workDir, agentSettings);
-            }
+            if (agentSettings != null) await CreateGeminiConfigurationAsync(workDir, agentSettings);
 
             var arguments = BuildGeminiArguments(contextFilePath, model, yolo);
             logger.Info("Launching Gemini CLI...");
@@ -57,6 +55,7 @@ public class GeminiService(
             {
                 logger.Error("Failed to start terminal session for Gemini CLI.");
             }
+
             await Task.CompletedTask;
             return started;
         }
@@ -85,18 +84,12 @@ public class GeminiService(
                     url = agentSettings.McpServerUrl,
                     description = $"AISwarm coordination server for agent {agentSettings.AgentId}",
                     trust = true,
-                    env = new Dictionary<string, string>
-                    {
-                        ["AISWARM_AGENT_ID"] = agentSettings.AgentId
-                    }
+                    env = new Dictionary<string, string> { ["AISWARM_AGENT_ID"] = agentSettings.AgentId }
                 }
             }
         };
 
-        var json = System.Text.Json.JsonSerializer.Serialize(configuration, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        var json = JsonSerializer.Serialize(configuration, new JsonSerializerOptions { WriteIndented = true });
 
         await fileSystem.WriteAllTextAsync(configPath, json);
         logger.Info($"Created Gemini configuration file: {configPath}");

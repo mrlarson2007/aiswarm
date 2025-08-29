@@ -1,16 +1,16 @@
 using AISwarm.DataLayer;
-using AISwarm.Infrastructure.Services;
-using Microsoft.Extensions.DependencyInjection;
 using AISwarm.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using Shouldly;
+using AISwarm.Infrastructure.Services;
 using AISwarm.Tests.TestDoubles;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Shouldly;
 
 namespace AISwarm.Tests.Services;
 
 /// <summary>
-/// Tests for the database scope service pattern that enables per-request transaction coordination.
-/// This pattern eliminates nested transaction issues by caching database scopes within DI scopes.
+///     Tests for the database scope service pattern that enables per-request transaction coordination.
+///     This pattern eliminates nested transaction issues by caching database scopes within DI scopes.
 /// </summary>
 public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemoryService>
 {
@@ -35,12 +35,17 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
         _timeService = _serviceProvider.GetRequiredService<ITimeService>();
     }
 
+    public void Dispose()
+    {
+        _serviceProvider.Dispose();
+    }
+
     public MemoryService SystemUnderTest =>
         _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<MemoryService>();
 
     /// <summary>
-    /// Verifies that multiple service calls within the same DI scope share the same database transaction.
-    /// This is the core behavior that eliminates nested transaction issues.
+    ///     Verifies that multiple service calls within the same DI scope share the same database transaction.
+    ///     This is the core behavior that eliminates nested transaction issues.
     /// </summary>
     public class ScopeCoordinationTests : DatabaseScopeServiceTests
     {
@@ -104,7 +109,7 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
             // This test documents the behavior difference and would pass with real SQLite databases.
             // For production use, the scoped service pattern will provide proper transaction isolation.
 
-            string testKey = "uncommitted-key";
+            var testKey = "uncommitted-key";
 
             // Arrange & Act - Save data but don't complete transaction
             using (var scope1 = _serviceProvider.CreateScope())
@@ -126,10 +131,5 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
                 result.Value.ShouldBe("uncommitted-value"); // In-memory persists, real SQLite would rollback
             }
         }
-    }
-
-    public void Dispose()
-    {
-        _serviceProvider.Dispose();
     }
 }

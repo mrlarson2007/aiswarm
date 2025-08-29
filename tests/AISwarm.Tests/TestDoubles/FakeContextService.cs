@@ -18,14 +18,6 @@ public class FakeContextService : IContextService
         set;
     } = "/test/context.md";
 
-    public string GetAgentPrompt(string agentType)
-    {
-        if (ShouldFail)
-            throw new InvalidOperationException(FailureMessage);
-
-        return $"Fake prompt for {agentType}";
-    }
-
     public Task<string> CreateContextFile(string agentType, string workingDirectory)
     {
         if (ShouldFail)
@@ -67,5 +59,13 @@ public class FakeContextService : IContextService
         {
             { "implementer", "Embedded" }, { "reviewer", "Embedded" }, { "planner", "Embedded" }
         };
+    }
+
+    public string GetAgentPrompt(string agentType)
+    {
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
+
+        return $"Fake prompt for {agentType}";
     }
 }

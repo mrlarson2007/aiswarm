@@ -6,11 +6,14 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
     where TType : struct, Enum
     where TPayload : class, IEventPayload
 {
-    private readonly List<(EventFilter<TType, TPayload> Filter, Channel<EventEnvelope<TType, TPayload>> Channel)> _subs =
-        [];
-    private readonly Lock _gate = new();
-    private bool _disposed;
     private readonly BoundedChannelOptions? _boundedOptions;
+    private readonly Lock _gate = new();
+
+    private readonly List<(EventFilter<TType, TPayload> Filter, Channel<EventEnvelope<TType, TPayload>> Channel)>
+        _subs =
+            [];
+
+    private bool _disposed;
 
     public InMemoryEventBus()
     {
@@ -21,12 +24,26 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
         _boundedOptions = options;
     }
 
-    public IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter, CancellationToken ct = default)
+    public void Dispose()
     {
         if (_disposed)
+            return;
+
+        List<Channel<EventEnvelope<TType, TPayload>>> channels;
+        lock (_gate)
         {
-            return Empty<EventEnvelope<TType, TPayload>>();
+            _disposed = true;
+            channels = _subs.Select(s => s.Channel).ToList();
+            _subs.Clear();
         }
+
+        foreach (var ch in channels) ch.Writer.TryComplete();
+    }
+
+    public IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter,
+        CancellationToken ct = default)
+    {
+        if (_disposed) return Empty<EventEnvelope<TType, TPayload>>();
 
         var channel = _boundedOptions is null
             ? Channel.CreateUnbounded<EventEnvelope<TType, TPayload>>()
@@ -37,47 +54,17 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
         }
 
         if (ct.CanBeCanceled)
-        {
             ct.Register(() =>
             {
                 lock (_gate)
                 {
                     ClearSubscriptions(channel);
                 }
+
                 channel.Writer.TryComplete();
             });
-        }
 
         return ReadAll(channel);
-    }
-
-    private static async IAsyncEnumerable<T> Empty<T>()
-    {
-        await Task.CompletedTask;
-        yield break;
-    }
-
-    private void ClearSubscriptions(Channel<EventEnvelope<TType, TPayload>> channel)
-    {
-        for (int i = _subs.Count - 1; i >= 0; i--)
-        {
-            if (ReferenceEquals(_subs[i].Channel, channel))
-            {
-                _subs.RemoveAt(i);
-                break;
-            }
-        }
-    }
-
-    private static async IAsyncEnumerable<EventEnvelope<TType, TPayload>> ReadAll(Channel<EventEnvelope<TType, TPayload>> ch)
-    {
-        while (await ch.Reader.WaitToReadAsync())
-        {
-            while (ch.Reader.TryRead(out var item))
-            {
-                yield return item;
-            }
-        }
     }
 
     public async ValueTask PublishAsync(EventEnvelope<TType, TPayload> evt, CancellationToken ct = default)
@@ -94,10 +81,31 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
                 .ToList();
         }
 
-        foreach (var channel in targets)
-        {
-            await channel.Writer.WriteAsync(evt, ct);
-        }
+        foreach (var channel in targets) await channel.Writer.WriteAsync(evt, ct);
+    }
+
+    private static async IAsyncEnumerable<T> Empty<T>()
+    {
+        await Task.CompletedTask;
+        yield break;
+    }
+
+    private void ClearSubscriptions(Channel<EventEnvelope<TType, TPayload>> channel)
+    {
+        for (var i = _subs.Count - 1; i >= 0; i--)
+            if (ReferenceEquals(_subs[i].Channel, channel))
+            {
+                _subs.RemoveAt(i);
+                break;
+            }
+    }
+
+    private static async IAsyncEnumerable<EventEnvelope<TType, TPayload>> ReadAll(
+        Channel<EventEnvelope<TType, TPayload>> ch)
+    {
+        while (await ch.Reader.WaitToReadAsync())
+        while (ch.Reader.TryRead(out var item))
+            yield return item;
     }
 
     private static bool Matches(EventFilter<TType, TPayload> f, EventEnvelope<TType, TPayload> e)
@@ -107,24 +115,5 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
         if (f.Predicate != null && !f.Predicate(e))
             return false;
         return true;
-    }
-
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        List<Channel<EventEnvelope<TType, TPayload>>> channels;
-        lock (_gate)
-        {
-            _disposed = true;
-            channels = _subs.Select(s => s.Channel).ToList();
-            _subs.Clear();
-        }
-
-        foreach (var ch in channels)
-        {
-            ch.Writer.TryComplete();
-        }
     }
 }

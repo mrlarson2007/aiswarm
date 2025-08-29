@@ -18,11 +18,6 @@ public class FileSystemService : IFileSystemService
         return File.Exists(path);
     }
 
-    public async Task<string> ReadAllTextAsync(string path)
-    {
-        return await File.ReadAllTextAsync(path);
-    }
-
     public async Task WriteAllTextAsync(
         string path,
         string content)
@@ -35,5 +30,10 @@ public class FileSystemService : IFileSystemService
         string content)
     {
         await File.AppendAllTextAsync(path, content);
+    }
+
+    public async Task<string> ReadAllTextAsync(string path)
+    {
+        return await File.ReadAllTextAsync(path);
     }
 }

@@ -10,8 +10,8 @@ using Shouldly;
 namespace AISwarm.Tests.Integration;
 
 /// <summary>
-/// Integration tests for memory tools using SQLite database to catch entity configuration issues
-/// that in-memory tests might miss
+///     Integration tests for memory tools using SQLite database to catch entity configuration issues
+///     that in-memory tests might miss
 /// </summary>
 public class MemoryToolsIntegrationTests : IDisposable
 {
@@ -48,11 +48,18 @@ public class MemoryToolsIntegrationTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
 
         // Initialize database and enable WAL mode
-        using var context = _serviceProvider.GetRequiredService<IDbContextFactory<CoordinationDbContext>>().CreateDbContext();
+        using var context = _serviceProvider.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()
+            .CreateDbContext();
         context.Database.EnsureCreated();
 
         // Enable WAL mode for better concurrency
         context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+    }
+
+    public void Dispose()
+    {
+        // Dispose service provider first to close all database connections
+        if (_serviceProvider is IDisposable disposable) disposable.Dispose();
     }
 
     [Fact]
@@ -70,11 +77,11 @@ public class MemoryToolsIntegrationTests : IDisposable
 
         // Act - Save memory
         var saveResult = await saveMemoryTool.SaveMemory(
-            key: key,
-            value: value,
-            type: type,
-            metadata: metadata,
-            @namespace: @namespace);
+            key,
+            value,
+            type,
+            metadata,
+            @namespace);
 
         // Assert - Save succeeded
         saveResult.Success.ShouldBeTrue($"Save failed with error: {saveResult.ErrorMessage}");
@@ -105,14 +112,14 @@ public class MemoryToolsIntegrationTests : IDisposable
 
         // Act - Save with null namespace (should default to empty string)
         var saveResult = await saveMemoryTool.SaveMemory(
-            key: key,
-            value: value,
+            key,
+            value,
             @namespace: null);
 
         saveResult.Success.ShouldBeTrue();
 
         // Act - Read with empty namespace
-        var readResult = await readMemoryTool.ReadMemoryAsync(key, "");
+        var readResult = await readMemoryTool.ReadMemoryAsync(key);
 
         // Assert
         readResult.Success.ShouldBeTrue($"Read failed with error: {readResult.ErrorMessage}");
@@ -128,7 +135,7 @@ public class MemoryToolsIntegrationTests : IDisposable
         var readMemoryTool = _serviceProvider.GetRequiredService<ReadMemoryMcpTool>();
 
         // Act
-        var result = await readMemoryTool.ReadMemoryAsync("non-existent-key", "");
+        var result = await readMemoryTool.ReadMemoryAsync("non-existent-key");
 
         // Assert
         result.Success.ShouldBeFalse();
@@ -166,14 +173,5 @@ public class MemoryToolsIntegrationTests : IDisposable
 
         readResult2.Success.ShouldBeTrue($"Read from namespace2 failed with error: {readResult2.ErrorMessage}");
         readResult2.Value.ShouldBe(value2);
-    }
-
-    public void Dispose()
-    {
-        // Dispose service provider first to close all database connections
-        if (_serviceProvider is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
     }
 }

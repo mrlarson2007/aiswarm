@@ -24,6 +24,7 @@ public class FakeLocalAgentService : ILocalAgentService
         get;
         set;
     }
+
     public string? KilledAgentId
     {
         get;
@@ -38,14 +39,6 @@ public class FakeLocalAgentService : ILocalAgentService
         return Task.FromResult(RegisteredAgentId);
     }
 
-    public Task<Agent?> GetAgentAsync(string agentId)
-    {
-        if (ShouldFail)
-            throw new InvalidOperationException(FailureMessage);
-
-        return Task.FromResult(RetrievedAgent);
-    }
-
     public Task<bool> UpdateHeartbeatAsync(string agentId)
     {
         if (ShouldFail)
@@ -58,7 +51,15 @@ public class FakeLocalAgentService : ILocalAgentService
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
-        this.KilledAgentId = agentId;
+        KilledAgentId = agentId;
         return Task.CompletedTask;
+    }
+
+    public Task<Agent?> GetAgentAsync(string agentId)
+    {
+        if (ShouldFail)
+            throw new InvalidOperationException(FailureMessage);
+
+        return Task.FromResult(RetrievedAgent);
     }
 }

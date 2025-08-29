@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 namespace AISwarm.Infrastructure;
 
@@ -38,6 +37,6 @@ public class ConsoleAppLogger : IAppLogger, IDisposable
 
     public void Dispose()
     {
-        _loggerFactory?.Dispose();
+        _loggerFactory.Dispose();
     }
 }

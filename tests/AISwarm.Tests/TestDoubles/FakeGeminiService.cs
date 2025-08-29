@@ -24,16 +24,6 @@ public class FakeGeminiService : IGeminiService
         private set;
     }
 
-    public Task<bool> IsGeminiCliAvailableAsync()
-    {
-        return Task.FromResult(!ShouldFail);
-    }
-
-    public Task<string?> GetGeminiVersionAsync()
-    {
-        return Task.FromResult<string?>(ShouldFail ? null : "1.0.0");
-    }
-
     public Task<bool> LaunchInteractiveAsync(
         string contextFilePath,
         string? model = null,
@@ -47,6 +37,16 @@ public class FakeGeminiService : IGeminiService
             throw new InvalidOperationException(FailureMessage);
 
         return Task.FromResult(LaunchResult);
+    }
+
+    public Task<bool> IsGeminiCliAvailableAsync()
+    {
+        return Task.FromResult(!ShouldFail);
+    }
+
+    public Task<string?> GetGeminiVersionAsync()
+    {
+        return Task.FromResult<string?>(ShouldFail ? null : "1.0.0");
     }
 
     public Task<bool> LaunchInteractiveWithSettingsAsync(string contextFilePath, string? model,

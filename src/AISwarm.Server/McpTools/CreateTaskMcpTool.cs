@@ -2,8 +2,8 @@ using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
-using AISwarm.Server.Entities;
 using AISwarm.Infrastructure.Eventing;
+using AISwarm.Server.Entities;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
@@ -62,7 +62,7 @@ public class CreateTaskMcpTool(
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            PersonaId = persona,  // This is the routing tag
+            PersonaId = persona, // This is the routing tag
             Description = description,
             Priority = priority,
             CreatedAt = timeService.UtcNow

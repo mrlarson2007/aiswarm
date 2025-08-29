@@ -1,55 +1,51 @@
 using System.Text.Json;
 using AISwarm.DataLayer;
-using Microsoft.EntityFrameworkCore;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Eventing;
+using Microsoft.EntityFrameworkCore;
 
-namespace AISwarm.Infrastructure.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
-/// Service that subscribes to system events and logs them to the database for audit and observability
+///     Service that subscribes to system events and logs them to the database for audit and observability
 /// </summary>
 public interface IEventLoggerService
 {
     /// <summary>
-    /// Starts subscribing to events and logging them to the database
+    ///     Starts subscribing to events and logging them to the database
     /// </summary>
     Task StartAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Stops subscribing to events
+    ///     Stops subscribing to events
     /// </summary>
     Task StopAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Implementation that logs both task and agent events to the EventLog table
+///     Implementation that logs both task and agent events to the EventLog table
 /// </summary>
-public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
+public class DatabaseEventLoggerService(
+    IDatabaseScopeService scopeService,
+    IWorkItemNotificationService taskNotifications,
+    IAgentNotificationService agentNotifications,
+    ITimeService timeService,
+    IAppLogger logger) : IEventLoggerService, IDisposable
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly IWorkItemNotificationService _taskNotifications;
-    private readonly IAgentNotificationService _agentNotifications;
-    private readonly ITimeService _timeService;
-    private readonly IAppLogger _logger;
+    private readonly IAgentNotificationService _agentNotifications = agentNotifications;
+    private readonly IAppLogger _logger = logger;
+    private readonly IDatabaseScopeService _scopeService = scopeService;
+    private readonly IWorkItemNotificationService _taskNotifications = taskNotifications;
+    private readonly ITimeService _timeService = timeService;
+    private Task? _agentEventLoggingTask;
 
     private CancellationTokenSource? _cancellationTokenSource;
-    private Task? _taskEventLoggingTask;
-    private Task? _agentEventLoggingTask;
     private TaskCompletionSource? _readyTaskCompletionSource;
+    private Task? _taskEventLoggingTask;
 
-    public DatabaseEventLoggerService(
-        IDatabaseScopeService scopeService,
-        IWorkItemNotificationService taskNotifications,
-        IAgentNotificationService agentNotifications,
-        ITimeService timeService,
-        IAppLogger logger)
+    public void Dispose()
     {
-        _scopeService = scopeService;
-        _taskNotifications = taskNotifications;
-        _agentNotifications = agentNotifications;
-        _timeService = timeService;
-        _logger = logger;
+        StopAsync().ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -78,14 +74,9 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
 
                 // Signal that this listener is ready
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
-                {
                     _readyTaskCompletionSource.SetResult();
-                }
 
-                await foreach (var taskEvent in subscription)
-                {
-                    await LogTaskEventAsync(taskEvent, token);
-                }
+                await foreach (var taskEvent in subscription) await LogTaskEventAsync(taskEvent, token);
             }
             catch (OperationCanceledException)
             {
@@ -99,7 +90,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 _logger.Error($"IO error in task event logging: {ex.Message}");
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            catch (DbUpdateException ex)
             {
                 _logger.Error($"Database update error in task event logging: {ex.Message}");
             }
@@ -114,14 +105,9 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
 
                 // Signal that this listener is ready
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
-                {
                     _readyTaskCompletionSource.SetResult();
-                }
 
-                await foreach (var agentEvent in subscription)
-                {
-                    await LogAgentEventAsync(agentEvent, token);
-                }
+                await foreach (var agentEvent in subscription) await LogAgentEventAsync(agentEvent, token);
             }
             catch (OperationCanceledException)
             {
@@ -139,7 +125,6 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 _logger.Error($"Database update error in agent event logging: {ex.Message}");
             }
-
         }, token);
 
         // Wait for both listeners to be ready
@@ -150,10 +135,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        if (_cancellationTokenSource == null)
-        {
-            return;
-        }
+        if (_cancellationTokenSource == null) return;
 
         _logger.Info("Stopping database event logger service");
 
@@ -161,7 +143,6 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
 
         // Wait for logging tasks to complete
         if (_taskEventLoggingTask != null)
-        {
             try
             {
                 await _taskEventLoggingTask;
@@ -170,10 +151,8 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 // Expected when cancelling
             }
-        }
 
         if (_agentEventLoggingTask != null)
-        {
             try
             {
                 await _agentEventLoggingTask;
@@ -182,7 +161,6 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             {
                 // Expected when cancelling
             }
-        }
 
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;
@@ -206,7 +184,9 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
                 Timestamp = _timeService.UtcNow,
                 Actor = ExtractActorFromTaskEvent(taskEvent),
                 CorrelationId = null, // Event envelopes don't have correlation IDs
-                Payload = JsonSerializer.Serialize((object?)taskEvent.Payload, new JsonSerializerOptions { WriteIndented = false }),
+                Payload =
+                    JsonSerializer.Serialize((object?)taskEvent.Payload,
+                        new JsonSerializerOptions { WriteIndented = false }),
                 EntityId = ExtractEntityIdFromTaskEvent(taskEvent),
                 EntityType = "Task",
                 Severity = GetSeverityFromTaskEvent(taskEvent),
@@ -238,7 +218,8 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
                 Timestamp = _timeService.UtcNow,
                 Actor = ExtractActorFromAgentEvent(agentEvent),
                 CorrelationId = null, // Event envelopes don't have correlation IDs
-                Payload = JsonSerializer.Serialize(agentEvent.Payload, new JsonSerializerOptions { WriteIndented = false }),
+                Payload =
+                    JsonSerializer.Serialize(agentEvent.Payload, new JsonSerializerOptions { WriteIndented = false }),
                 EntityId = agentEvent.Payload.AgentId,
                 EntityType = "Agent",
                 Severity = GetSeverityFromAgentEvent(agentEvent),
@@ -324,9 +305,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         var tags = new List<string>();
 
         if (taskEvent.Payload is TaskCreatedPayload created && !string.IsNullOrEmpty(created.PersonaId))
-        {
             tags.Add($"persona:{created.PersonaId}");
-        }
 
         return tags.Count > 0 ? string.Join(",", tags) : null;
     }
@@ -339,10 +318,5 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         tags.Add($"event:{agentEvent.Type}");
 
         return tags.Count > 0 ? string.Join(",", tags) : null;
-    }
-
-    public void Dispose()
-    {
-        StopAsync().ConfigureAwait(false).GetAwaiter().GetResult();
     }
 }

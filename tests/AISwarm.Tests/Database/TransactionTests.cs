@@ -13,10 +13,15 @@ public class DatabaseScopeTests : IDisposable
     public DatabaseScopeTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
+    }
+
+    public void Dispose()
+    {
+        // Context lifecycle managed by scopes
     }
 
     [Fact]
@@ -111,10 +116,5 @@ public class DatabaseScopeTests : IDisposable
         using var verifyScope = _scopeService.GetReadScope();
         var savedAgent = await verifyScope.Agents.FindAsync("transaction-scope-test");
         savedAgent.ShouldNotBeNull();
-    }
-
-    public void Dispose()
-    {
-        // Context lifecycle managed by scopes
     }
 }

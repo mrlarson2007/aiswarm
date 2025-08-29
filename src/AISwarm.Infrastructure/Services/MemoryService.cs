@@ -1,3 +1,4 @@
+using System.Text;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Entities;
@@ -6,31 +7,26 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.Infrastructure.Services;
 
 /// <summary>
-/// Memory service that uses per-request transaction coordination.
-/// Uses IDatabaseScopeService to automatically coordinate transactions across multiple operations.
+///     Memory service that uses per-request transaction coordination.
+///     Uses IDatabaseScopeService to automatically coordinate transactions across multiple operations.
 /// </summary>
-public class MemoryService : IMemoryService
+public class MemoryService(
+    IDatabaseScopeService scopedDbService,
+    ITimeService timeService) : IMemoryService
 {
     private const string DefaultContentType = "text";
 
-    private readonly IDatabaseScopeService _scopedDbService;
-    private readonly ITimeService _timeService;
+    private readonly IDatabaseScopeService _scopedDbService = scopedDbService;
+    private readonly ITimeService _timeService = timeService;
 
-    public MemoryService(
-        IDatabaseScopeService scopedDbService,
-        ITimeService timeService)
-    {
-        _scopedDbService = scopedDbService;
-        _timeService = timeService;
-    }
-
-    public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null, string? metadata = null)
+    public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null,
+        string? metadata = null)
     {
         // Get scoped write scope - uses existing transaction scope if available, creates new one if needed
         var scope = _scopedDbService.GetWriteScope();
         var now = _timeService.UtcNow;
         var namespaceName = @namespace ?? "";
-        var valueBytes = System.Text.Encoding.UTF8.GetBytes(value);
+        var valueBytes = Encoding.UTF8.GetBytes(value);
 
         var entity = await scope.MemoryEntries
             .FirstOrDefaultAsync(m => m.Key == key && m.Namespace == namespaceName);

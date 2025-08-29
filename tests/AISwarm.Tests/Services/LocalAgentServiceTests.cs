@@ -14,16 +14,12 @@ namespace AISwarm.Tests.Services;
 
 public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private LocalAgentService? _systemUnderTest;
-    private readonly FakeTimeService _timeService;
+    private readonly IAgentStateService _agentStateService;
     private readonly Mock<IAgentNotificationService> _mockNotificationService;
     private readonly Mock<IProcessTerminationService> _mockProcessTerminationService;
-    private readonly IAgentStateService _agentStateService;
-
-    public LocalAgentService SystemUnderTest =>
-        _systemUnderTest ??= new LocalAgentService(
-            _timeService, _scopeService, _agentStateService);
+    private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
+    private LocalAgentService? _systemUnderTest;
 
 
     public LocalAgentServiceTests()
@@ -39,8 +35,13 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
 
         _mockNotificationService = new Mock<IAgentNotificationService>();
         _mockProcessTerminationService = new Mock<IProcessTerminationService>();
-        _agentStateService = new AgentStateService(_scopeService, _mockNotificationService.Object, _mockProcessTerminationService.Object);
+        _agentStateService = new AgentStateService(_scopeService, _mockNotificationService.Object,
+            _mockProcessTerminationService.Object);
     }
+
+    public LocalAgentService SystemUnderTest =>
+        _systemUnderTest ??= new LocalAgentService(
+            _timeService, _scopeService, _agentStateService);
 
     public class AgentRegistrationTests : LocalAgentServiceTests
     {
@@ -54,7 +55,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
                 WorkingDirectory = "/test/path",
                 Model = "gemini-1.5-pro",
                 WorktreeName = "main"
-
             };
 
             // Act
@@ -84,11 +84,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Arrange
             var request1 =
                 new AgentRegistrationRequest { PersonaId = "planner", WorkingDirectory = "/path1" };
-            var request2 = new AgentRegistrationRequest
-            {
-                PersonaId = "implementer",
-                WorkingDirectory = "/path2"
-            };
+            var request2 = new AgentRegistrationRequest { PersonaId = "implementer", WorkingDirectory = "/path2" };
 
             // Act
             var agentId1 = await SystemUnderTest.RegisterAgentAsync(request1);
@@ -123,10 +119,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             // Arrange
             var request = new AgentRegistrationRequest
             {
-                PersonaId = "tester",
-                WorkingDirectory = "/test/minimal-path",
-                Model = null,
-                WorktreeName = null
+                PersonaId = "tester", WorkingDirectory = "/test/minimal-path", Model = null, WorktreeName = null
             };
 
             // Act
@@ -142,7 +135,6 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
             agent.WorktreeName.ShouldBeNull();
             agent.Status.ShouldBe(AgentStatus.Starting);
         }
-
     }
 
     public class AgentHeartbeatTests : LocalAgentServiceTests

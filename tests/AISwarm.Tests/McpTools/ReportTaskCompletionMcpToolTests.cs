@@ -12,15 +12,13 @@ namespace AISwarm.Tests.McpTools;
 public class ReportTaskCompletionMcpToolTests
     : IDisposable, ISystemUnderTest<ReportTaskCompletionMcpTool>
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly FakeTimeService _timeService;
     private readonly IEventBus<TaskEventType, ITaskLifecyclePayload> _bus =
         new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
-    private readonly IWorkItemNotificationService _notifier;
-    private ReportTaskCompletionMcpTool? _systemUnderTest;
 
-    public ReportTaskCompletionMcpTool SystemUnderTest =>
-        _systemUnderTest ??= new ReportTaskCompletionMcpTool(_scopeService, _timeService, _notifier);
+    private readonly IWorkItemNotificationService _notifier;
+    private readonly IDatabaseScopeService _scopeService;
+    private readonly FakeTimeService _timeService;
+    private ReportTaskCompletionMcpTool? _systemUnderTest;
 
     protected ReportTaskCompletionMcpToolTests()
     {
@@ -37,6 +35,103 @@ public class ReportTaskCompletionMcpToolTests
     public void Dispose()
     {
         // Context factory handles disposal
+    }
+
+    public ReportTaskCompletionMcpTool SystemUnderTest =>
+        _systemUnderTest ??= new ReportTaskCompletionMcpTool(_scopeService, _timeService, _notifier);
+
+    private async Task CreateRunningAgentAsync(string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var agent = new Agent
+        {
+            Id = agentId,
+            PersonaId = "test-persona",
+            WorkingDirectory = "/test",
+            Status = AgentStatus.Running,
+            RegisteredAt = _timeService.UtcNow,
+            LastHeartbeat = _timeService.UtcNow
+        };
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreatePendingTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Pending,
+            PersonaId = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateInProgressTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.InProgress,
+            PersonaId = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _timeService.UtcNow,
+            StartedAt = _timeService.UtcNow
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateCompletedTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Completed,
+            PersonaId = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _timeService.UtcNow,
+            CompletedAt = _timeService.UtcNow,
+            Result = "Previously completed"
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
+    }
+
+    private async Task CreateFailedTaskAsync(string taskId, string agentId)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var task = new WorkItem
+        {
+            Id = taskId,
+            AgentId = agentId,
+            Status = TaskStatus.Failed,
+            PersonaId = "Test persona content",
+            Description = "Test task description",
+            Priority = TaskPriority.Normal,
+            CreatedAt = _timeService.UtcNow,
+            CompletedAt = _timeService.UtcNow,
+            Result = "Previously completed"
+        };
+        scope.Tasks.Add(task);
+        await scope.SaveChangesAsync();
+        scope.Complete();
     }
 
     public class TaskReportCompletionTests : ReportTaskCompletionMcpToolTests
@@ -141,13 +236,11 @@ public class ReportTaskCompletionMcpToolTests
             var readTask = Task.Run(async () =>
             {
                 await foreach (var evt in _notifier.SubscibeForTaskCompletion([taskId], token))
-                {
                     if (evt.Type == TaskEventType.Completed)
                     {
                         received.Add(evt);
                         break;
                     }
-                }
             }, token);
 
             await Task.Delay(30, token);
@@ -237,13 +330,11 @@ public class ReportTaskCompletionMcpToolTests
             var readTask = Task.Run(async () =>
             {
                 await foreach (var evt in _notifier.SubscibeForTaskCompletion([taskId], token))
-                {
                     if (evt.Type == TaskEventType.Failed)
                     {
                         received.Add(evt);
                         break;
                     }
-                }
             }, token);
             await Task.Delay(5, token);
 
@@ -253,99 +344,5 @@ public class ReportTaskCompletionMcpToolTests
             await readTask;
             received.Count.ShouldBe(1);
         }
-    }
-
-    private async Task CreateRunningAgentAsync(string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var agent = new Agent
-        {
-            Id = agentId,
-            PersonaId = "test-persona",
-            WorkingDirectory = "/test",
-            Status = AgentStatus.Running,
-            RegisteredAt = _timeService.UtcNow,
-            LastHeartbeat = _timeService.UtcNow
-        };
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
-
-    private async Task CreatePendingTaskAsync(string taskId, string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Pending,
-            PersonaId = "Test persona content",
-            Description = "Test task description",
-            Priority = TaskPriority.Normal,
-            CreatedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
-
-    private async Task CreateInProgressTaskAsync(string taskId, string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.InProgress,
-            PersonaId = "Test persona content",
-            Description = "Test task description",
-            Priority = TaskPriority.Normal,
-            CreatedAt = _timeService.UtcNow,
-            StartedAt = _timeService.UtcNow
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
-
-    private async Task CreateCompletedTaskAsync(string taskId, string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Completed,
-            PersonaId = "Test persona content",
-            Description = "Test task description",
-            Priority = TaskPriority.Normal,
-            CreatedAt = _timeService.UtcNow,
-            CompletedAt = _timeService.UtcNow,
-            Result = "Previously completed"
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
-    }
-
-    private async Task CreateFailedTaskAsync(string taskId, string agentId)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var task = new WorkItem
-        {
-            Id = taskId,
-            AgentId = agentId,
-            Status = TaskStatus.Failed,
-            PersonaId = "Test persona content",
-            Description = "Test task description",
-            Priority = TaskPriority.Normal,
-            CreatedAt = _timeService.UtcNow,
-            CompletedAt = _timeService.UtcNow,
-            Result = "Previously completed"
-        };
-        scope.Tasks.Add(task);
-        await scope.SaveChangesAsync();
-        scope.Complete();
     }
 }

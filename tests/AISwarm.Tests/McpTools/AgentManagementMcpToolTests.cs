@@ -13,27 +13,17 @@ namespace AISwarm.Tests.McpTools;
 public class AgentManagementMcpToolTests
     : ISystemUnderTest<AgentManagementMcpTool>
 {
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly FakeTimeService _timeService;
-    private readonly TestLogger _logger;
     private readonly FakeContextService _fakeContextService;
+    private readonly FakeFileSystemService _fakeFileSystemService;
     private readonly FakeGitService _fakeGitService;
     private readonly Mock<IInteractiveTerminalService> _fakeTerminalService;
-    private readonly FakeFileSystemService _fakeFileSystemService;
     private readonly GeminiService _geminiService;
     private readonly LocalAgentService _localAgentService;
+    private readonly TestLogger _logger;
+    private readonly IDatabaseScopeService _scopeService;
     private readonly TestEnvironmentService _testEnvironmentService;
+    private readonly FakeTimeService _timeService;
     private AgentManagementMcpTool? _systemUnderTest;
-
-    public AgentManagementMcpTool SystemUnderTest =>
-        _systemUnderTest ??= new AgentManagementMcpTool(
-            _scopeService,
-            _fakeContextService,
-            _fakeGitService,
-            _geminiService,
-            _localAgentService,
-            _testEnvironmentService,
-            _logger);
 
     protected AgentManagementMcpToolTests()
     {
@@ -65,6 +55,40 @@ public class AgentManagementMcpToolTests
             agentStateService);
 
         _testEnvironmentService = new TestEnvironmentService();
+    }
+
+    public AgentManagementMcpTool SystemUnderTest =>
+        _systemUnderTest ??= new AgentManagementMcpTool(
+            _scopeService,
+            _fakeContextService,
+            _fakeGitService,
+            _geminiService,
+            _localAgentService,
+            _testEnvironmentService,
+            _logger);
+
+    private async Task CreateAgentAsync(
+        string agentId,
+        string personaId,
+        AgentStatus status,
+        string? processId = null)
+    {
+        using var scope = _scopeService.GetWriteScope();
+        var agent = new Agent
+        {
+            Id = agentId,
+            PersonaId = personaId,
+            Status = status,
+            RegisteredAt = _timeService.UtcNow,
+            LastHeartbeat = _timeService.UtcNow,
+            StartedAt = _timeService.UtcNow,
+            ProcessId = processId ?? "12345",
+            WorkingDirectory = "/test/directory"
+        };
+
+        scope.Agents.Add(agent);
+        await scope.SaveChangesAsync();
+        scope.Complete();
     }
 
     public class ListAgentsTests : AgentManagementMcpToolTests
@@ -217,13 +241,13 @@ public class AgentManagementMcpToolTests
             _fakeContextService.CreatedContextPath = "/test/repo/test-branch/implementer_context.md";
 
             _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
-                It.IsAny<string>(),
-                It.IsAny<string>()))
+                    It.IsAny<string>(),
+                    It.IsAny<string>()))
                 .Returns(true);
 
             _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
-                It.Is<string>(x => x.Contains("gemini")),
-                It.IsAny<string>()))
+                    It.Is<string>(x => x.Contains("gemini")),
+                    It.IsAny<string>()))
                 .Returns(true);
 
             _fakeFileSystemService.AddFile(
@@ -248,8 +272,8 @@ public class AgentManagementMcpToolTests
             _fakeGitService.CreatedWorktreePath = "/test/repo/test-branch";
             _fakeContextService.CreatedContextPath = "/test/repo/test-branch/implementer_context.md";
             _fakeTerminalService.Setup(t => t.LaunchTerminalInteractive(
-                It.Is<string>(x => x.Contains("--yolo")),
-                It.IsAny<string>()))
+                    It.Is<string>(x => x.Contains("--yolo")),
+                    It.IsAny<string>()))
                 .Returns(true);
 
             _fakeFileSystemService.AddFile(
@@ -294,7 +318,7 @@ public class AgentManagementMcpToolTests
                 existingAgentId,
                 "implementer",
                 AgentStatus.Running,
-                processId: "12345");
+                "12345");
 
             // Act
             var result = await SystemUnderTest.KillAgentAsync(existingAgentId);
@@ -310,30 +334,5 @@ public class AgentManagementMcpToolTests
             listResult.Agents[0].AgentId.ShouldBe(existingAgentId);
             listResult.Agents[0].Status.ShouldBe("Killed");
         }
-
-    }
-
-    private async Task CreateAgentAsync(
-        string agentId,
-        string personaId,
-        AgentStatus status,
-        string? processId = null)
-    {
-        using var scope = _scopeService.GetWriteScope();
-        var agent = new Agent
-        {
-            Id = agentId,
-            PersonaId = personaId,
-            Status = status,
-            RegisteredAt = _timeService.UtcNow,
-            LastHeartbeat = _timeService.UtcNow,
-            StartedAt = _timeService.UtcNow,
-            ProcessId = processId ?? "12345",
-            WorkingDirectory = "/test/directory"
-        };
-
-        scope.Agents.Add(agent);
-        await scope.SaveChangesAsync();
-        scope.Complete();
     }
 }

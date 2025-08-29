@@ -3,24 +3,24 @@ using AISwarm.Shared.Models;
 namespace AISwarm.Server.Entities;
 
 /// <summary>
-/// Result of creating a task via MCP tool
+///     Result of creating a task via MCP tool
 /// </summary>
 public class CreateTaskResult : Result<CreateTaskResult>
 {
     /// <summary>
-    /// ID of the created task (only populated on success)
+    ///     ID of the created task (only populated on success)
     /// </summary>
     public string? TaskId
     {
-        get; set;
+        get;
+        set;
     }
 
     /// <summary>
-    /// Creates a successful result with task ID
+    ///     Creates a successful result with task ID
     /// </summary>
-    public static CreateTaskResult SuccessWithTaskId(string taskId) => new()
+    public static CreateTaskResult SuccessWithTaskId(string taskId)
     {
-        Success = true,
-        TaskId = taskId
-    };
+        return new CreateTaskResult { Success = true, TaskId = taskId };
+    }
 }

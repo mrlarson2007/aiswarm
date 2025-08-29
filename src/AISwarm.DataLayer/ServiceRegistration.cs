@@ -1,3 +1,5 @@
+using System.Data;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -43,7 +45,7 @@ public static class ServiceRegistration
             if (provider.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
             {
                 var conn = context.Database.GetDbConnection();
-                if (conn.State != System.Data.ConnectionState.Open)
+                if (conn.State != ConnectionState.Open)
                     conn.Open();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "PRAGMA table_info('Tasks')";
@@ -59,6 +61,7 @@ public static class ServiceRegistration
                         break;
                     }
                 }
+
                 reader.Close();
                 if (!hasPersonaId)
                 {
@@ -68,7 +71,7 @@ public static class ServiceRegistration
                 }
             }
         }
-        catch (System.Data.Common.DbException)
+        catch (DbException)
         {
             // Best-effort upgrade; ignore if unavailable.
         }

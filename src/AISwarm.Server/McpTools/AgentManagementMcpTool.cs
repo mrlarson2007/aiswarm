@@ -20,16 +20,14 @@ public class AgentManagementMcpTool(
     [McpServerTool(Name = "list_agents")]
     [Description("List available agents with optional persona filter")]
     public async Task<ListAgentsResult> ListAgentsAsync(
-        [Description("Optional persona filter (implementer, reviewer, planner, etc.)")] string? personaFilter = null)
+        [Description("Optional persona filter (implementer, reviewer, planner, etc.)")]
+        string? personaFilter = null)
     {
         using var scope = scopeService.GetReadScope();
 
         var query = scope.Agents.AsQueryable();
 
-        if (!string.IsNullOrEmpty(personaFilter))
-        {
-            query = query.Where(a => a.PersonaId == personaFilter);
-        }
+        if (!string.IsNullOrEmpty(personaFilter)) query = query.Where(a => a.PersonaId == personaFilter);
 
         var agents = await query
             .Select(a => new AgentInfo
@@ -51,11 +49,15 @@ public class AgentManagementMcpTool(
     [McpServerTool(Name = "launch_agent")]
     [Description("Launch a new agent with specified persona")]
     public async Task<LaunchAgentResult> LaunchAgentAsync(
-        [Description("Agent persona (implementer, reviewer, planner, etc.)")] string persona,
-        [Description("Description of what the agent should accomplish")] string description,
+        [Description("Agent persona (implementer, reviewer, planner, etc.)")]
+        string persona,
+        [Description("Description of what the agent should accomplish")]
+        string description,
         [Description("Optional model to use")] string? model = null,
-        [Description("Optional worktree name for the agent")] string? worktreeName = null,
-        [Description("Bypass permission prompts (use --yolo flag)")] bool yolo = false)
+        [Description("Optional worktree name for the agent")]
+        string? worktreeName = null,
+        [Description("Bypass permission prompts (use --yolo flag)")]
+        bool yolo = false)
     {
         logger.Info($"[MCP] LaunchAgentAsync started - persona: {persona}, model: {model}, worktree: {worktreeName}");
 
@@ -74,6 +76,7 @@ public class AgentManagementMcpTool(
                 logger.Warn($"[MCP] LaunchAgentAsync failed - invalid agent type: {persona}");
                 return LaunchAgentResult.Failure($"Invalid agent type: {persona}");
             }
+
             logger.Info("[MCP] Agent type validation passed");
 
             // Check if we're in a git repository
@@ -83,6 +86,7 @@ public class AgentManagementMcpTool(
                 logger.Warn("[MCP] LaunchAgentAsync failed - not in git repository");
                 return LaunchAgentResult.Failure("Must be run from within a git repository");
             }
+
             logger.Info("[MCP] Git repository check passed");
 
             // Get repository root
@@ -93,10 +97,11 @@ public class AgentManagementMcpTool(
                 logger.Warn("[MCP] LaunchAgentAsync failed - could not determine repository root");
                 return LaunchAgentResult.Failure("Could not determine repository root");
             }
+
             logger.Info($"[MCP] Repository root: {repositoryRoot}");
 
             // Create worktree if specified
-            string workingDirectory = repositoryRoot;
+            var workingDirectory = repositoryRoot;
             if (!string.IsNullOrWhiteSpace(worktreeName))
             {
                 logger.Info($"[MCP] Creating worktree: {worktreeName}...");
@@ -112,10 +117,7 @@ public class AgentManagementMcpTool(
             logger.Info("[MCP] Registering agent in database...");
             var registrationRequest = new AgentRegistrationRequest
             {
-                PersonaId = persona,
-                WorkingDirectory = workingDirectory,
-                Model = model,
-                WorktreeName = worktreeName
+                PersonaId = persona, WorkingDirectory = workingDirectory, Model = model, WorktreeName = worktreeName
             };
 
             var agentId = await localAgentService.RegisterAgentAsync(registrationRequest);
@@ -164,22 +166,17 @@ public class AgentManagementMcpTool(
     [McpServerTool(Name = "kill_agent")]
     [Description("Stop and kill an agent by ID")]
     public async Task<KillAgentResult> KillAgentAsync(
-        [Description("ID of the agent to kill")] string agentId)
+        [Description("ID of the agent to kill")]
+        string agentId)
     {
-        if (string.IsNullOrWhiteSpace(agentId))
-        {
-            return KillAgentResult.Failure("Agent ID is required");
-        }
+        if (string.IsNullOrWhiteSpace(agentId)) return KillAgentResult.Failure("Agent ID is required");
 
         try
         {
             // Check if agent exists first
             using var scope = scopeService.GetReadScope();
             var agent = await scope.Agents.FindAsync(agentId);
-            if (agent == null)
-            {
-                return KillAgentResult.Failure($"Agent not found: {agentId}");
-            }
+            if (agent == null) return KillAgentResult.Failure($"Agent not found: {agentId}");
 
             // Use the local agent service to handle process termination and database updates
             await localAgentService.KillAgentAsync(agentId);

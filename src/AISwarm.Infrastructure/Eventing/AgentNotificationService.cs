@@ -1,13 +1,9 @@
 namespace AISwarm.Infrastructure.Eventing;
 
 public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecyclePayload> bus)
-    : BaseNotificationService<AgentEventType, IAgentLifecyclePayload, AgentEventEnvelope>(bus), IAgentNotificationService
+    : BaseNotificationService<AgentEventType, IAgentLifecyclePayload, AgentEventEnvelope>(bus),
+        IAgentNotificationService
 {
-    protected override AgentEventEnvelope CreateEventEnvelope(AgentEventType type, DateTimeOffset timestamp, IAgentLifecyclePayload payload)
-    {
-        return new AgentEventEnvelope(type, timestamp, payload);
-    }
-
     public ValueTask PublishAgentRegistered(string agentId, string? persona, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
@@ -24,7 +20,8 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
         return PublishEventAsync(AgentEventType.Killed, payload, ct);
     }
 
-    public ValueTask PublishAgentStatusChanged(string agentId, string? oldStatus, string? newStatus, CancellationToken ct = default)
+    public ValueTask PublishAgentStatusChanged(string agentId, string? oldStatus, string? newStatus,
+        CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
 
@@ -35,8 +32,14 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
     public IAsyncEnumerable<AgentEventEnvelope> SubscribeForAllAgentEvents(CancellationToken ct = default)
     {
         var filter = new AgentEventFilter(
-            Types: [AgentEventType.Registered, AgentEventType.Killed, AgentEventType.StatusChanged]);
+            [AgentEventType.Registered, AgentEventType.Killed, AgentEventType.StatusChanged]);
         return ToAgentEventEnvelopeAsyncEnumerable(Bus.Subscribe(filter, ct));
+    }
+
+    protected override AgentEventEnvelope CreateEventEnvelope(AgentEventType type, DateTimeOffset timestamp,
+        IAgentLifecyclePayload payload)
+    {
+        return new AgentEventEnvelope(type, timestamp, payload);
     }
 
     private IAsyncEnumerable<AgentEventEnvelope> ToAgentEventEnvelopeAsyncEnumerable(
@@ -49,5 +52,7 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
 }
 
 public record AgentRegisteredPayload(string AgentId, string? Persona) : IAgentLifecyclePayload;
+
 public record AgentKilledPayload(string AgentId, string? Reason) : IAgentLifecyclePayload;
+
 public record AgentStatusChangedPayload(string AgentId, string? OldStatus, string? NewStatus) : IAgentLifecyclePayload;

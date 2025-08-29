@@ -1,8 +1,8 @@
 using System.Text.Json;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Infrastructure;
 using AISwarm.Infrastructure.Eventing;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
@@ -10,16 +10,16 @@ using Shouldly;
 namespace AISwarm.Tests.Services;
 
 /// <summary>
-/// Base class for DatabaseEventLoggerService tests providing common test infrastructure
+///     Base class for DatabaseEventLoggerService tests providing common test infrastructure
 /// </summary>
 public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemUnderTest<DatabaseEventLoggerService>
 {
-    protected readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
-    protected readonly IDatabaseScopeService _scopeService;
-    protected readonly FakeTimeService _timeService;
-    protected readonly TestLogger _logger;
-    protected readonly WorkItemNotificationService _taskNotificationService;
     protected readonly AgentNotificationService _agentNotificationService;
+    protected readonly TestLogger _logger;
+    protected readonly IDatabaseScopeService _scopeService;
+    protected readonly WorkItemNotificationService _taskNotificationService;
+    protected readonly FakeTimeService _timeService;
+    protected readonly IDbContextFactory<CoordinationDbContext> DbContextFactory;
 
     protected DatabaseEventLoggerServiceTestBase()
     {
@@ -28,8 +28,8 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
             .UseInMemoryDatabase(databaseName)
             .Options;
 
-        _dbContextFactory = new TestDbContextFactory(options);
-        _scopeService = new DatabaseScopeService(_dbContextFactory);
+        DbContextFactory = new TestDbContextFactory(options);
+        _scopeService = new DatabaseScopeService(DbContextFactory);
         _timeService = new FakeTimeService();
         _logger = new TestLogger();
 
@@ -41,8 +41,14 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
         _agentNotificationService = new AgentNotificationService(agentEventBus);
 
         // Ensure the database is created and ready
-        using var context = _dbContextFactory.CreateDbContext();
+        using var context = DbContextFactory.CreateDbContext();
         context.Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        using var context = DbContextFactory.CreateDbContext();
+        context.Database.EnsureDeleted();
     }
 
     public DatabaseEventLoggerService SystemUnderTest => new(
@@ -52,21 +58,15 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
         _timeService,
         _logger);
 
-    public void Dispose()
-    {
-        using var context = _dbContextFactory.CreateDbContext();
-        context.Database.EnsureDeleted();
-    }
-
     protected async Task<EventLog?> GetEventLogAsync()
     {
-        using var context = _dbContextFactory.CreateDbContext();
+        using var context = DbContextFactory.CreateDbContext();
         return await context.EventLogs.OrderBy(e => e.Timestamp).FirstOrDefaultAsync();
     }
 
     protected async Task<EventLog?> GetEventLogAsync(string eventType)
     {
-        using var context = _dbContextFactory.CreateDbContext();
+        using var context = DbContextFactory.CreateDbContext();
         return await context.EventLogs
             .Where(e => e.EventType == eventType)
             .OrderBy(e => e.Timestamp)
@@ -75,10 +75,9 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
 
     protected async Task<List<EventLog>> GetAllEventLogsAsync()
     {
-        using var context = _dbContextFactory.CreateDbContext();
+        using var context = DbContextFactory.CreateDbContext();
         return await context.EventLogs.OrderBy(e => e.Timestamp).ToListAsync();
     }
-
 }
 
 [Collection("DatabaseEventLogger")]
@@ -117,9 +116,8 @@ public class TaskEventLoggingTests : DatabaseEventLoggerServiceTestBase
         // Assert - Check all events are in database
         var allLogs = await GetAllEventLogsAsync();
         if (allLogs.Count != 3)
-        {
-            throw new Exception($"Expected 3 events but found {allLogs.Count}. Event types: [{string.Join(", ", allLogs.Select(e => e.EventType))}]");
-        }
+            throw new Exception(
+                $"Expected 3 events but found {allLogs.Count}. Event types: [{string.Join(", ", allLogs.Select(e => e.EventType))}]");
         allLogs.Count.ShouldBe(3);
 
         // Verify TaskCreated event
@@ -239,4 +237,3 @@ public class ServiceLifecycleTests : DatabaseEventLoggerServiceTestBase
         _logger.Errors.ShouldBeEmpty();
     }
 }
-

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
-using AISwarm.DataLayer.Entities;
 using AISwarm.DataLayer;
+using AISwarm.DataLayer.Entities;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
@@ -8,8 +8,8 @@ using Shouldly;
 namespace AISwarm.Tests.DataLayer;
 
 /// <summary>
-/// Tests for MemoryEntry entity validation and behavior.
-/// Following TDD approach - testing edge cases and validation first.
+///     Tests for MemoryEntry entity validation and behavior.
+///     Following TDD approach - testing edge cases and validation first.
 /// </summary>
 public class MemoryEntryTests
 {
@@ -30,7 +30,7 @@ public class MemoryEntryTests
             // Act & Assert
             var validationResults = new List<ValidationResult>();
             var validationContext = new ValidationContext(memoryEntry);
-            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, validateAllProperties: true);
+            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, true);
 
             // Assert - Should fail validation
             isValid.ShouldBeFalse();
@@ -52,7 +52,7 @@ public class MemoryEntryTests
             // Act & Assert
             var validationResults = new List<ValidationResult>();
             var validationContext = new ValidationContext(memoryEntry);
-            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, validateAllProperties: true);
+            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, true);
 
             // Assert - Should fail validation
             isValid.ShouldBeFalse();
@@ -74,7 +74,7 @@ public class MemoryEntryTests
             // Act & Assert
             var validationResults = new List<ValidationResult>();
             var validationContext = new ValidationContext(memoryEntry);
-            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, validateAllProperties: true);
+            var isValid = Validator.TryValidateObject(memoryEntry, validationContext, validationResults, true);
 
             // Assert - Should fail validation
             isValid.ShouldBeFalse();
@@ -96,16 +96,18 @@ public class MemoryEntryTests
             _dbContext = new CoordinationDbContext(options);
         }
 
+        public void Dispose()
+        {
+            _dbContext.Dispose();
+        }
+
         [Fact]
         public async Task WhenSavingMemoryEntryToDatabase_ShouldPersistSuccessfully()
         {
             // Arrange
             var memoryEntry = new MemoryEntry
             {
-                Id = "test-id",
-                Namespace = "test-namespace",
-                Key = "test-key",
-                Value = "test-value"
+                Id = "test-id", Namespace = "test-namespace", Key = "test-key", Value = "test-value"
             };
 
             // Act
@@ -118,11 +120,6 @@ public class MemoryEntryTests
             savedEntry.Namespace.ShouldBe("test-namespace");
             savedEntry.Key.ShouldBe("test-key");
             savedEntry.Value.ShouldBe("test-value");
-        }
-
-        public void Dispose()
-        {
-            _dbContext.Dispose();
         }
     }
 }

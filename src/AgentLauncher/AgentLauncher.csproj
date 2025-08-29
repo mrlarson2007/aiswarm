@@ -1,30 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    
-    <!-- Configure as a global tool -->
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>aiswarm</ToolCommandName>
-    <PackageId>AiSwarm.AgentLauncher</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>AI Swarm</Authors>
-    <Description>CLI tool for launching Gemini agents with personas and worktrees</Description>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
 
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
-  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
-  <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8" />
-  </ItemGroup>
+        <!-- Configure as a global tool -->
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>aiswarm</ToolCommandName>
+        <PackageId>AiSwarm.AgentLauncher</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>AI Swarm</Authors>
+        <Description>CLI tool for launching Gemini agents with personas and worktrees</Description>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
-    <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.8"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj"/>
+        <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj"/>
+    </ItemGroup>
 
 </Project>
