@@ -79,9 +79,6 @@ public class GetNextTaskMcpToolTests
             result.PersonaId.ShouldBe(persona);
             result.Description.ShouldBe(description);
 
-            // Allow any pending scope operations to complete before verification
-            //await Task.Delay(100);
-
             using var scope = _scopeService.GetReadScope();
             // Verify that the task was marked as in progress in the database
             var task = await scope.Tasks.FindAsync(taskId);

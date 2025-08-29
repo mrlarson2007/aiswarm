@@ -75,7 +75,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             try
             {
                 var subscription = _taskNotifications.SubscribeForAllTaskEvents(token);
-                
+
                 // Signal that this listener is ready
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
                 {
@@ -111,7 +111,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             try
             {
                 var subscription = _agentNotifications.SubscribeForAllAgentEvents(token);
-                
+
                 // Signal that this listener is ready
                 if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
                 {
@@ -130,15 +130,16 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             catch (InvalidOperationException ex)
             {
                 _logger.Error($"Invalid operation in agent event logging: {ex.Message}");
+            }
             catch (IOException ex)
             {
                 _logger.Error($"IO error in agent event logging: {ex.Message}");
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            catch (DbUpdateException ex)
             {
                 _logger.Error($"Database update error in agent event logging: {ex.Message}");
             }
-            }
+
         }, token);
 
         // Wait for both listeners to be ready
