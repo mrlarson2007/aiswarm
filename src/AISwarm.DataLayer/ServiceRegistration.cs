@@ -68,7 +68,7 @@ public static class ServiceRegistration
                 }
             }
         }
-        catch
+        catch (System.Data.Common.DbException)
         {
             // Best-effort upgrade; ignore if unavailable.
         }
