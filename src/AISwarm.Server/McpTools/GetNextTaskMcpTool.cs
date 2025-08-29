@@ -76,16 +76,26 @@ public class GetNextTaskMcpTool(
         if (preferred != null)
             return preferred;
 
-        // Wait for new task events
+        // Wait for new task events with retry limit to prevent infinite loops
         using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
         try
         {
+            const int maxRetries = 10; // Prevent infinite loops in race conditions
+            int retryCount = 0;
+            
             do
             {
                 preferredTaskId = await TryGetNextTaskIdAsync(agentInfo, cts.Token);
                 var result = await TryGetOrClaimTaskAsync(agentInfo, preferredTaskId);
                 if (result != null)
                     return result;
+                
+                retryCount++;
+                if (retryCount >= maxRetries)
+                {
+                    // Break out of potential infinite loop after max retries
+                    break;
+                }
             } while (preferredTaskId != null);
         }
         finally
@@ -226,6 +236,9 @@ public class GetNextTaskMcpTool(
 
         await scope.SaveChangesAsync();
         scope.Complete();
+
+        // Publish TaskClaimed event for consistency with ClaimUnassignedTaskAsync
+        await workItemNotifications.PublishTaskClaimed(task.Id, agentId);
 
         return GetNextTaskResult.SuccessWithTask(
             task.Id,

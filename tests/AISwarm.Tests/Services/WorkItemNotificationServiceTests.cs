@@ -52,7 +52,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert
         received.Count.ShouldBe(2);
@@ -160,7 +163,10 @@ public class WorkItemNotificationServiceTests
                 }
                 completed = true;
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation token is triggered - intentionally ignored
+            }
         }, token);
 
         await Task.Delay(5, cts.Token);
@@ -174,7 +180,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         completed.ShouldBeTrue();
 
@@ -279,7 +288,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert
         received.Count.ShouldBe(1);
@@ -325,7 +337,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert: only the unassigned task should be received
         received.Count.ShouldBe(1);
@@ -390,7 +405,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert
         completed.ShouldBeTrue();
@@ -448,7 +466,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert
         received.Count.ShouldBe(2);
@@ -514,7 +535,10 @@ public class WorkItemNotificationServiceTests
         {
             await readTask;
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            // Expected when cancellation token is triggered - intentionally ignored
+        }
 
         // Assert
         lock (received) // Thread-safe access for assertion
@@ -557,7 +581,7 @@ public class WorkItemNotificationServiceTests
         var subscriptionComplete = new TaskCompletionSource<bool>();
 
         // Act
-        var readTask = Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             try
             {

@@ -11,17 +11,17 @@ public class TestLogger : IAppLogger
     public ConcurrentBag<string> Infos
     {
         get;
-    } = [];
+    } = new();
 
     public ConcurrentBag<string> Warnings
     {
         get;
-    } = [];
+    } = new();
 
     public ConcurrentBag<string> Errors
     {
         get;
-    } = [];
+    } = new();
 
     public void Info(string message)
     {

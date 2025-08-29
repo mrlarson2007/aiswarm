@@ -11,6 +11,8 @@ namespace AISwarm.Infrastructure.Services;
 /// </summary>
 public class MemoryService : IMemoryService
 {
+    private const string DefaultContentType = "text";
+    
     private readonly IDatabaseScopeService _scopedDbService;
     private readonly ITimeService _timeService;
 
@@ -41,7 +43,7 @@ public class MemoryService : IMemoryService
                 Namespace = namespaceName,
                 Key = key,
                 Value = value,
-                Type = type ?? "json",
+                Type = type ?? DefaultContentType,
                 Metadata = metadata,
                 IsCompressed = false,
                 Size = valueBytes.Length,

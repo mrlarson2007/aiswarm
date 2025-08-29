@@ -86,7 +86,7 @@ public class EndToEndIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task WhenAssigingTaskToRegisterdAgent_SHouldReturnAssignedTask()
+    public async Task WhenAssigningTaskToRegisteredAgent_ShouldReturnAssignedTask()
     {
         var eventLogger = _serviceProvider.GetRequiredService<IEventLoggerService>();
         var agentTool = _serviceProvider.GetRequiredService<AgentManagementMcpTool>();
@@ -100,7 +100,7 @@ public class EndToEndIntegrationTests : IDisposable
 
             // Give subscription time to be fully established before publishing events
             // This follows the pattern used in other notification service tests
-            await Task.Delay(50);
+            await Task.Delay(200);
 
             // launch agent
             var persona = "implementer";
@@ -123,23 +123,30 @@ public class EndToEndIntegrationTests : IDisposable
             getTaskResult.TaskId.ShouldBe(taskId);
             getTaskResult.Description.ShouldBe("Implement feature X");
 
+            // Wait a moment after task is claimed
+            await Task.Delay(200);
+
             // complete the task
             var completeTaskResult =
                 await completionTool.ReportTaskCompletionAsync(taskId, "Feature X implemented successfully");
             completeTaskResult.IsSuccess.ShouldBeTrue();
 
             // Give async event processing time to complete
-            await Task.Delay(100);
+            await Task.Delay(500);
 
             // verify log events in table
             using var context = _dbContextFactory.CreateDbContext();
             var events = await context.EventLogs.ToListAsync();
 
+            // Check task status for debugging
+            var task = await context.Tasks.FindAsync(taskId);
+            var taskStatus = task?.Status.ToString() ?? "NOT_FOUND";
+
             // Debug: log what events we actually have
             var eventTypes = string.Join(", ", events.Select(e => e.EventType));
             if (events.Count != 3)
             {
-                throw new Exception($"Expected 3 events but found {events.Count}. Types: [{eventTypes}]");
+                throw new Exception($"Expected 3 events but found {events.Count}. Types: [{eventTypes}]. Task status: {taskStatus}");
             }
 
             events.Count.ShouldBe(3);
@@ -154,7 +161,7 @@ public class EndToEndIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task WhenTaskIsAssingedToPersona_SHouldReturnTaskToAnyAgentWithSamePersona()
+    public async Task WhenTaskIsAssignedToPersona_ShouldReturnTaskToAnyAgentWithSamePersona()
     {
         var agentTool = _serviceProvider.GetRequiredService<AgentManagementMcpTool>();
         var createTaskTool = _serviceProvider.GetRequiredService<CreateTaskMcpTool>();
@@ -272,7 +279,7 @@ public class EndToEndIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task WhenMemoryIsCreated_ShouldRetreiveIt()
+    public async Task WhenMemoryIsCreated_ShouldRetrieveIt()
     {
         var agentTool = _serviceProvider.GetRequiredService<AgentManagementMcpTool>();
         var saveMemoryTool = _serviceProvider.GetRequiredService<SaveMemoryMcpTool>();
