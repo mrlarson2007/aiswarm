@@ -60,13 +60,13 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
 
     protected async Task<EventLog?> GetEventLogAsync()
     {
-        using var context = DbContextFactory.CreateDbContext();
+        await using var context = await DbContextFactory.CreateDbContextAsync();
         return await context.EventLogs.OrderBy(e => e.Timestamp).FirstOrDefaultAsync();
     }
 
     protected async Task<EventLog?> GetEventLogAsync(string eventType)
     {
-        using var context = DbContextFactory.CreateDbContext();
+        await using var context = await DbContextFactory.CreateDbContextAsync();
         return await context.EventLogs
             .Where(e => e.EventType == eventType)
             .OrderBy(e => e.Timestamp)
@@ -75,7 +75,7 @@ public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemU
 
     protected async Task<List<EventLog>> GetAllEventLogsAsync()
     {
-        using var context = DbContextFactory.CreateDbContext();
+        await using var context = await DbContextFactory.CreateDbContextAsync();
         return await context.EventLogs.OrderBy(e => e.Timestamp).ToListAsync();
     }
 }

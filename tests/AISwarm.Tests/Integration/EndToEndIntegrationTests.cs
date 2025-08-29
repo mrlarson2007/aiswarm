@@ -142,7 +142,7 @@ public class EndToEndIntegrationTests : IDisposable
             await Task.Delay(500);
 
             // verify log events in table
-            using var context = _dbContextFactory.CreateDbContext();
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
             var events = await context.EventLogs.ToListAsync();
 
             // Check task status for debugging
@@ -207,7 +207,7 @@ public class EndToEndIntegrationTests : IDisposable
             .ShouldStartWith("system:requery:"); // No task available since the other task is for different persona
 
         // verify first task is completed, second task is still pending in database
-        using var context = _dbContextFactory.CreateDbContext();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
         var task = await context.Tasks.FindAsync(taskId);
         task.ShouldNotBeNull();
         task.Status.ShouldBe(TaskStatus.Completed);
@@ -275,7 +275,7 @@ public class EndToEndIntegrationTests : IDisposable
         getTaskResult4.TaskId.ShouldStartWith("system:requery:"); // No task available
 
         // verify both tasks are marked as completed in database
-        using var context = _dbContextFactory.CreateDbContext();
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
         var task1 = await context.Tasks.FindAsync(taskId1);
         task1.ShouldNotBeNull();
         task1.Status.ShouldBe(TaskStatus.Completed);

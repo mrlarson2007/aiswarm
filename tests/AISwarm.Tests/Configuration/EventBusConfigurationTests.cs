@@ -18,7 +18,7 @@ public class EventBusConfigurationTests
 
         builder.Services.AddInfrastructureServices(builder.Configuration);
 
-        using var sp = builder.Services.BuildServiceProvider();
+        await using var sp = builder.Services.BuildServiceProvider();
         var bus = sp.GetService<IEventBus<TaskEventType, ITaskLifecyclePayload>>();
         bus.ShouldNotBeNull(); // Expect DI to provide an event bus
 
