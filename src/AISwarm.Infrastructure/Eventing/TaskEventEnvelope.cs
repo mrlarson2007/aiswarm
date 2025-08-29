@@ -9,6 +9,7 @@ public record TaskEventEnvelope(
 public enum TaskEventType
 {
     Created,
+    Claimed,
     Completed,
     Failed,
 }

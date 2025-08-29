@@ -244,6 +244,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         return taskEvent.Payload switch
         {
             TaskCreatedPayload created => created.AgentId,
+            TaskClaimedPayload claimed => claimed.AgentId,
             TaskCompletedPayload completed => completed.AgentId,
             TaskFailedPayload failed => failed.AgentId,
             _ => null
@@ -255,6 +256,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         return taskEvent.Payload switch
         {
             TaskCreatedPayload created => created.TaskId,
+            TaskClaimedPayload claimed => claimed.TaskId,
             TaskCompletedPayload completed => completed.TaskId,
             TaskFailedPayload failed => failed.TaskId,
             _ => null
@@ -273,6 +275,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         {
             TaskEventType.Failed => "Warning",
             TaskEventType.Created => "Information",
+            TaskEventType.Claimed => "Information",
             TaskEventType.Completed => "Information",
             _ => "Information"
         };

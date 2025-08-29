@@ -50,6 +50,17 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
         return PublishEventAsync(TaskEventType.Created, payload, ct);
     }
 
+    public ValueTask PublishTaskClaimed(
+        string taskId,
+        string? agentId,
+        CancellationToken ct = default)
+    {
+        EventValidation.ValidateRequiredId(taskId, nameof(taskId));
+
+        var payload = new TaskClaimedPayload(taskId, agentId);
+        return PublishEventAsync(TaskEventType.Claimed, payload, ct);
+    }
+
     public ValueTask PublishTaskCompleted(
         string taskId,
         string? agentId,
@@ -97,7 +108,7 @@ public class WorkItemNotificationService(IEventBus<TaskEventType, ITaskLifecycle
     public IAsyncEnumerable<TaskEventEnvelope> SubscribeForAllTaskEvents(CancellationToken ct = default)
     {
         var filter = new TaskEventFilter(
-            Types: [TaskEventType.Created, TaskEventType.Completed, TaskEventType.Failed]);
+            Types: [TaskEventType.Created, TaskEventType.Claimed, TaskEventType.Completed, TaskEventType.Failed]);
         return ToTaskEventEnvelopeAsyncEnumerable(Bus.Subscribe(filter, ct));
     }
 
@@ -133,5 +144,6 @@ public interface ITaskLifecyclePayload : IEventPayload
     }
 }
 public record TaskCreatedPayload(string TaskId, string? AgentId, string? PersonaId) : ITaskLifecyclePayload;
+public record TaskClaimedPayload(string TaskId, string? AgentId) : ITaskLifecyclePayload;
 public record TaskCompletedPayload(string TaskId, string? AgentId) : ITaskLifecyclePayload;
 public record TaskFailedPayload(string TaskId, string? AgentId, string? Reason) : ITaskLifecyclePayload;

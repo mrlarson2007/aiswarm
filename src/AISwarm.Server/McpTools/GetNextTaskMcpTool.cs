@@ -209,6 +209,9 @@ public class GetNextTaskMcpTool(
         await scope.SaveChangesAsync();
         scope.Complete();
 
+        // Publish TaskClaimed event
+        await workItemNotifications.PublishTaskClaimed(task.Id, agentId);
+
         return GetNextTaskResult.SuccessWithTask(
             task.Id,
             task.PersonaId ?? string.Empty,

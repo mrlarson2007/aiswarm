@@ -591,6 +591,57 @@ public class GetNextTaskMcpToolTests
         }
     }
 
+    public class TaskClaimedEventTests : GetNextTaskMcpToolTests
+    {
+        [Fact]
+        public async Task WhenUnassignedTaskIsClaimed_ShouldPublishTaskClaimedEvent()
+        {
+            // Arrange
+            var agentId = "agent-claimed-event";
+            var persona = "reviewer";
+            var description = "Review the authentication module";
+
+            // Create a running agent
+            await CreateRunningAgentAsync(agentId, persona);
+
+            // Create an unassigned task
+            var taskId = await CreateUnassignedTaskAsync(persona, description);
+
+            // Set up event listener to capture events BEFORE performing the action
+            var receivedEvents = new List<TaskEventEnvelope>();
+            var eventSubscription = _notifier.SubscribeForAllTaskEvents();
+
+            var eventCapture = Task.Run(async () =>
+            {
+                await foreach (var taskEvent in eventSubscription)
+                {
+                    receivedEvents.Add(taskEvent);
+                    // Look specifically for TaskClaimed event for our task
+                    if (taskEvent.Type == TaskEventType.Claimed && taskEvent.Payload.TaskId == taskId)
+                        break;
+                }
+            });
+
+
+            // Act - This should claim the task and publish TaskClaimed event
+            var result = await SystemUnderTest.GetNextTaskAsync(agentId);
+
+            // Wait for TaskClaimed event to be published
+            await eventCapture.WaitAsync(TimeSpan.FromSeconds(2));
+
+            // Assert
+            result.Success.ShouldBeTrue();
+            result.TaskId.ShouldBe(taskId);
+
+            // Verify TaskClaimed event was published
+            var claimedEvents = receivedEvents.Where(e => e.Type == TaskEventType.Claimed && e.Payload.TaskId == taskId).ToList();
+            claimedEvents.ShouldHaveSingleItem();
+            var claimedEvent = claimedEvents[0];
+            claimedEvent.Payload.TaskId.ShouldBe(taskId);
+            claimedEvent.Payload.AgentId.ShouldBe(agentId);
+        }
+    }
+
 
     private async Task CreateRunningAgentAsync(string agentId, string personaId)
     {
