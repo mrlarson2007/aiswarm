@@ -7,7 +7,7 @@ namespace AISwarm.Tests.TestDoubles;
 /// </summary>
 public class TestEnvironmentService : IEnvironmentService
 {
-    private readonly Dictionary<string, string?> _vars = new();
+    private readonly Dictionary<string, string?> _vars = [];
 
     public string CurrentDirectory
     {

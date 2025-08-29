@@ -1,5 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Shared.Constants;
 
 namespace AISwarm.Infrastructure;
 
@@ -12,7 +13,7 @@ namespace AISwarm.Infrastructure;
 public class LocalAgentService(
     ITimeService timeService,
     IDatabaseScopeService scopeService,
-    IProcessTerminationService processTerminationService)
+    IAgentStateService agentStateService)
     : ILocalAgentService
 {
     /// <summary>
@@ -20,7 +21,7 @@ public class LocalAgentService(
     /// </summary>
     public async Task<string> RegisterAgentAsync(AgentRegistrationRequest request)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
 
         var agentId = Guid.NewGuid().ToString();
         var currentTime = timeService.UtcNow;
@@ -29,7 +30,6 @@ public class LocalAgentService(
         {
             Id = agentId,
             PersonaId = request.PersonaId,
-            AgentType = request.AgentType,
             WorkingDirectory = request.WorkingDirectory,
             Status = AgentStatus.Starting,
             RegisteredAt = currentTime,
@@ -46,21 +46,23 @@ public class LocalAgentService(
     }
 
     /// <summary>
-    /// Update agent heartbeat and transition Starting agents to Running
+    /// Update the heartbeat timestamp for an agent
     /// </summary>
     public async Task<bool> UpdateHeartbeatAsync(string agentId)
     {
-        using var scope = scopeService.CreateWriteScope();
-
+        using var scope = scopeService.GetWriteScope();
         var agent = await scope.Agents.FindAsync(agentId);
         if (agent != null)
         {
             agent.UpdateHeartbeat(timeService.UtcNow);
 
             // If agent is starting and actively polling for tasks, transition to running
+            // Handle this inline to avoid nested transactions
             if (agent.Status == AgentStatus.Starting)
             {
                 agent.Status = AgentStatus.Running;
+                if (agent.StartedAt == default)
+                    agent.StartedAt = timeService.UtcNow;
             }
 
             await scope.SaveChangesAsync();
@@ -75,35 +77,7 @@ public class LocalAgentService(
     /// </summary>
     public async Task KillAgentAsync(string agentId)
     {
-        using var scope = scopeService.CreateWriteScope();
-
-        var agent = await scope.Agents.FindAsync(agentId);
-        if (agent != null)
-        {
-            // Attempt to kill the actual process if we have a process ID and termination service
-            if (!string.IsNullOrEmpty(agent.ProcessId))
-            {
-                await processTerminationService.KillProcessAsync(agent.ProcessId);
-            }
-
-            agent.Kill(timeService.UtcNow);
-
-            // Handle dangling tasks when agent is killed
-            var inProgressTasks = scope.Tasks
-                .Where(t => t.AgentId == agentId)
-                .Where(t => t.Status == DataLayer.Entities.TaskStatus.InProgress)
-                .ToList();
-
-            foreach (var task in inProgressTasks)
-            {
-                task.Status = DataLayer.Entities.TaskStatus.Failed;
-                task.Result = "Agent terminated";
-                task.CompletedAt = timeService.UtcNow;
-            }
-
-            await scope.SaveChangesAsync();
-            scope.Complete();
-        }
+        await agentStateService.KillAsync(agentId, timeService.UtcNow);
     }
 }
 
@@ -113,7 +87,6 @@ public class LocalAgentService(
 public record AgentRegistrationRequest
 {
     public string PersonaId { get; init; } = string.Empty;
-    public string AgentType { get; init; } = string.Empty;
     public string WorkingDirectory { get; init; } = string.Empty;
     public string? Model
     {

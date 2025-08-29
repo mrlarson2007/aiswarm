@@ -1,5 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
+using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 
@@ -7,8 +8,7 @@ namespace AISwarm.Tests.Database;
 
 public class DatabaseScopeTests : IDisposable
 {
-    private readonly CoordinationDbContext _context;
-    private readonly DatabaseScopeService _scopeService;
+    private readonly IDatabaseScopeService _scopeService;
 
     public DatabaseScopeTests()
     {
@@ -16,8 +16,7 @@ public class DatabaseScopeTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        _context = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_context);
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
 
     [Fact]
@@ -28,19 +27,23 @@ public class DatabaseScopeTests : IDisposable
         {
             Id = "read-test-agent",
             PersonaId = "tester",
-            AgentType = "tester",
             WorkingDirectory = "/read/test",
             Status = AgentStatus.Starting,
             RegisteredAt = DateTime.UtcNow,
             LastHeartbeat = DateTime.UtcNow
         };
 
-        _context.Agents.Add(agent);
-        await _context.SaveChangesAsync();
+        // Arrange - Setup test data
+        using (var setupScope = _scopeService.GetWriteScope())
+        {
+            setupScope.Agents.Add(agent);
+            await setupScope.SaveChangesAsync();
+            setupScope.Complete();
+        }
 
         // Act
         Agent? retrievedAgent;
-        using (var scope = _scopeService.CreateReadScope())
+        using (var scope = _scopeService.GetReadScope())
         {
             retrievedAgent = await scope.Agents.FindAsync("read-test-agent");
         }
@@ -55,13 +58,12 @@ public class DatabaseScopeTests : IDisposable
     {
         // Arrange & Act
         string agentId;
-        using (var scope = _scopeService.CreateWriteScope())
+        using (var scope = _scopeService.GetWriteScope())
         {
             var agent = new Agent
             {
                 Id = "write-test-agent",
                 PersonaId = "implementer",
-                AgentType = "implementer",
                 WorkingDirectory = "/write/test",
                 Status = AgentStatus.Starting,
                 RegisteredAt = DateTime.UtcNow,
@@ -74,8 +76,9 @@ public class DatabaseScopeTests : IDisposable
             scope.Complete();
         }
 
-        // Assert
-        var savedAgent = await _context.Agents.FindAsync(agentId);
+        // Assert - Verify agent was saved
+        using var assertScope = _scopeService.GetReadScope();
+        var savedAgent = await assertScope.Agents.FindAsync(agentId);
         savedAgent.ShouldNotBeNull();
         savedAgent.PersonaId.ShouldBe("implementer");
     }
@@ -87,13 +90,12 @@ public class DatabaseScopeTests : IDisposable
         // This test verifies that TransactionScope doesn't throw exceptions with in-memory database
 
         // Act & Assert - Should not throw
-        using (var scope = _scopeService.CreateWriteScope())
+        using (var scope = _scopeService.GetWriteScope())
         {
             var agent = new Agent
             {
                 Id = "transaction-scope-test",
                 PersonaId = "tester",
-                AgentType = "tester",
                 WorkingDirectory = "/scope/test",
                 Status = AgentStatus.Starting,
                 RegisteredAt = DateTime.UtcNow,
@@ -106,12 +108,13 @@ public class DatabaseScopeTests : IDisposable
         }
 
         // Verify the agent was saved
-        var savedAgent = await _context.Agents.FindAsync("transaction-scope-test");
+        using var verifyScope = _scopeService.GetReadScope();
+        var savedAgent = await verifyScope.Agents.FindAsync("transaction-scope-test");
         savedAgent.ShouldNotBeNull();
     }
 
     public void Dispose()
     {
-        _context.Dispose();
+        // Context lifecycle managed by scopes
     }
 }

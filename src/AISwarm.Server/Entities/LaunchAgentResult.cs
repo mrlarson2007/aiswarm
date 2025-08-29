@@ -1,19 +1,9 @@
+using AISwarm.Shared.Models;
+
 namespace AISwarm.Server.Entities;
 
-public class LaunchAgentResult
+public class LaunchAgentResult : Result<LaunchAgentResult>
 {
-    public bool Success
-    {
-        get;
-        init;
-    }
-
-    public string? ErrorMessage
-    {
-        get;
-        init;
-    }
-
     public string? AgentId
     {
         get;
@@ -26,18 +16,8 @@ public class LaunchAgentResult
         init;
     }
 
-    public static LaunchAgentResult Failure(string message)
-    {
-        return new LaunchAgentResult { Success = false, ErrorMessage = message };
-    }
-
     public static LaunchAgentResult SuccessWith(string agentId)
     {
         return new LaunchAgentResult { Success = true, AgentId = agentId };
-    }
-
-    public static LaunchAgentResult SuccessWith(string agentId, string? processId)
-    {
-        return new LaunchAgentResult { Success = true, AgentId = agentId, ProcessId = processId };
     }
 }

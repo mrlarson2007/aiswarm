@@ -10,10 +10,10 @@ public static class ServiceRegistration
     public static IServiceCollection AddAgentLauncherServices(this IServiceCollection services)
     {
         // External / infrastructure
-        services.AddInfrastructureServices();
+        var configuration = new ConfigurationBuilder().Build();
+        services.AddInfrastructureServices(configuration);
 
         // Use centralized data layer services with proper database initialization
-        var configuration = new ConfigurationBuilder().Build();
         services.AddDataLayerServices(configuration);
 
         // Command handlers

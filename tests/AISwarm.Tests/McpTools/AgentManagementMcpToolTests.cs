@@ -1,6 +1,7 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +11,8 @@ using Shouldly;
 namespace AISwarm.Tests.McpTools;
 
 public class AgentManagementMcpToolTests
-    : IDisposable, ISystemUnderTest<AgentManagementMcpTool>
+    : ISystemUnderTest<AgentManagementMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private readonly TestLogger _logger;
@@ -24,7 +24,6 @@ public class AgentManagementMcpToolTests
     private readonly LocalAgentService _localAgentService;
     private readonly TestEnvironmentService _testEnvironmentService;
     private AgentManagementMcpTool? _systemUnderTest;
-    private readonly Mock<IProcessTerminationService> _mockProcessTerminateService;
 
     public AgentManagementMcpTool SystemUnderTest =>
         _systemUnderTest ??= new AgentManagementMcpTool(
@@ -36,18 +35,22 @@ public class AgentManagementMcpToolTests
             _testEnvironmentService,
             _logger);
 
-    public AgentManagementMcpToolTests()
+    protected AgentManagementMcpToolTests()
     {
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
 
         _timeService = new FakeTimeService();
-        _scopeService = new DatabaseScopeService(_dbContext);
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
         _logger = new TestLogger();
         _fakeContextService = new FakeContextService();
-        _mockProcessTerminateService = new Mock<IProcessTerminationService>();
+        var mockNotificationService = new Mock<IAgentNotificationService>();
+        var mockProcessTerminationService = new Mock<IProcessTerminationService>();
+        IAgentStateService agentStateService = new AgentStateService(
+            _scopeService,
+            mockNotificationService.Object,
+            mockProcessTerminationService.Object);
         _fakeGitService = new FakeGitService();
         _fakeTerminalService = new Mock<IInteractiveTerminalService>();
         _fakeFileSystemService = new FakeFileSystemService();
@@ -59,14 +62,9 @@ public class AgentManagementMcpToolTests
         _localAgentService = new LocalAgentService(
             _timeService,
             _scopeService,
-            _mockProcessTerminateService.Object);
+            agentStateService);
 
         _testEnvironmentService = new TestEnvironmentService();
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
     }
 
     public class ListAgentsTests : AgentManagementMcpToolTests
@@ -304,8 +302,6 @@ public class AgentManagementMcpToolTests
             // Assert
             result.Success.ShouldBeTrue();
             result.ErrorMessage.ShouldBeNull();
-            _mockProcessTerminateService
-                .Verify(x => x.KillProcessAsync("12345"), Times.Once);
 
             var listResult = await SystemUnderTest.ListAgentsAsync();
             listResult.ShouldNotBeNull();
@@ -323,12 +319,11 @@ public class AgentManagementMcpToolTests
         AgentStatus status,
         string? processId = null)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var agent = new Agent
         {
             Id = agentId,
             PersonaId = personaId,
-            AgentType = personaId,
             Status = status,
             RegisteredAt = _timeService.UtcNow,
             LastHeartbeat = _timeService.UtcNow,

@@ -3,6 +3,7 @@ using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
 using AISwarm.Server.Entities;
+using AISwarm.Infrastructure.Eventing;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 
@@ -14,7 +15,8 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class CreateTaskMcpTool(
     IDatabaseScopeService scopeService,
-    ITimeService timeService)
+    ITimeService timeService,
+    IWorkItemNotificationService workItemNotifications)
 {
     /// <summary>
     ///     Creates a new task and assigns it to the specified agent
@@ -29,14 +31,14 @@ public class CreateTaskMcpTool(
     public async Task<CreateTaskResult> CreateTaskAsync(
         [Description("ID of the agent to assign the task to (optional - leave empty for unassigned task)")]
         string? agentId,
-        [Description("Full persona markdown content for the agent")]
+        [Description("Agent persona (implementer, reviewer, planner, etc.)")]
         string persona,
         [Description("Description of what the agent should accomplish")]
         string description,
         [Description("Priority of the task: Low, Normal, High, or Critical")]
         TaskPriority priority = TaskPriority.Normal)
     {
-        using var scope = scopeService.CreateWriteScope();
+        using var scope = scopeService.GetWriteScope();
 
         // Only validate agent if agentId is provided (for assigned tasks)
         if (!string.IsNullOrEmpty(agentId))
@@ -60,7 +62,7 @@ public class CreateTaskMcpTool(
             Id = taskId,
             AgentId = agentId,
             Status = TaskStatus.Pending,
-            Persona = persona,
+            PersonaId = persona,  // This is the routing tag
             Description = description,
             Priority = priority,
             CreatedAt = timeService.UtcNow
@@ -69,6 +71,9 @@ public class CreateTaskMcpTool(
         scope.Tasks.Add(workItem);
         await scope.SaveChangesAsync();
         scope.Complete();
+
+        // Publish non-durable notification that a task was created
+        await workItemNotifications.PublishTaskCreated(taskId, agentId, persona);
 
         return CreateTaskResult.SuccessWithTaskId(taskId);
     }

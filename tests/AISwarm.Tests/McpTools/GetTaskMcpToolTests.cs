@@ -1,6 +1,5 @@
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
-using AISwarm.Infrastructure;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +9,8 @@ using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
 namespace AISwarm.Tests.McpTools;
 
 public class GetTaskMcpToolTests
-    : IDisposable, ISystemUnderTest<GetTaskMcpTool>
+    : ISystemUnderTest<GetTaskMcpTool>
 {
-    private readonly CoordinationDbContext _dbContext;
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
     private GetTaskMcpTool? _systemUnderTest;
@@ -20,20 +18,15 @@ public class GetTaskMcpToolTests
     public GetTaskMcpTool SystemUnderTest =>
         _systemUnderTest ??= new GetTaskMcpTool(_scopeService);
 
-    public GetTaskMcpToolTests()
+    protected GetTaskMcpToolTests()
     {
         _timeService = new FakeTimeService();
 
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        _scopeService = new DatabaseScopeService(_dbContext);
-    }
 
-    public void Dispose()
-    {
-        _dbContext.Dispose();
+        _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
     }
 
     public class GetTasksByStatusTests : GetTaskMcpToolTests
@@ -377,13 +370,13 @@ public class GetTaskMcpToolTests
         TaskStatus status,
         string? agentId = null)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var task = new WorkItem
         {
             Id = taskId,
             Status = status,
             AgentId = agentId,
-            Persona = "Test persona",
+            PersonaId = "test",
             Description = "Test description",
             CreatedAt = _timeService.UtcNow,
             StartedAt = status == TaskStatus.InProgress ? _timeService.UtcNow : null,
@@ -402,7 +395,7 @@ public class GetTaskMcpToolTests
         string description,
         string agentId)
     {
-        using var scope = _scopeService.CreateWriteScope();
+        using var scope = _scopeService.GetWriteScope();
         var id = Guid.NewGuid().ToString();
         var status = Enum.Parse<TaskStatus>(statusName);
 
@@ -411,7 +404,7 @@ public class GetTaskMcpToolTests
             Id = id,
             AgentId = agentId,
             Status = status,
-            Persona = persona,
+            PersonaId = "implementer",
             Description = description,
             CreatedAt = _timeService.UtcNow,
             StartedAt = _timeService.UtcNow.AddMinutes(1),

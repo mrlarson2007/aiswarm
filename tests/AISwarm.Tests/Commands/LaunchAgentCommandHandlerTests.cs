@@ -10,23 +10,22 @@ using Shouldly;
 namespace AISwarm.Tests.Commands;
 
 public class LaunchAgentCommandHandlerTests
-    : IDisposable, ISystemUnderTest<LaunchAgentCommandHandler>
+    : ISystemUnderTest<LaunchAgentCommandHandler>
 {
     private readonly Mock<IContextService> _context;
     private readonly PassThroughProcessLauncher _process;
     private readonly FakeFileSystemService _fs;
     private readonly IGeminiService _gemini;
-    private readonly Mock<IProcessTerminationService> _mockProcessTerminationService;
+    private readonly Mock<IAgentStateService> _mockAgentStateService;
     private readonly ILocalAgentService _localAgentService;
     private readonly TestLogger _logger;
     private readonly TestEnvironmentService _env;
     private readonly GitService _git;
-    private readonly CoordinationDbContext _dbContext;
     private readonly FakeTimeService _timeService;
+    private readonly IDatabaseScopeService _scopeService;
     private LaunchAgentCommandHandler? _systemUnderTest;
 
-    private static string _expectedPromptFormatString =
-        "I've just created \"{0}\". Please read it for your instructions.";
+    private const string ExpectedPromptFormatString = "I've just created \"{0}\". Please read it for your instructions.";
 
     public LaunchAgentCommandHandler SystemUnderTest =>
         _systemUnderTest ??= new LaunchAgentCommandHandler(
@@ -51,8 +50,8 @@ public class LaunchAgentCommandHandlerTests
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        _dbContext = new CoordinationDbContext(options);
-        var scopeService = new DatabaseScopeService(_dbContext);
+        var scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
+        _scopeService = scopeService;
 
         _git = new GitService(_process, _fs, _logger);
 
@@ -60,17 +59,12 @@ public class LaunchAgentCommandHandlerTests
         var terminalService = new WindowsTerminalService(_process);
         _gemini = new GeminiService(terminalService, _logger, _fs);
 
-        _mockProcessTerminationService = new Mock<IProcessTerminationService>();
+        _mockAgentStateService = new Mock<IAgentStateService>();
         // Create real LocalAgentService with test doubles for dependencies
         _localAgentService = new LocalAgentService(
             _timeService,
             scopeService,
-            _mockProcessTerminationService.Object);
-    }
-
-    public void Dispose()
-    {
-        _dbContext.Dispose();
+            _mockAgentStateService.Object);
     }
 
     public class DryRunTests : LaunchAgentCommandHandlerTests
@@ -287,7 +281,7 @@ public class LaunchAgentCommandHandlerTests
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
                 i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo-feature_launch/planner_context.md")));
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo-feature_launch/planner_context.md")));
         }
 
         [Fact]
@@ -335,7 +329,7 @@ public class LaunchAgentCommandHandlerTests
             _process.Invocations.ShouldContain(i =>
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md")) &&
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
                 !i.Arguments.Contains("-m ") // No model specified
             );
         }
@@ -366,7 +360,7 @@ public class LaunchAgentCommandHandlerTests
             _process.Invocations.ShouldContain(i =>
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md")) &&
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md")) &&
                 !i.Arguments.Contains("-m ") // No model specified
             );
         }
@@ -395,7 +389,7 @@ public class LaunchAgentCommandHandlerTests
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
                 i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md"))
             );
         }
 
@@ -481,10 +475,11 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Verify agent was actually registered in database
-            var agents = await _dbContext.Agents.ToListAsync();
+            using var scope = _scopeService.GetReadScope();
+            var agents = await scope.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
-            agent.AgentType.ShouldBe("planner");
+            agent.PersonaId.ShouldBe("planner");
             agent.WorkingDirectory.ShouldBe("/repo");
             agent.Model.ShouldBe("gemini-1.5-pro");
             agent.Status.ShouldBe(AgentStatus.Starting);
@@ -516,7 +511,8 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            var agents = await _dbContext.Agents.ToListAsync();
+            using var scope2 = _scopeService.GetReadScope();
+            var agents = await scope2.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
 
@@ -525,7 +521,7 @@ public class LaunchAgentCommandHandlerTests
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
                 i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md"))
             );
 
             // Should have created Gemini configuration file
@@ -560,7 +556,8 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            var agents = await _dbContext.Agents.ToListAsync();
+            using var scope3 = _scopeService.GetReadScope();
+            var agents = await scope3.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
 
@@ -597,7 +594,8 @@ public class LaunchAgentCommandHandlerTests
             result.ShouldBeTrue();
 
             // Get the registered agent from database
-            var agents = await _dbContext.Agents.ToListAsync();
+            using var scope4 = _scopeService.GetReadScope();
+            var agents = await scope4.Agents.ToListAsync();
             agents.ShouldHaveSingleItem();
             var agent = agents.First();
 
@@ -647,7 +645,7 @@ public class LaunchAgentCommandHandlerTests
                 i.File == "pwsh.exe" &&
                 i.Arguments.Contains("gemini") &&
                 i.Arguments.Contains("-m \"gemini-1.5-pro\"") &&
-                i.Arguments.Contains(string.Format(_expectedPromptFormatString, "/repo/planner_context.md"))
+                i.Arguments.Contains(string.Format(ExpectedPromptFormatString, "/repo/planner_context.md"))
             );
 
             // Should not have created configuration file since monitor is disabled

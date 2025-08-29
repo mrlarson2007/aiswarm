@@ -19,7 +19,7 @@ public class ListAgentsCommandTests
             {"planner", "Embedded"},
             {"custom", "External: /tmp/custom_prompt.md"}
         });
-        _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(new[] { "custom", "planner" });
+        _contextService.Setup(s => s.GetAvailableAgentTypes()).Returns(["custom", "planner"]);
 
         var env = new TestEnvironmentService { CurrentDirectory = "/repo" };
         env.SetVar("AISWARM_PERSONAS_PATH", null);

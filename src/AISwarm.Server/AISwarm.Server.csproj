@@ -11,9 +11,11 @@
     <PackageReference Include="ModelContextProtocol" Version="*-*" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="*-*" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,6 +25,15 @@
   <ItemGroup>
     <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
     <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
+    <ProjectReference Include="..\AISwarm.Shared\AISwarm.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Configuration\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Configuration\McpToolConfiguration.cs" />
   </ItemGroup>
 
 </Project>

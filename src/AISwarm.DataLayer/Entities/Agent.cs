@@ -17,12 +17,6 @@ public class Agent
         set;
     } = string.Empty;
 
-    public string AgentType
-    {
-        get;
-        set;
-    } = string.Empty;
-
     public string WorkingDirectory
     {
         get;

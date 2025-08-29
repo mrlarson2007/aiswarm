@@ -1,11 +1,11 @@
-using System.Net;
-using System.Net.Sockets;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace AISwarm.Server;
@@ -27,7 +27,7 @@ internal static class Program
 
         // Configure MCP server with BOTH stdio and HTTP transports
         builder.Services
-            .AddInfrastructureServices()
+            .AddInfrastructureServices(builder.Configuration)
             .AddMcpServer()
             .WithStdioServerTransport() // For VS Code
             .WithHttpTransport() // For Gemini CLI
@@ -41,6 +41,17 @@ internal static class Program
 
         var app = builder.Build();
 
+        // Start event logging service
+        var eventLogger = app.Services.GetRequiredService<IEventLoggerService>();
+        await eventLogger.StartAsync();
+
+        // Register shutdown handling for graceful event logger cleanup
+        var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+        appLifetime.ApplicationStopping.Register(() =>
+        {
+            // Note: We can't await here, but StopAsync should handle cleanup synchronously if needed
+            _ = eventLogger.StopAsync();
+        });
 
         // Map MCP HTTP endpoints
         app.MapMcp();
@@ -49,7 +60,7 @@ internal static class Program
         Console.WriteLine("AISwarm MCP Server starting with dual transport support:");
         Console.WriteLine("- Stdio transport for VS Code MCP integration");
         Console.WriteLine($"- HTTP transport for Gemini CLI at {url}");
-
+        Console.WriteLine("- Event logging service started for audit trail");
 
         await task;
     }
@@ -62,25 +73,5 @@ internal static class Program
         var aiswarmDirectory = Path.Combine(workingDirectory, ".aiswarm");
         Directory.CreateDirectory(aiswarmDirectory);
         services.AddDataLayerServices(configuration);
-    }
-
-    private static int GetAvailablePort()
-    {
-        // Find an available port starting from 8081 (avoiding 8080 as requested)
-        for (var port = 8081; port <= 9000; port++)
-            try
-            {
-                using var listener = new TcpListener(IPAddress.Loopback, port);
-                listener.Start();
-                listener.Stop();
-                return port;
-            }
-            catch
-            {
-                // Port is in use, try next one
-            }
-
-        // Fallback to a default port if no available port found
-        return 8081;
     }
 }

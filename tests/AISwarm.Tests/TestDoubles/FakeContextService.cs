@@ -47,7 +47,7 @@ public class FakeContextService : IContextService
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
 
-        return new[] { "implementer", "reviewer", "planner" };
+        return ["implementer", "reviewer", "planner"];
     }
 
     public bool IsValidAgentType(string agentType)

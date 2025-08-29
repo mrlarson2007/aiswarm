@@ -4,19 +4,17 @@ using Microsoft.EntityFrameworkCore;
 namespace AISwarm.DataLayer;
 
 /// <summary>
-///     Database scope service that provides reading and writing scopes using dispose pattern
+/// Full database scope service that provides both read and write operations with cached transaction coordination.
+/// Inherits read-only operations and adds write capabilities.
 /// </summary>
-public interface IDatabaseScopeService
+public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 {
     /// <summary>
-    ///     Creates a read-only scope for database operations
+    /// Gets a cached write scope for database operations. If no cached scope exists, creates a new one.
+    /// Multiple calls return the same cached instance.
     /// </summary>
-    IReadScope CreateReadScope();
-
-    /// <summary>
-    ///     Creates a write scope with TransactionScope for automatic transaction handling
-    /// </summary>
-    IWriteScope CreateWriteScope();
+    /// <returns>A write scope for database operations</returns>
+    IWriteScope GetWriteScope();
 }
 
 /// <summary>
@@ -24,13 +22,6 @@ public interface IDatabaseScopeService
 /// </summary>
 public interface IReadScope : IDisposable
 {
-    /// <summary>
-    ///     Database context for advanced operations
-    /// </summary>
-    CoordinationDbContext Context
-    {
-        get;
-    }
 
     /// <summary>
     ///     Agents DbSet for direct access
@@ -44,6 +35,16 @@ public interface IReadScope : IDisposable
     ///     Tasks DbSet for direct access
     /// </summary>
     DbSet<WorkItem> Tasks
+    {
+        get;
+    }
+
+    DbSet<MemoryEntry> MemoryEntries
+    {
+        get;
+    }
+
+    DbSet<EventLog> EventLogs
     {
         get;
     }
@@ -52,31 +53,8 @@ public interface IReadScope : IDisposable
 /// <summary>
 ///     Write scope that provides access to database operations with automatic transaction handling
 /// </summary>
-public interface IWriteScope : IDisposable
+public interface IWriteScope : IReadScope
 {
-    /// <summary>
-    ///     Database context for advanced operations
-    /// </summary>
-    CoordinationDbContext Context
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     Agents DbSet for direct access
-    /// </summary>
-    DbSet<Agent> Agents
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     Tasks DbSet for direct access
-    /// </summary>
-    DbSet<WorkItem> Tasks
-    {
-        get;
-    }
 
     /// <summary>
     ///     Save changes to the database

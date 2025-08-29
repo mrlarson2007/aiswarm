@@ -26,7 +26,6 @@ public class CoordinationDbContextTests : IDisposable
         {
             Id = "agent-123",
             PersonaId = "planner",
-            AgentType = "planner",
             WorkingDirectory = "/test/path",
             Status = AgentStatus.Running,
             StartedAt = DateTime.UtcNow,

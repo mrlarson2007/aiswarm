@@ -33,13 +33,13 @@ public class WorkItem
     }
 
     /// <summary>
-    ///     Full persona markdown content defining the agent's role and behavior
+    ///     Routing tag indicating which persona should execute this work item
     /// </summary>
-    public string Persona
+    public string? PersonaId
     {
         get;
         set;
-    } = string.Empty;
+    }
 
     /// <summary>
     ///     Description of what the agent should accomplish

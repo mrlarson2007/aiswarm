@@ -13,6 +13,8 @@ public class ContextService : IContextService
         { "tester", "AISwarm.Infrastructure.Resources.tester_prompt.md" }
     };
 
+    private const string McpInstructionsResource = "AISwarm.Infrastructure.Resources.mcp_instructions.md";
+
     private const string DefaultPersonasDirectory = ".aiswarm|personas"; // '|' placeholder to be split
     private const string PersonasEnvironmentVariable = "AISWARM_PERSONAS_PATH";
 
@@ -32,6 +34,18 @@ public class ContextService : IContextService
             throw new InvalidOperationException($"Resource not found: {resourceName}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    private string GetMcpInstructions(string agentId)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(McpInstructionsResource) ??
+            throw new InvalidOperationException($"Resource not found: {McpInstructionsResource}");
+        using var reader = new StreamReader(stream);
+        var content = reader.ReadToEnd();
+
+        // Replace placeholders with actual agent ID
+        return content.Replace("{0}", agentId);
     }
 
     /// <inheritdoc />
@@ -56,70 +70,21 @@ public class ContextService : IContextService
         // Create the base context file first
         var contextFilePath = await CreateContextFile(agentType, workingDirectory);
 
-        // If agentId is provided, append MCP tool instructions
+        // If agentId is provided, append agent ID and MCP tool instructions
         if (!string.IsNullOrWhiteSpace(agentId))
         {
-            var mcpToolInstructionsPrompt = $@"
+            var agentIdSection = $@"
 
 ## Your Agent ID
 
 Your unique agent ID is: `{agentId}`
 **You MUST use this ID for all MCP tool interactions.**
 
-## IMMEDIATE ACTION REQUIRED
+";
+            var mcpInstructions = GetMcpInstructions(agentId);
+            var fullInstructions = agentIdSection + mcpInstructions;
 
-**1. Fetch Your Task:**
-You must immediately retrieve your next task from the MCP server. Use the following tool call:
-
-`mcp_aiswarm_get_next_task(agentId='{agentId}')`
-
-**2. Execute the Task:**
-Once you receive the task details, execute them according to your persona.
-
-**3. Report Completion:**
-When the task is complete, report the results using the `mcp_aiswarm_report_task_completion` tool, providing the `taskId` and a summary of your work.
-
----
-
-## Reference: Available Tools
-
-You have access to the following MCP tools for task management:
-
-### `mcp_aiswarm_get_next_task`
-
-- **Purpose**: Fetches your next assigned task.
-- **Parameters**:
-  - `agentId`: Your agent ID.
-
-### `mcp_aiswarm_create_task`
-
-- **Purpose**: Creates new tasks for other agents.
-- **Parameters**:
-  - `agentId`: Target agent ID (or empty for unassigned).
-  - `persona`: Full persona markdown for the new agent.
-  - `description`: A clear description of the task.
-  - `priority`: `Low`, `Normal`, `High`, `Critical`.
-
-### `mcp_aiswarm_report_task_completion`
-
-- **Purpose**: Reports that a task is finished.
-- **Parameters**:
-  - `taskId`: The ID of the completed task.
-  - `result`: A summary of the results.
-### Task Management Workflow
-1. **Start Work Session**: Call `mcp_aiswarm_get_next_task` with your agentId ({agentId}) to check for pending tasks.
-2. **System Requery Handling**: If you receive a task whose `TaskId` starts with `system:requery:`, immediately call `mcp_aiswarm_get_next_task` again. Do not produce other output before re-querying.
-3. **Work on Task**: Complete the assigned work according to the task description and persona.
-4. **Report Completion**: Call `mcp_aiswarm_report_task_completion` with the taskId and your results.
-5. **Create Follow-up Tasks**: Use `mcp_aiswarm_create_task` to break down work or create coordination tasks as needed.
-
-### Best Practices
-- Always include your agent ID ({agentId}) when calling get_next_task.
-- Provide detailed results when reporting task completion.
-- Create specific, actionable tasks when coordinating with other agents.
-- Use appropriate priority levels for time-sensitive work.";
-
-            await File.AppendAllTextAsync(contextFilePath, mcpToolInstructionsPrompt);
+            await File.AppendAllTextAsync(contextFilePath, fullInstructions);
         }
 
         return contextFilePath;

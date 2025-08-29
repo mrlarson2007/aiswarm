@@ -21,7 +21,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
             return GetTasksByStatusResult.Failure(
                 $"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
 
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
 
         var tasks = await scope.Tasks
             .Where(t => t.Status == taskStatus)
@@ -43,7 +43,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         [Description("ID of the task to query")]
         string taskId)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
         var task = await scope.Tasks.FindAsync(taskId);
 
         if (task is null)
@@ -68,7 +68,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
         [Description("ID of the agent to query tasks for")]
         string agentId)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
         var tasks = await scope.Tasks
             .Where(t => t.AgentId == agentId)
             .Select(t => new TaskInfo
@@ -95,7 +95,7 @@ public class GetTaskMcpTool(IDatabaseScopeService scopeService)
             return GetTasksByStatusResult.Failure(
                 $"Invalid status: {status}. Valid values are: Pending, InProgress, Completed, Failed");
 
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
         var tasks = await scope.Tasks
             .Where(t => t.AgentId == agentId && t.Status == taskStatus)
             .ToListAsync();

@@ -22,7 +22,7 @@ public class AgentManagementMcpTool(
     public async Task<ListAgentsResult> ListAgentsAsync(
         [Description("Optional persona filter (implementer, reviewer, planner, etc.)")] string? personaFilter = null)
     {
-        using var scope = scopeService.CreateReadScope();
+        using var scope = scopeService.GetReadScope();
 
         var query = scope.Agents.AsQueryable();
 
@@ -113,7 +113,6 @@ public class AgentManagementMcpTool(
             var registrationRequest = new AgentRegistrationRequest
             {
                 PersonaId = persona,
-                AgentType = persona,
                 WorkingDirectory = workingDirectory,
                 Model = model,
                 WorktreeName = worktreeName
@@ -175,7 +174,7 @@ public class AgentManagementMcpTool(
         try
         {
             // Check if agent exists first
-            using var scope = scopeService.CreateReadScope();
+            using var scope = scopeService.GetReadScope();
             var agent = await scope.Agents.FindAsync(agentId);
             if (agent == null)
             {

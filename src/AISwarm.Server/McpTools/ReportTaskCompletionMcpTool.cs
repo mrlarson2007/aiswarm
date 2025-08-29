@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Eventing;
 using AISwarm.Server.Entities;
 using ModelContextProtocol.Server;
 using TaskStatus = AISwarm.DataLayer.Entities.TaskStatus;
@@ -10,7 +11,8 @@ namespace AISwarm.Server.McpTools;
 [McpServerToolType]
 public class ReportTaskCompletionMcpTool(
     IDatabaseScopeService databaseScopeService,
-    ITimeService timeService)
+    ITimeService timeService,
+    IWorkItemNotificationService workItemNotifications)
 {
     [McpServerTool(Name = "report_task_completion")]
     [Description("Reports completion of a task with results")]
@@ -20,7 +22,7 @@ public class ReportTaskCompletionMcpTool(
         [Description("Result of the completed task")]
         string result)
     {
-        using var scope = databaseScopeService.CreateWriteScope();
+        using var scope = databaseScopeService.GetWriteScope();
 
         var task = await scope.Tasks.FindAsync(taskId);
         if (task == null)
@@ -38,6 +40,8 @@ public class ReportTaskCompletionMcpTool(
         await scope.SaveChangesAsync();
         scope.Complete();
 
+        await workItemNotifications.PublishTaskCompleted(taskId, task.AgentId);
+
         return ReportTaskCompletionResult.Success(taskId);
     }
 
@@ -49,7 +53,7 @@ public class ReportTaskCompletionMcpTool(
         [Description("Error message for the failed task")]
         string errorMessage)
     {
-        using var scope = databaseScopeService.CreateWriteScope();
+        using var scope = databaseScopeService.GetWriteScope();
 
         var task = await scope.Tasks.FindAsync(taskId);
         if (task == null)
@@ -62,6 +66,8 @@ public class ReportTaskCompletionMcpTool(
 
         await scope.SaveChangesAsync();
         scope.Complete();
+
+        await workItemNotifications.PublishTaskFailed(taskId, task.AgentId, errorMessage);
 
         return ReportTaskCompletionResult.Success(taskId);
     }

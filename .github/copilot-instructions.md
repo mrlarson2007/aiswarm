@@ -15,12 +15,57 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 
 **Critical**: Never write production code without a failing test first. Refactoring must never change behavior.
 
+### **GREEN Phase "Minimal" Discipline**:
+**"Minimal" means write ONLY the code needed to make the current failing test pass while keeping all existing tests green.**
+
+- **Maintain All Tests**: Keep all existing tests passing while making the new test pass
+- **Literal Minimum**: Write the smallest possible change to turn the current test from red to green
+- **No Over-Engineering**: Don't add extra functionality beyond what tests require
+- **Single Focus**: Focus on making the current test pass with minimal additional code
+- **Simple Implementation**: Use the simplest approach that satisfies all current tests
+- **Example**: If testing value validation, add value validation logic alongside existing key validation
+
+**Wrong GREEN Approach**: Over-engineering with complex branching or premature abstractions
+**Correct GREEN Approach**: Add minimal logic to handle the new test case while preserving existing functionality
+
+**TDD GREEN Phase Example:**
+```csharp
+// Current implementation (make key validation test pass)
+public Task<Result> ValidateInput(string key, string value) 
+{
+    return Task.FromResult(Result.Failure("key required"));
+}
+
+// Step 2: New failing test: value validation
+public Task<Result> ValidateInput(string key, string value) 
+{
+    if (string.IsNullOrEmpty(value))  // Only handles new test
+        return Task.FromResult(Result.Failure("value required"));
+    
+    return Task.FromResult(Result.Failure("key required")); // existing test still passes
+}
+
+// Step 3: Create positive test that forces full implementation
+public Task<Result> ValidateInput(string key, string value) 
+{
+    if (string.IsNullOrEmpty(key))
+        return Task.FromResult(Result.Failure("key required"));
+    
+    if (string.IsNullOrEmpty(value))  // Add minimal logic for new test
+        return Task.FromResult(Result.Failure("value required"));
+
+    return Task.FromResult(Result.Success("Valid input")); // New test passes, existing tests still pass
+}
+```
+
 ### **One Test at a Time Discipline**: 
 - Write only ONE test method per RED-GREEN-REFACTOR cycle
 - Start with edge cases and error conditions first (invalid input, missing data, etc.)
 - Then write tests for main happy path logic
 - Each test should verify one specific behavior or scenario
 - Never write multiple test methods before implementing the production code
+- **GREEN Phase**: Write minimal code for the current failing test while keeping all existing tests green
+- **REFACTOR Phase**: Improve code structure and design while maintaining all test functionality
 
 
 ## Test Architecture Patterns
@@ -238,4 +283,27 @@ This codebase follows strict Test-Driven Development (TDD) practices and clean c
 - **Logging**: Structured logging via `IAppLogger` interface for testability
 - **Configuration**: Environment-based configuration with clear interfaces
 
-**Essential Rule**: All new code follows TDD cycle. Tests pass after every change. Refactoring preserves existing behavior while improving structure.
+## Refactoring Discipline
+
+- **Preserve Functionality Only**: Refactoring must NEVER add new features or anticipate future needs
+- **Evidence-Based Changes**: Only refactor based on actual duplication found in existing code
+- **YAGNI Principle**: You Aren't Gonna Need It - don't create patterns that aren't immediately used
+- **Conservative Approach**: Make minimal changes that eliminate existing duplication
+- **Verify Usage**: Every refactored pattern must be actually used, not just potentially useful
+- **No Speculation**: Don't create builder patterns, configuration objects, or abstractions unless tests already demonstrate the need
+
+### Refactoring Anti-Patterns to Avoid
+```csharp
+// WRONG: Creating unused builder patterns
+public class AgentBuilder { } // Never used in tests = dead code
+
+// WRONG: Over-engineered configuration objects  
+public class McpToolConfiguration { } // Not needed = complexity
+
+// RIGHT: Only extract what's actually duplicated
+public abstract class Result<T> { } // Used by 10+ existing Result classes
+```
+
+**Critical Refactoring Rule**: If you create something during refactoring that isn't immediately used by existing code, it's over-engineering and should be removed.
+
+**Essential Rule**: All new code follows TDD cycle. Tests pass after every change. Refactoring preserves existing behavior while improving structure without adding unused abstractions.

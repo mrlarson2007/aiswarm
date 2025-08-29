@@ -24,9 +24,9 @@ public class GetNextTaskResult
     }
 
     /// <summary>
-    ///     Persona content for the task (null if no tasks available)
+    ///     PersonaId for the task (null if no tasks available)
     /// </summary>
-    public string? Persona
+    public string? PersonaId
     {
         get;
         set;
@@ -77,8 +77,8 @@ public class GetNextTaskResult
         {
             Success = true,
             TaskId = $"system:requery:{Guid.NewGuid():N}",
-            Persona =
-                "You are a cooperative agent. When you receive a system requery task, you must immediately re-invoke the get_next_task tool to check for work.",
+            PersonaId =
+                "cooperative-agent",
             Description =
                 "No tasks available right now. Immediately call the get_next_task tool again to check for new tasks.",
             Message = "No tasks available. Please call this tool again to check for new tasks."
@@ -90,14 +90,14 @@ public class GetNextTaskResult
     /// </summary>
     public static GetNextTaskResult SuccessWithTask(
         string taskId,
-        string persona,
+        string personaId,
         string description)
     {
         return new GetNextTaskResult
         {
             Success = true,
             TaskId = taskId,
-            Persona = persona,
+            PersonaId = personaId,
             Description = description,
             Message =
                 "Task retrieved successfully. After completing this task, call this tool again to get the next task."
