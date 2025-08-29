@@ -79,49 +79,86 @@ The AI Swarm MCP server provides real-time task coordination and agent managemen
 
 The MCP server provides the following tools for agent coordination:
 
-#### Task Management
+#### Task Management Tools
 
-- **`create_task`** - Create and assign tasks to agents
-- **`get_tasks_by_status`** - Retrieve tasks filtered by status (Pending, InProgress, Completed, Failed)
-- **`get_task_status`** - Get detailed status information for a specific task
-- **`get_tasks_by_agent_id`** - Retrieve all tasks assigned to a specific agent
-- **`get_tasks_by_agent_id_and_status`** - Get tasks for an agent filtered by status
-- **`get_next_task`** - Agent polling endpoint to retrieve next available task
-- **`report_task_completion`** - Mark tasks as completed with results
-- **`report_task_failure`** - Report task failures with error details
+- **`mcp_aiswarm_create_task`** - Create and assign tasks to agents with priority levels
+- **`mcp_aiswarm_get_next_task`** - Agent polling endpoint with configurable timeout and retry logic
+- **`mcp_aiswarm_get_task_status`** - Get detailed status information for a specific task
+- **`mcp_aiswarm_get_tasks_by_status`** - Retrieve tasks filtered by status (Pending, InProgress, Completed, Failed)
+- **`mcp_aiswarm_get_tasks_by_agent_id`** - Retrieve all tasks assigned to a specific agent
+- **`mcp_aiswarm_get_tasks_by_agent_id_and_status`** - Get tasks for an agent filtered by status
+- **`mcp_aiswarm_report_task_completion`** - Mark tasks as completed with results
+- **`mcp_aiswarm_report_task_failure`** - Report task failures with error details
 
-#### Agent Management
+#### Agent Management Tools
 
-- **`list_agents`** - List all registered agents with status and heartbeat information
-- **`launch_agent`** - Launch new agents with specified personas and worktree isolation
-- **`kill_agent`** - Terminate running agents and clean up associated resources
+- **`mcp_aiswarm_list_agents`** - List all registered agents with status, heartbeat, and persona filtering
+- **`mcp_aiswarm_launch_agent`** - Launch new agents with specified personas and worktree isolation
+- **`mcp_aiswarm_kill_agent`** - Terminate running agents and clean up associated resources
+
+#### Memory & State Management Tools
+
+- **`mcp_aiswarm_save_memory`** - Save data to memory for agent communication and state persistence
+- **`mcp_aiswarm_read_memory`** - Reads stored memory entries with automatic access tracking
 
 ### MCP Tool Parameters
 
 #### Task Creation
 
 ```typescript
-create_task(agentId?: string, persona: string, description: string, priority: "Low" | "Normal" | "High" | "Critical")
+mcp_aiswarm_create_task(
+    agentId?: string,                                    // Optional agent ID for task assignment
+    persona: string,                                     // Agent persona (implementer, reviewer, planner, etc.)
+    description: string,                                 // Task description
+    priority: "Low" | "Normal" | "High" | "Critical"    // Task priority level
+)
 ```
 
 #### Agent Launch
 
 ```typescript
-launch_agent(persona: string, description: string, worktreeName?: string, model?: string, yolo: boolean = false)
+mcp_aiswarm_launch_agent(
+    persona: string,              // Agent persona type
+    description: string,          // Agent task description  
+    worktreeName?: string,        // Optional git worktree name
+    model?: string,               // Optional AI model to use
+    yolo: boolean = false         // Bypass permission prompts
+)
 ```
 
 #### Task Querying
 
 ```typescript
-get_tasks_by_status(status: "Pending" | "InProgress" | "Completed" | "Failed")
-get_tasks_by_agent_id_and_status(agentId: string, status: string)
+mcp_aiswarm_get_tasks_by_status(status: "Pending" | "InProgress" | "Completed" | "Failed")
+mcp_aiswarm_get_tasks_by_agent_id_and_status(agentId: string, status: string)
+mcp_aiswarm_get_next_task(agentId: string, timeoutMs?: number)  // Configurable timeout
+```
+
+#### Memory Operations
+
+```typescript
+mcp_aiswarm_save_memory(
+    key: string,                  // Memory key
+    value: string,                // Data to store
+    type?: string,                // Content type (json, text, binary, etc.)
+    metadata?: string,            // JSON metadata for queries
+    namespace?: string            // Optional namespace for organization
+)
+
+mcp_aiswarm_read_memory(
+    key: string,                  // Memory key to retrieve
+    namespace?: string = ""       // Namespace (defaults to empty string)
+)
 ```
 
 ### Key Features
 
-- **Real-Time Coordination**: Agents can poll for tasks and report status in real-time
+- **Real-Time Coordination**: Event-driven architecture with InMemoryEventBus for immediate task and agent coordination
+- **Configurable Task Polling**: Agents can poll for tasks with configurable timeouts, retry logic, and polling intervals
 - **Automatic Status Management**: Agent status automatically transitions from Starting → Running during task polling
-- **Failure Recovery**: Comprehensive error handling with task failure reporting
+- **Event Notification System**: Comprehensive event system for TaskCreated, TaskClaimed, TaskCompleted, and TaskFailed events
+- **Memory Management**: Persistent memory storage with namespace support and automatic access tracking
+- **Failure Recovery**: Comprehensive error handling with configurable retry logic and task failure reporting
 - **Heartbeat Monitoring**: Automatic agent heartbeat updates during task operations
 - **Worktree Isolation**: Each agent runs in isolated git worktrees to prevent conflicts
 - **Cross-Platform**: Works on Windows, macOS, and Linux

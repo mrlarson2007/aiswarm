@@ -12,6 +12,8 @@ Core architectural documentation, database schemas, and foundational design deci
 
 - [SQLite Task Coordination Design](system-design/sqlite-task-coordination-design.md) - Complete system architecture with Mermaid diagrams
 - [Coordination Server Structure](system-design/coordination-server-structure.md) - Clean architecture layout and implementation patterns
+- [Event-Driven Architecture](system-design/event-driven-architecture.md) - InMemoryEventBus and notification services documentation
+- [API Documentation](system-design/api-documentation.md) - Comprehensive API reference with configuration options
 
 ### Database
 
@@ -24,6 +26,9 @@ Core architectural documentation, database schemas, and foundational design deci
   - [ADR-0001: Record Architecture Decisions](system-design/adr/0001-record-architecture-decisions.md)
   - [ADR-0002: Shared Context Between Agents](system-design/adr/0002-shared-context-between-agents.md)
   - [ADR-0003: Separate MCP Coordination Server](system-design/adr/0003-separate-mcp-coordination-server.md)
+  - [ADR-0004: Use Official Gemini CLI with MCP Integration](system-design/adr/0004-gemini-cli-mcp-integration.md)
+  - [ADR-0005: Memory Table System for Agent Communication](system-design/adr/0005-memory-table-system.md) *(Superseded by ADR-0006)*
+  - [ADR-0006: Practical Memory System Implementation](system-design/adr/0006-practical-memory-system.md)
 
 ## 🚀 Features
 
@@ -35,6 +40,8 @@ Feature specifications, implementation plans, and user-facing functionality.
 
 - [Agent Coordination Instructions](features/agent-coordination-prompt.md) - Complete workflow guide for AI agents
 - [Task Coordination Implementation Plan](features/sqlite-task-coordination-plan.md) - TDD-based implementation roadmap
+- [MCP Tools Reference](features/mcp-tools-reference.md) - Comprehensive documentation for all 13 MCP tools
+- [Event-Driven Architecture](system-design/event-driven-architecture.md) - Complete event bus system documentation
 
 ### Development Process
 
