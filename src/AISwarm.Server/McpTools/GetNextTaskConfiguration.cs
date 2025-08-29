@@ -24,11 +24,21 @@ public class GetNextTaskConfiguration
     } = TimeSpan.FromMilliseconds(10);
 
     /// <summary>
+    ///     Maximum number of retry attempts when race conditions occur during task claiming (default: 10)
+    /// </summary>
+    public int MaxRetries
+    {
+        get;
+        set;
+    } = 50;
+
+    /// <summary>
     ///     Production configuration with longer timeouts suitable for real agent use
     /// </summary>
     public static GetNextTaskConfiguration Production => new()
     {
         TimeToWaitForTask = TimeSpan.FromMinutes(5),
-        PollingInterval = TimeSpan.FromSeconds(1)
+        PollingInterval = TimeSpan.FromSeconds(1),
+        MaxRetries = 10
     };
 }

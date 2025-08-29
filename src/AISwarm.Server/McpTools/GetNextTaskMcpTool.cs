@@ -86,7 +86,6 @@ public class GetNextTaskMcpTool(
         using var cts = new CancellationTokenSource(configuration.TimeToWaitForTask);
         try
         {
-            const int maxRetries = 10; // Prevent infinite loops in race conditions
             int retryCount = 0;
 
             do
@@ -97,7 +96,7 @@ public class GetNextTaskMcpTool(
                     return result;
 
                 retryCount++;
-                if (retryCount >= maxRetries)
+                if (retryCount >= configuration.MaxRetries)
                 {
                     // Break out of potential infinite loop after max retries
                     break;
