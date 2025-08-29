@@ -199,23 +199,149 @@ Decision lean: start with the await tool (Gemini-friendly), keep resource subscr
 
 ---
 
-## PROGRESS UPDATE: Memory System Implementation (Completed by Accident)
+## Current Status: MCP Coordination System
 
-### What Happened
-While working on the event bus feature, we accidentally implemented a complete memory system following TDD methodology. This was valuable work but not the original goal.
+### What We Built
 
-### Memory System Completed (7 tests passing)
-- **SaveMemoryMcpTool**: Complete with validation, metadata, type support (3 tests)
-- **ReadMemoryMcpTool**: Complete with validation, access tracking, metadata support (4 tests)
-- **MemoryService**: Full CRUD with access tracking (AccessedAt, AccessCount)
-- **MemoryEntryDto**: Client-focused DTO (Key, Value, Namespace, Type, Size, Metadata)
-- **Database Integration**: Via DatabaseScopeService with in-memory testing
-- **Enhanced MemoryEntry**: All Claude Flow-inspired fields
-- **Documentation**: ADR-0006 superseding ADR-0005
+Implemented a Model Context Protocol (MCP) coordination system with the following components:
 
-### Back to Original Goal: Event Bus Implementation
-Need to resume implementing basic event logging for:
-- **Task Events**: TaskCreated, TaskAssigned, TaskCompleted, TaskFailed
-- **Agent Events**: AgentRegistered, AgentKilled, AgentStatusChanged
-- **Event Bus Core**: In-memory event bus for notifications
+### MCP Tools Implemented (14/15 Core Tools)
+
+**Agent Lifecycle Management**:
+- `list_agents` - List and filter agents by persona
+- `launch_agent` - Launch new agents with persona/context  
+- `kill_agent` - Stop/terminate agents with lifecycle tracking
+- `register_agent` - Handled implicitly by `launch_agent`
+
+**Task Coordination System**:
+- `create_task` - Create tasks with agent assignment
+- `get_task_status` - Get individual task details
+- `get_tasks_by_status` - Filter tasks by status
+- `get_tasks_by_agent_id` - Filter tasks by agent
+- `get_tasks_by_agent_id_and_status` - Combined filtering
+- `get_next_task` - Get next available task for agent
+- `report_task_completion` - Mark task as completed
+- `report_task_failure` - Mark task as failed
+
+**Memory System**:
+- `save_memory` - Save data to shared memory
+- `read_memory` - Read data from shared memory
+
+### Remaining Core Tools (1/15)
+- `wait_for_agent_ready` - Wait until agent is ready to start work
+
+Note: `get_agent_status` removed as redundant with `list_agents` functionality.
+
+## Recent Design Decisions
+
+### Removed: Generic Event Waiting
+- **Decision**: Remove `wait_for_next_event` (too broad, complex)
+- **Replacement**: `wait_for_agent_ready` (focused, specific use case)
+- **Rationale**: Agents need simple readiness check, not generic event streaming
+
+### Removed: Explicit Heartbeat
+- **Decision**: Remove `update_heartbeat` as separate tool
+- **Implementation**: Implicit heartbeat via `get_next_task` and task status updates
+- **Benefits**: Simpler API, natural activity tracking, no overhead
+
+### Agent Coordination Pattern
+- **Flow**: Agents poll for tasks → process → report status → repeat
+- **Heartbeat**: Implicit through regular task operations
+- **Event-Driven Architecture**: InMemoryEventBus with TaskEvent/AgentEvent envelopes
+- **Database Persistence**: EF Core with SQLite, transaction scoping via DatabaseScopeService  
+- **Test Coverage**: 181 tests passing with comprehensive TDD workflow
+- **Clean Architecture**: DI, SOLID principles, proper separation of concerns
+
+---
+
+## Production Roadmap
+
+### Critical Foundation
+
+**Local Development Workflow**
+- Problem: Manual install cycle slows development iteration
+- Solution: Automated `dev-install` script for global tool refresh
+- Impact: Faster development testing with real MCP tools
+
+**Self-Contained Packaging**  
+- Problem: Users need .NET runtime installed
+- Solution: Self-contained deployment with embedded runtime
+- Impact: Zero-dependency installation for end users
+
+**Complete Final MCP Tool**
+- Missing: `wait_for_agent_ready` 
+- Impact: 100% core functionality complete
+
+**Global Tool Publishing**
+- Problem: No distribution mechanism
+- Solution: NuGet global tool + GitHub releases
+- Impact: Easy installation via `dotnet tool install -g`
+
+### User Experience
+
+**Unified CLI Experience**
+- Problem: Separate AgentLauncher and MCP server
+- Solution: AgentLauncher calls MCP server internally  
+- Impact: Single entry point for all operations
+
+**Installation Documentation**
+- Problem: No guidance for new users
+- Solution: Clear README with quick start guide
+- Impact: Smooth onboarding experience
+
+**Enhanced Personas**
+- Problem: Basic personas need expansion
+- Solution: Rich, detailed persona instructions
+- Impact: Better out-of-box agent behavior
+
+### Operational Concerns
+
+**Configuration Management**
+- Problem: Hard-coded settings  
+- Solution: Environment variables, config files
+- Impact: Production deployment flexibility
+
+**Error Handling & Recovery**
+- Problem: Basic error handling only
+- Solution: Graceful degradation, retry logic
+- Impact: Production reliability
+
+**Health & Monitoring**
+- Problem: No operational visibility
+- Solution: Health endpoints, structured logging  
+- Impact: Production monitoring capability
+
+### Iterative Enhancements
+
+**Memory Tools Expansion**
+- Current: Basic save/read memory
+- Enhancement: List, delete, search, bulk operations
+- Pattern: One tool per PR for incremental delivery
+
+**File System Organization**
+- Agent folders: Current state persistence
+- Memory subfolder: File-based memory backup
+- Log folder: Structured log file output
+
+**Advanced Agent Features**
+- Agent restart capability: Resume from saved state
+- Agent communication: Direct agent-to-agent messaging
+- Agent pools: Resource management and load balancing
+
+### Security & Scaling
+
+**Basic Security**
+- Input validation: Prevent injection attacks
+- Authentication: Basic token/API key support
+- Authorization: Role-based access control
+
+**Performance Optimization**
+- Load testing: Concurrent agent limits
+- Resource management: Memory/CPU monitoring
+- Database optimization: Query performance, connection pooling
+
+**Deployment Automation**
+- Docker containers: Production deployment
+- CI/CD pipelines: Automated releases  
+- Infrastructure as Code: Deployment automation
 

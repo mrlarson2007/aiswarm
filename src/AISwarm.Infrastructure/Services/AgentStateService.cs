@@ -93,7 +93,7 @@ public class AgentStateService(
         scope.Complete();
 
         await notificationService.PublishAgentStatusChanged(
-            agentId, AgentStatus.Starting.ToString(), AgentStatus.Running.ToString());
+            agentId, nameof(AgentStatus.Starting), nameof(AgentStatus.Running));
 
         return true;
     }
