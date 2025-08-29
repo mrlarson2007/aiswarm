@@ -60,7 +60,7 @@ public class WorkItemNotificationServiceTests
         // Assert
         received.Count.ShouldBe(2);
         var ids = received.Select(e => ((TaskCreatedPayload)e.Payload).TaskId).OrderBy(x => x).ToArray();
-        ids.ShouldBe(new[] { "t-agent", "t-persona" });
+        ids.ShouldBe(["t-agent", "t-persona"]);
     }
 
     [Fact(Timeout = 5000)]
