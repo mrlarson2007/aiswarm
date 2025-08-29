@@ -170,6 +170,42 @@ public class TaskEventLoggingTests : DatabaseEventLoggerServiceTestBase
 
         await eventLogger.StopAsync();
     }
+
+    [Fact]
+    public async Task WhenTaskClaimedEventPublished_ShouldLogToDatabase()
+    {
+        // Arrange
+        var eventLogger = SystemUnderTest;
+        var taskId = "test-task-claimed";
+        var agentId = "test-agent-claimer";
+
+        await eventLogger.StartAsync();
+
+        // Act - Publish TaskClaimed event
+        await _taskNotificationService.PublishTaskClaimed(taskId, agentId);
+
+        // Give async event processing time to complete
+        await Task.Delay(100);
+
+        // Assert - Check event is in database
+        var allLogs = await GetAllEventLogsAsync();
+        allLogs.Count.ShouldBe(1);
+
+        var claimedEvent = allLogs.FirstOrDefault(e => e.EventType == "TaskClaimed");
+        claimedEvent.ShouldNotBeNull();
+        claimedEvent.EntityType.ShouldBe("Task");
+        claimedEvent.EntityId.ShouldBe(taskId);
+        claimedEvent.Actor.ShouldBe(agentId);
+        claimedEvent.Timestamp.ShouldBe(_timeService.UtcNow);
+        claimedEvent.Severity.ShouldBe("Information");
+
+        var claimedPayload = JsonSerializer.Deserialize<TaskClaimedPayload>(claimedEvent.Payload!);
+        claimedPayload.ShouldNotBeNull();
+        claimedPayload.TaskId.ShouldBe(taskId);
+        claimedPayload.AgentId.ShouldBe(agentId);
+
+        await eventLogger.StopAsync();
+    }
 }
 
 [Collection("DatabaseEventLogger")]

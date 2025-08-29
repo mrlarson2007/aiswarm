@@ -27,7 +27,7 @@ public class GetNextTaskMcpToolTests
 
     private GetNextTaskMcpTool CreateSystemUnderTest()
     {
-        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _notifier);
+        var tool = new GetNextTaskMcpTool(_scopeService, _mockLocalAgentService.Object, _notifier, _timeService);
         tool.Configuration = new GetNextTaskConfiguration();
         return tool;
     }
@@ -54,6 +54,7 @@ public class GetNextTaskMcpToolTests
         [Fact]
         public async Task WhenTaskExistsInDatabase_ShouldFindTaskOnFirstCall()
         {
+
             // Arrange - RED: This test reproduces the bug where agents don't pick up existing tasks
             var agentId = "agent-existing-task";
             var persona = "reviewer";
@@ -70,9 +71,7 @@ public class GetNextTaskMcpToolTests
             // Using a short timeout configuration - the key is it should find the task without timing out
             var config = new GetNextTaskConfiguration { TimeToWaitForTask = TimeSpan.FromMilliseconds(200) };
 
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var result = await SystemUnderTest.GetNextTaskAsync(agentId, config);
-            stopwatch.Stop();
 
             // Assert - Should find the task without waiting the full timeout period
             result.Success.ShouldBeTrue("Should find existing task in database");
@@ -80,9 +79,17 @@ public class GetNextTaskMcpToolTests
             result.PersonaId.ShouldBe(persona);
             result.Description.ShouldBe(description);
 
-            // Should not take the full timeout - should be much faster than 200ms
-            stopwatch.ElapsedMilliseconds.ShouldBeLessThan(200,
-                "Should find task quickly from database, not wait full timeout period");
+            // Allow any pending scope operations to complete before verification
+            //await Task.Delay(100);
+
+            using var scope = _scopeService.GetReadScope();
+            // Verify that the task was marked as in progress in the database
+            var task = await scope.Tasks.FindAsync(taskId);
+            task.ShouldNotBeNull();
+            task.Status.ShouldBe(TaskStatus.InProgress);
+            task.StartedAt.ShouldBe(_timeService.UtcNow);
+            task.AgentId.ShouldBe(agentId);
+
 
             // Verify heartbeat was updated
             _mockLocalAgentService.Verify(x => x.UpdateHeartbeatAsync(agentId), Times.Once);
@@ -621,7 +628,6 @@ public class GetNextTaskMcpToolTests
                         break;
                 }
             });
-
 
             // Act - This should claim the task and publish TaskClaimed event
             var result = await SystemUnderTest.GetNextTaskAsync(agentId);

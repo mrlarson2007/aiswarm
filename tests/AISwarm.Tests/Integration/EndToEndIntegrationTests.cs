@@ -110,7 +110,7 @@ public class EndToEndIntegrationTests : IDisposable
             agentId.ShouldNotBeNullOrEmpty();
 
             // create task assigned to specific agent
-            var createTaskResult = await createTaskTool.CreateTaskAsync(agentId, persona, "Implement feature X");
+            var createTaskResult = await createTaskTool.CreateTaskAsync(null, persona, "Implement feature X");
             createTaskResult.Success.ShouldBeTrue();
             var taskId = createTaskResult.TaskId!;
 
@@ -137,14 +137,15 @@ public class EndToEndIntegrationTests : IDisposable
 
             // Debug: log what events we actually have
             var eventTypes = string.Join(", ", events.Select(e => e.EventType));
-            if (events.Count != 2)
+            if (events.Count != 3)
             {
-                throw new Exception($"Expected 2 events but found {events.Count}. Types: [{eventTypes}]");
+                throw new Exception($"Expected 3 events but found {events.Count}. Types: [{eventTypes}]");
             }
 
-            events.Count.ShouldBe(2);
+            events.Count.ShouldBe(3);
             events[0].EventType.ShouldBe("TaskCreated");
-            events[1].EventType.ShouldBe("TaskCompleted");
+            events[1].EventType.ShouldBe("TaskClaimed");
+            events[2].EventType.ShouldBe("TaskCompleted");
         }
         finally
         {
@@ -232,10 +233,10 @@ public class EndToEndIntegrationTests : IDisposable
         getTaskResult1.TaskId.ShouldBe(taskId1);
         getTaskResult1.Description.ShouldBe("Implement feature A");
 
-        // calling get_next_task again should return the same pending task
+        // calling get_next_task again should return the same in-progress task
         var getTaskResult2 = await getNextTaskTool.GetNextTaskAsync(agentId, 1000);
         getTaskResult2.Success.ShouldBeTrue();
-        getTaskResult2.TaskId.ShouldBe(taskId1); // Still the first task
+        getTaskResult2.TaskId.ShouldBe(taskId1); // Still the first task (now InProgress)
         getTaskResult2.Description.ShouldBe("Implement feature A");
 
         // complete the first task

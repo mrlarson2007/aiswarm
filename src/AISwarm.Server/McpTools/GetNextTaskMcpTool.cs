@@ -16,7 +16,8 @@ namespace AISwarm.Server.McpTools;
 public class GetNextTaskMcpTool(
     IDatabaseScopeService scopeService,
     ILocalAgentService localAgentService,
-    IWorkItemNotificationService workItemNotifications)
+    IWorkItemNotificationService workItemNotifications,
+    ITimeService timeService)
 {
     public GetNextTaskConfiguration Configuration
     {
@@ -153,6 +154,23 @@ public class GetNextTaskMcpTool(
             }
         }
 
+        // First, check for in-progress tasks assigned to this agent
+        var inProgressTask = await scope.Tasks
+            .Where(t => t.AgentId == agentInfo.AgentId)
+            .Where(t => t.Status == TaskStatus.InProgress)
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (inProgressTask != null)
+        {
+            return GetNextTaskResult.SuccessWithTask(
+                inProgressTask.Id,
+                inProgressTask.PersonaId ?? string.Empty,
+                inProgressTask.Description);
+        }
+
+        // Then check for pending tasks assigned to this agent
         var pendingTask = await scope.Tasks
             .Where(t => t.AgentId == agentInfo.AgentId)
             .Where(t => t.Status == TaskStatus.Pending)
@@ -161,10 +179,10 @@ public class GetNextTaskMcpTool(
             .FirstOrDefaultAsync();
 
         if (pendingTask != null)
-            return GetNextTaskResult.SuccessWithTask(
-                pendingTask.Id,
-                pendingTask.PersonaId ?? string.Empty,
-                pendingTask.Description);
+        {
+            // Mark the assigned task as in progress when agent picks it up
+            return await StartAssignedTaskAsync(pendingTask.Id, agentInfo.AgentId);
+        }
 
         var unassignedTask = await scope.Tasks
             .Where(t => t.AgentId == null || t.AgentId == string.Empty)
@@ -178,6 +196,41 @@ public class GetNextTaskMcpTool(
             return await ClaimUnassignedTaskAsync(unassignedTask.Id, agentInfo.AgentId);
 
         return null;
+    }
+
+    /// <summary>
+    ///     Starts an assigned task by marking it as InProgress and setting the start time
+    /// </summary>
+    /// <param name="taskId">ID of the task to start</param>
+    /// <param name="agentId">ID of the agent starting the task</param>
+    /// <returns>Result with task information or failure if task no longer available</returns>
+    private async Task<GetNextTaskResult> StartAssignedTaskAsync(
+        string taskId,
+        string agentId)
+    {
+        using var scope = scopeService.GetWriteScope();
+
+        // Re-fetch the task to ensure it's still assigned to this agent
+        var task = await scope.Tasks.FindAsync(taskId);
+
+        if (task == null)
+            return GetNextTaskResult.NoTasksAvailable();
+
+        // Verify task is still assigned to this agent and pending
+        if (task.AgentId != agentId || task.Status != TaskStatus.Pending)
+            return GetNextTaskResult.NoTasksAvailable();
+
+        // Start the task
+        task.Status = TaskStatus.InProgress;
+        task.StartedAt = timeService.UtcNow;
+
+        await scope.SaveChangesAsync();
+        scope.Complete();
+
+        return GetNextTaskResult.SuccessWithTask(
+            task.Id,
+            task.PersonaId ?? string.Empty,
+            task.Description);
     }
 
     /// <summary>
@@ -205,6 +258,8 @@ public class GetNextTaskMcpTool(
 
         // Claim the task
         task.AgentId = agentId;
+        task.Status = TaskStatus.InProgress;
+        task.StartedAt = timeService.UtcNow;
 
         await scope.SaveChangesAsync();
         scope.Complete();
