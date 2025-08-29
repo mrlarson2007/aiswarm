@@ -29,7 +29,7 @@ public class AgentNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var hasEvent = await enumerator.MoveNextAsync().AsTask().WaitAsync(cts.Token);
         hasEvent.ShouldBeTrue();
-        
+
         var evt = enumerator.Current;
         evt.Type.ShouldBe(AgentEventType.Registered);
         evt.Payload.AgentId.ShouldBe(agentId);
@@ -54,7 +54,7 @@ public class AgentNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var hasEvent = await enumerator.MoveNextAsync().AsTask().WaitAsync(cts.Token);
         hasEvent.ShouldBeTrue();
-        
+
         var evt = enumerator.Current;
         evt.Type.ShouldBe(AgentEventType.Killed);
         evt.Payload.AgentId.ShouldBe(agentId);
@@ -80,7 +80,7 @@ public class AgentNotificationServiceTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var hasEvent = await enumerator.MoveNextAsync().AsTask().WaitAsync(cts.Token);
         hasEvent.ShouldBeTrue();
-        
+
         var evt = enumerator.Current;
         evt.Type.ShouldBe(AgentEventType.StatusChanged);
         evt.Payload.AgentId.ShouldBe(agentId);

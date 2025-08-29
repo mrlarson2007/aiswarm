@@ -35,6 +35,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _taskEventLoggingTask;
     private Task? _agentEventLoggingTask;
+    private TaskCompletionSource? _readyTaskCompletionSource;
 
     public DatabaseEventLoggerService(
         IDatabaseScopeService scopeService,
@@ -50,25 +51,37 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         _logger = logger;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         if (_cancellationTokenSource != null)
         {
             _logger.Warn("Event logger is already running");
-            return Task.CompletedTask;
+            return;
         }
 
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var token = _cancellationTokenSource.Token;
+        _readyTaskCompletionSource = new TaskCompletionSource();
 
         _logger.Info("Starting database event logger service");
+
+        var listenerReadyCount = 0;
+        var totalListeners = 2; // Task and Agent listeners
 
         // Start task event logging
         _taskEventLoggingTask = Task.Run(async () =>
         {
             try
             {
-                await foreach (var taskEvent in _taskNotifications.SubscribeForAllTaskEvents(token))
+                var subscription = _taskNotifications.SubscribeForAllTaskEvents(token);
+                
+                // Signal that this listener is ready
+                if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
+                {
+                    _readyTaskCompletionSource.SetResult();
+                }
+
+                await foreach (var taskEvent in subscription)
                 {
                     await LogTaskEventAsync(taskEvent, token);
                 }
@@ -88,7 +101,15 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         {
             try
             {
-                await foreach (var agentEvent in _agentNotifications.SubscribeForAllAgentEvents(token))
+                var subscription = _agentNotifications.SubscribeForAllAgentEvents(token);
+                
+                // Signal that this listener is ready
+                if (Interlocked.Increment(ref listenerReadyCount) == totalListeners)
+                {
+                    _readyTaskCompletionSource.SetResult();
+                }
+
+                await foreach (var agentEvent in subscription)
                 {
                     await LogAgentEventAsync(agentEvent, token);
                 }
@@ -103,8 +124,10 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             }
         }, token);
 
+        // Wait for both listeners to be ready
+        await _readyTaskCompletionSource.Task;
+
         _logger.Info("Database event logger service started successfully");
-        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
@@ -147,6 +170,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
         _cancellationTokenSource = null;
         _taskEventLoggingTask = null;
         _agentEventLoggingTask = null;
+        _readyTaskCompletionSource = null;
 
         _logger.Info("Database event logger service stopped");
     }
@@ -207,7 +231,7 @@ public class DatabaseEventLoggerService : IEventLoggerService, IDisposable
             await scope.SaveChangesAsync();
             scope.Complete();
 
-                        _logger.Info($"Logged agent event: {agentEvent.Type} for agent {eventLog.EntityId}");
+            _logger.Info($"Logged agent event: {agentEvent.Type} for agent {eventLog.EntityId}");
         }
         catch (Exception ex)
         {

@@ -1,4 +1,4 @@
-﻿namespace AISwarm.Infrastructure.Entities;
+namespace AISwarm.Infrastructure.Entities;
 
 public record MemoryEntryDto(
     string Key,

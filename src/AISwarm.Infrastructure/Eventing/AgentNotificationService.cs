@@ -11,7 +11,7 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
     public ValueTask PublishAgentRegistered(string agentId, string? persona, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
-        
+
         var payload = new AgentRegisteredPayload(agentId, persona);
         return PublishEventAsync(AgentEventType.Registered, payload, ct);
     }
@@ -19,7 +19,7 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
     public ValueTask PublishAgentKilled(string agentId, string? reason, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
-        
+
         var payload = new AgentKilledPayload(agentId, reason);
         return PublishEventAsync(AgentEventType.Killed, payload, ct);
     }
@@ -27,7 +27,7 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
     public ValueTask PublishAgentStatusChanged(string agentId, string? oldStatus, string? newStatus, CancellationToken ct = default)
     {
         EventValidation.ValidateRequiredId(agentId, nameof(agentId));
-        
+
         var payload = new AgentStatusChangedPayload(agentId, oldStatus, newStatus);
         return PublishEventAsync(AgentEventType.StatusChanged, payload, ct);
     }
@@ -43,7 +43,7 @@ public class AgentNotificationService(IEventBus<AgentEventType, IAgentLifecycleP
         IAsyncEnumerable<EventEnvelope<AgentEventType, IAgentLifecyclePayload>> asyncEnumerable)
     {
         return EventConversion.ConvertToConcreteEnvelope(
-            asyncEnumerable, 
+            asyncEnumerable,
             (type, timestamp, payload) => new AgentEventEnvelope(type, timestamp, payload));
     }
 }

@@ -9,19 +9,23 @@ using Shouldly;
 
 namespace AISwarm.Tests.Services;
 
-public class DatabaseEventLoggerServiceTests : IDisposable, ISystemUnderTest<DatabaseEventLoggerService>
+/// <summary>
+/// Base class for DatabaseEventLoggerService tests providing common test infrastructure
+/// </summary>
+public abstract class DatabaseEventLoggerServiceTestBase : IDisposable, ISystemUnderTest<DatabaseEventLoggerService>
 {
-    private readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
-    private readonly IDatabaseScopeService _scopeService;
-    private readonly FakeTimeService _timeService;
-    private readonly TestLogger _logger;
-    private readonly WorkItemNotificationService _taskNotificationService;
-    private readonly AgentNotificationService _agentNotificationService;
+    protected readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
+    protected readonly IDatabaseScopeService _scopeService;
+    protected readonly FakeTimeService _timeService;
+    protected readonly TestLogger _logger;
+    protected readonly WorkItemNotificationService _taskNotificationService;
+    protected readonly AgentNotificationService _agentNotificationService;
 
-    public DatabaseEventLoggerServiceTests()
+    protected DatabaseEventLoggerServiceTestBase()
     {
+        var databaseName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<CoordinationDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName)
             .Options;
 
         _dbContextFactory = new TestDbContextFactory(options);
@@ -29,12 +33,16 @@ public class DatabaseEventLoggerServiceTests : IDisposable, ISystemUnderTest<Dat
         _timeService = new FakeTimeService();
         _logger = new TestLogger();
 
-        // Set up notification services
+        // Create fresh event buses for each test instance to ensure isolation
         var taskEventBus = new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>();
         var agentEventBus = new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>();
 
         _taskNotificationService = new WorkItemNotificationService(taskEventBus);
         _agentNotificationService = new AgentNotificationService(agentEventBus);
+
+        // Ensure the database is created and ready
+        using var context = _dbContextFactory.CreateDbContext();
+        context.Database.EnsureCreated();
     }
 
     public DatabaseEventLoggerService SystemUnderTest => new(
@@ -50,189 +58,149 @@ public class DatabaseEventLoggerServiceTests : IDisposable, ISystemUnderTest<Dat
         context.Database.EnsureDeleted();
     }
 
-    private async Task<EventLog?> GetEventLogAsync()
+    protected async Task<EventLog?> GetEventLogAsync()
     {
         using var context = _dbContextFactory.CreateDbContext();
-        return await context.EventLogs.FirstOrDefaultAsync();
+        return await context.EventLogs.OrderBy(e => e.Timestamp).FirstOrDefaultAsync();
     }
 
-    private async Task<List<EventLog>> GetAllEventLogsAsync()
+    protected async Task<EventLog?> GetEventLogAsync(string eventType)
+    {
+        using var context = _dbContextFactory.CreateDbContext();
+        return await context.EventLogs
+            .Where(e => e.EventType == eventType)
+            .OrderBy(e => e.Timestamp)
+            .FirstOrDefaultAsync();
+    }
+
+    protected async Task<List<EventLog>> GetAllEventLogsAsync()
     {
         using var context = _dbContextFactory.CreateDbContext();
         return await context.EventLogs.OrderBy(e => e.Timestamp).ToListAsync();
     }
 
-    public class TaskEventLoggingTests : DatabaseEventLoggerServiceTests
+}
+
+[Collection("DatabaseEventLogger")]
+public class TaskEventLoggingTests : DatabaseEventLoggerServiceTestBase
+{
+    [Fact]
+    public async Task WhenMultipleTaskEventsPublished_ShouldLogAllToDatabase()
     {
-        [Fact]
-        public async Task WhenTaskCreatedEventPublished_ShouldLogToDatabase()
+        // Arrange
+        var eventLogger = SystemUnderTest;
+        
+        // Test data for TaskCreated
+        var taskId1 = "test-task-1";
+        var agentId1 = "test-agent-1";
+        var personaId = "implementer";
+        
+        // Test data for TaskCompleted
+        var taskId2 = "test-task-2";
+        var agentId2 = "test-agent-2";
+        
+        // Test data for TaskFailed
+        var taskId3 = "test-task-3";
+        var agentId3 = "test-agent-3";
+        var reason = "Test failure reason";
+
+        await eventLogger.StartAsync();
+
+        // Act - Publish all three event types
+        await _taskNotificationService.PublishTaskCreated(taskId1, agentId1, personaId);
+        await _taskNotificationService.PublishTaskCompleted(taskId2, agentId2);
+        await _taskNotificationService.PublishTaskFailed(taskId3, agentId3, reason);
+
+        // Give async event processing time to complete
+        await Task.Delay(100);
+
+        // Assert - Check all events are in database
+        var allLogs = await GetAllEventLogsAsync();
+        if (allLogs.Count != 3)
         {
-            // Arrange
-            var eventLogger = SystemUnderTest;
-            var taskId = "test-task-1";
-            var agentId = "test-agent-1";
-            var personaId = "implementer";
-
-            await eventLogger.StartAsync();
-
-            // Act
-            await _taskNotificationService.PublishTaskCreated(taskId, agentId, personaId);
-
-            // Give the async subscription time to process
-            await Task.Delay(1000); // Increased delay
-
-            // Assert - Check database directly
-            var eventLog = await GetEventLogAsync();
-            eventLog.ShouldNotBeNull();
-            eventLog.EventType.ShouldBe("TaskCreated");
-            eventLog.EntityType.ShouldBe("Task");
-            eventLog.EntityId.ShouldBe(taskId);
-            eventLog.Actor.ShouldBe(agentId);
-            eventLog.Timestamp.ShouldBe(_timeService.UtcNow);
-            eventLog.Severity.ShouldBe("Information");
-            eventLog.Tags.ShouldNotBeNull();
-            eventLog.Tags.ShouldContain("persona:implementer");
-
-            // Verify payload contains expected data
-            var payload = JsonSerializer.Deserialize<TaskCreatedPayload>(eventLog.Payload!);
-            payload.ShouldNotBeNull();
-            payload.TaskId.ShouldBe(taskId);
-            payload.AgentId.ShouldBe(agentId);
-            
-            // Debug: Check the actual payload content if PersonaId is null
-            if (payload.PersonaId == null)
-            {
-                throw new Exception($"PersonaId is null. Full payload JSON: {eventLog.Payload}");
-            }
-            
-            payload.PersonaId.ShouldBe(personaId);
-
-            await eventLogger.StopAsync();
+            throw new Exception($"Expected 3 events but found {allLogs.Count}. Event types: [{string.Join(", ", allLogs.Select(e => e.EventType))}]");
         }
+        allLogs.Count.ShouldBe(3);
 
-        [Fact]
-        public async Task WhenTaskCompletedEventPublished_ShouldLogToDatabase()
-        {
-            // Arrange
-            var eventLogger = SystemUnderTest;
-            var taskId = "test-task-2";
-            var agentId = "test-agent-2";
+        // Verify TaskCreated event
+        var createdEvent = allLogs.FirstOrDefault(e => e.EventType == "TaskCreated");
+        createdEvent.ShouldNotBeNull();
+        createdEvent.EntityType.ShouldBe("Task");
+        createdEvent.EntityId.ShouldBe(taskId1);
+        createdEvent.Actor.ShouldBe(agentId1);
+        createdEvent.Timestamp.ShouldBe(_timeService.UtcNow);
+        createdEvent.Severity.ShouldBe("Information");
+        createdEvent.Tags.ShouldNotBeNull();
+        createdEvent.Tags.ShouldContain("persona:implementer");
 
-            await eventLogger.StartAsync();
+        var createdPayload = JsonSerializer.Deserialize<TaskCreatedPayload>(createdEvent.Payload!);
+        createdPayload.ShouldNotBeNull();
+        createdPayload.TaskId.ShouldBe(taskId1);
+        createdPayload.AgentId.ShouldBe(agentId1);
+        createdPayload.PersonaId.ShouldBe(personaId);
 
-            // Act
-            await _taskNotificationService.PublishTaskCompleted(taskId, agentId);
+        // Verify TaskCompleted event
+        var completedEvent = allLogs.FirstOrDefault(e => e.EventType == "TaskCompleted");
+        completedEvent.ShouldNotBeNull();
+        completedEvent.EntityType.ShouldBe("Task");
+        completedEvent.EntityId.ShouldBe(taskId2);
+        completedEvent.Actor.ShouldBe(agentId2);
+        completedEvent.Timestamp.ShouldBe(_timeService.UtcNow);
+        completedEvent.Severity.ShouldBe("Information");
 
-            // Give the async subscription time to process
-            await Task.Delay(1000); // Increased delay
+        var completedPayload = JsonSerializer.Deserialize<TaskCompletedPayload>(completedEvent.Payload!);
+        completedPayload.ShouldNotBeNull();
+        completedPayload.TaskId.ShouldBe(taskId2);
+        completedPayload.AgentId.ShouldBe(agentId2);
 
-            // Assert - Check database directly
-            var eventLog = await GetEventLogAsync();
-            eventLog.ShouldNotBeNull();
-            eventLog.EventType.ShouldBe("TaskCompleted");
-            eventLog.EntityType.ShouldBe("Task");
-            eventLog.EntityId.ShouldBe(taskId);
-            eventLog.Actor.ShouldBe(agentId);
-            eventLog.Timestamp.ShouldBe(_timeService.UtcNow);
-            eventLog.Severity.ShouldBe("Information");
+        // Verify TaskFailed event
+        var failedEvent = allLogs.FirstOrDefault(e => e.EventType == "TaskFailed");
+        failedEvent.ShouldNotBeNull();
+        failedEvent.EntityType.ShouldBe("Task");
+        failedEvent.EntityId.ShouldBe(taskId3);
+        failedEvent.Actor.ShouldBe(agentId3);
+        failedEvent.Timestamp.ShouldBe(_timeService.UtcNow);
+        failedEvent.Severity.ShouldBe("Warning");
 
-            // Verify payload contains expected data
-            var payload = JsonSerializer.Deserialize<TaskCompletedPayload>(eventLog.Payload!);
-            payload.ShouldNotBeNull();
-            payload.TaskId.ShouldBe(taskId);
-            payload.AgentId.ShouldBe(agentId);
+        var failedPayload = JsonSerializer.Deserialize<TaskFailedPayload>(failedEvent.Payload!);
+        failedPayload.ShouldNotBeNull();
+        failedPayload.TaskId.ShouldBe(taskId3);
+        failedPayload.AgentId.ShouldBe(agentId3);
+        failedPayload.Reason.ShouldBe(reason);
 
-            await eventLogger.StopAsync();
-        }
-
-        [Fact]
-        public async Task WhenTaskFailedEventPublished_ShouldLogToDatabase()
-        {
-            // Arrange
-            var eventLogger = SystemUnderTest;
-            var taskId = "test-task-3";
-            var agentId = "test-agent-3";
-            var reason = "Test failure reason";
-
-            await eventLogger.StartAsync();
-
-            // Act
-            await _taskNotificationService.PublishTaskFailed(taskId, agentId, reason);
-
-            // Give the async subscription time to process
-            await Task.Delay(1000); // Increased delay
-
-            // Assert - Check database directly
-            var eventLog = await GetEventLogAsync();
-            if (eventLog == null)
-            {
-                // Debug: Check if any events were logged at all
-                var allLogs = await GetAllEventLogsAsync();
-                throw new Exception($"No TaskFailed event found. Total events in DB: {allLogs.Count}. Event types: [{string.Join(", ", allLogs.Select(e => e.EventType))}]");
-            }
-            
-            eventLog.ShouldNotBeNull();
-            eventLog.EventType.ShouldBe("TaskFailed");
-            eventLog.EntityType.ShouldBe("Task");
-            eventLog.EntityId.ShouldBe(taskId);
-            eventLog.Actor.ShouldBe(agentId);
-            eventLog.Timestamp.ShouldBe(_timeService.UtcNow);
-            eventLog.Severity.ShouldBe("Warning");
-
-            // Verify payload contains expected data
-            var payload = JsonSerializer.Deserialize<TaskFailedPayload>(eventLog.Payload!);
-            payload.ShouldNotBeNull();
-            payload.TaskId.ShouldBe(taskId);
-            payload.AgentId.ShouldBe(agentId);
-            payload.Reason.ShouldBe(reason);
-
-            await eventLogger.StopAsync();
-        }
-    }
-
-    public class ServiceLifecycleTests : DatabaseEventLoggerServiceTests
-    {
-        [Fact]
-        public async Task WhenStartingAndStoppingService_ShouldHandleGracefully()
-        {
-            // Arrange
-            var eventLogger = SystemUnderTest;
-
-            // Act & Assert - Should start without errors
-            await eventLogger.StartAsync();
-            _logger.Infos.ShouldContain(m => m.Contains("Database event logger service started successfully"));
-
-            // Should stop without errors
-            await eventLogger.StopAsync();
-            _logger.Infos.ShouldContain(m => m.Contains("Database event logger service stopped"));
-        }
-
-        [Fact]
-        public async Task WhenStoppingWithoutStarting_ShouldHandleGracefully()
-        {
-            // Arrange
-            var eventLogger = SystemUnderTest;
-
-            // Act & Assert - Should stop gracefully even if never started
-            await eventLogger.StopAsync();
-
-            // Should not have any error messages
-            _logger.Errors.ShouldBeEmpty();
-        }
-    }
-
-    private class TestDbContextFactory : IDbContextFactory<CoordinationDbContext>
-    {
-        private readonly DbContextOptions<CoordinationDbContext> _options;
-
-        public TestDbContextFactory(DbContextOptions<CoordinationDbContext> options)
-        {
-            _options = options;
-        }
-
-        public CoordinationDbContext CreateDbContext()
-        {
-            return new CoordinationDbContext(_options);
-        }
+        await eventLogger.StopAsync();
     }
 }
+
+[Collection("DatabaseEventLogger")]
+public class ServiceLifecycleTests : DatabaseEventLoggerServiceTestBase
+{
+    [Fact]
+    public async Task WhenStartingAndStoppingService_ShouldHandleGracefully()
+    {
+        // Arrange
+        var eventLogger = SystemUnderTest;
+
+        // Act & Assert - Should start without errors
+        await eventLogger.StartAsync();
+        _logger.Infos.ShouldContain(m => m.Contains("Database event logger service started successfully"));
+
+        // Should stop without errors
+        await eventLogger.StopAsync();
+        _logger.Infos.ShouldContain(m => m.Contains("Database event logger service stopped"));
+    }
+
+    [Fact]
+    public async Task WhenStoppingWithoutStarting_ShouldHandleGracefully()
+    {
+        // Arrange
+        var eventLogger = SystemUnderTest;
+
+        // Act & Assert - Should stop gracefully even if never started
+        await eventLogger.StopAsync();
+
+        // Should not have any error messages
+        _logger.Errors.ShouldBeEmpty();
+    }
+}
+

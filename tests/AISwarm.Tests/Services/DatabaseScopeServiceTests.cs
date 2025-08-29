@@ -20,22 +20,22 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
     public DatabaseScopeServiceTests()
     {
         var services = new ServiceCollection();
-        
+
         // Configure in-memory database with unique name for test isolation
         services.AddDbContextFactory<CoordinationDbContext>(options =>
             options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
-        
+
         // Register all required services
         services.AddScoped<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
         services.AddSingleton<ITimeService, FakeTimeService>();
         services.AddScoped<IMemoryService, MemoryService>();
-        
+
         _serviceProvider = services.BuildServiceProvider();
         _timeService = _serviceProvider.GetRequiredService<ITimeService>();
     }
 
-    public MemoryService SystemUnderTest => 
+    public MemoryService SystemUnderTest =>
         _serviceProvider.CreateScope().ServiceProvider.GetRequiredService<MemoryService>();
 
     /// <summary>
@@ -90,7 +90,7 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
             using (var scope2 = _serviceProvider.CreateScope())
             {
                 var memoryService2 = scope2.ServiceProvider.GetRequiredService<IMemoryService>();
-                
+
                 var result = await memoryService2.ReadMemoryAsync("scope1-key", "test");
                 result.ShouldNotBeNull();
                 result.Value.ShouldBe("scope1-value");
@@ -103,9 +103,9 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
             // NOTE: In-memory databases don't support transaction rollback the same way as real databases.
             // This test documents the behavior difference and would pass with real SQLite databases.
             // For production use, the scoped service pattern will provide proper transaction isolation.
-            
+
             string testKey = "uncommitted-key";
-            
+
             // Arrange & Act - Save data but don't complete transaction
             using (var scope1 = _serviceProvider.CreateScope())
             {
@@ -120,7 +120,7 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
             {
                 var memoryService2 = scope2.ServiceProvider.GetRequiredService<IMemoryService>();
                 var result = await memoryService2.ReadMemoryAsync(testKey, "test");
-                
+
                 // Document the in-memory database behavior vs. real database behavior
                 result.ShouldNotBeNull(); // In-memory DB behavior - would be null with real SQLite
                 result.Value.ShouldBe("uncommitted-value"); // In-memory persists, real SQLite would rollback

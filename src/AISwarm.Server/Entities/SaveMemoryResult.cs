@@ -2,9 +2,18 @@ namespace AISwarm.Server.Entities;
 
 public class SaveMemoryResult
 {
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
-    public string? Key { get; init; }
+    public bool Success
+    {
+        get; init;
+    }
+    public string? ErrorMessage
+    {
+        get; init;
+    }
+    public string? Key
+    {
+        get; init;
+    }
     public string? Namespace
     {
         get;

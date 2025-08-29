@@ -103,7 +103,7 @@ public class MemoryEntryTests
             var memoryEntry = new MemoryEntry
             {
                 Id = "test-id",
-                Namespace = "test-namespace", 
+                Namespace = "test-namespace",
                 Key = "test-key",
                 Value = "test-value"
             };

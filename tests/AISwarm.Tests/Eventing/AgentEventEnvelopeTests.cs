@@ -12,15 +12,15 @@ public class AgentEventEnvelopeTests
         var eventType = AgentEventType.Registered;
         var timestamp = DateTimeOffset.UtcNow;
         var payload = new TestAgentPayload("agent-123");
-        
+
         // Act
         var envelope = new AgentEventEnvelope(eventType, timestamp, payload);
-        
+
         // Assert
         envelope.Type.ShouldBe(eventType);
         envelope.Timestamp.ShouldBe(timestamp);
         envelope.Payload.ShouldBe(payload);
     }
-    
+
     private record TestAgentPayload(string AgentId) : IAgentLifecyclePayload;
 }

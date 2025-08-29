@@ -43,7 +43,7 @@ public class ContextService : IContextService
             throw new InvalidOperationException($"Resource not found: {McpInstructionsResource}");
         using var reader = new StreamReader(stream);
         var content = reader.ReadToEnd();
-        
+
         // Replace placeholders with actual agent ID
         return content.Replace("{0}", agentId);
     }
@@ -83,7 +83,7 @@ Your unique agent ID is: `{agentId}`
 ";
             var mcpInstructions = GetMcpInstructions(agentId);
             var fullInstructions = agentIdSection + mcpInstructions;
-            
+
             await File.AppendAllTextAsync(contextFilePath, fullInstructions);
         }
 

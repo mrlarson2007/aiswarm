@@ -23,7 +23,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
     private readonly DatabaseScopeService _scopeService;
     private readonly ITimeService _timeService = new FakeTimeService();
 
-    public SaveMemoryMcpTool SystemUnderTest => new (
+    public SaveMemoryMcpTool SystemUnderTest => new(
         new MemoryService(_scopeService, _timeService));
 
     public class ValidationTests : SaveMemoryMcpToolTests

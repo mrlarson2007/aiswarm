@@ -5,8 +5,14 @@ namespace AISwarm.Shared.Models;
 /// </summary>
 public abstract class Result<T> where T : Result<T>, new()
 {
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
+    public bool Success
+    {
+        get; init;
+    }
+    public string? ErrorMessage
+    {
+        get; init;
+    }
 
     /// <summary>
     /// Creates a failure result with the specified error message

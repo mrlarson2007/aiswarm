@@ -10,7 +10,7 @@ public class AgentEventTypeTests
     {
         // Arrange & Act
         var eventType = AgentEventType.Registered;
-        
+
         // Assert
         eventType.ShouldBe(AgentEventType.Registered);
     }
@@ -20,7 +20,7 @@ public class AgentEventTypeTests
     {
         // Arrange & Act
         var eventType = AgentEventType.Killed;
-        
+
         // Assert
         eventType.ShouldBe(AgentEventType.Killed);
     }
@@ -30,7 +30,7 @@ public class AgentEventTypeTests
     {
         // Arrange & Act
         var eventType = AgentEventType.StatusChanged;
-        
+
         // Assert
         eventType.ShouldBe(AgentEventType.StatusChanged);
     }

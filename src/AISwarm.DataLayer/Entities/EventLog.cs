@@ -25,36 +25,54 @@ public class EventLog
     /// UTC timestamp when the event occurred
     /// </summary>
     [Required]
-    public DateTime Timestamp { get; set; }
+    public DateTime Timestamp
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Actor who triggered the event (agent ID, user, system)
     /// </summary>
     [MaxLength(200)]
-    public string? Actor { get; set; }
+    public string? Actor
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Correlation ID for tracing related events
     /// </summary>
     [MaxLength(100)]
-    public string? CorrelationId { get; set; }
+    public string? CorrelationId
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Serialized event payload containing event-specific data
     /// </summary>
-    public string? Payload { get; set; }
+    public string? Payload
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Primary entity ID involved in the event (task ID, agent ID, etc.)
     /// </summary>
     [MaxLength(100)]
-    public string? EntityId { get; set; }
+    public string? EntityId
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Type of entity (Task, Agent, User, etc.)
     /// </summary>
     [MaxLength(50)]
-    public string? EntityType { get; set; }
+    public string? EntityType
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Event severity level (Information, Warning, Error, Critical)
@@ -66,5 +84,8 @@ public class EventLog
     /// Optional tags for filtering and categorization
     /// </summary>
     [MaxLength(500)]
-    public string? Tags { get; set; }
+    public string? Tags
+    {
+        get; set;
+    }
 }

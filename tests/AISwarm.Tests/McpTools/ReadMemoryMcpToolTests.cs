@@ -13,7 +13,10 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
 
-    public ReadMemoryMcpTool SystemUnderTest { get; }
+    public ReadMemoryMcpTool SystemUnderTest
+    {
+        get;
+    }
 
     protected ReadMemoryMcpToolTests()
     {
@@ -33,7 +36,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
         public async Task WhenKeyIsEmpty_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("", @namespace:"");
+            var result = await SystemUnderTest.ReadMemoryAsync("", @namespace: "");
 
             // Assert
             result.Success.ShouldBeFalse();
@@ -44,7 +47,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
         public async Task WhenMemoryDoesNotExist_ShouldReturnFailure()
         {
             // Arrange - Act
-            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", @namespace:"");
+            var result = await SystemUnderTest.ReadMemoryAsync("nonexistent-key", @namespace: "");
 
             // Assert
             result.Success.ShouldBeFalse();

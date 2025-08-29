@@ -91,7 +91,7 @@ public class CoordinationDbContext(
             entity.Property(e => e.EntityType).HasMaxLength(50);
             entity.Property(e => e.Severity).HasMaxLength(20).HasDefaultValue("Information");
             entity.Property(e => e.Tags).HasMaxLength(500);
-            
+
             // Indexes for efficient querying
             entity.HasIndex(e => e.EventType);
             entity.HasIndex(e => e.Timestamp);

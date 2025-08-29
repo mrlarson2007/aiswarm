@@ -10,10 +10,10 @@ public class AgentLifecyclePayloadTests
     {
         // Arrange
         var payload = new TestAgentPayload("agent-123");
-        
+
         // Act & Assert
         payload.AgentId.ShouldBe("agent-123");
     }
-    
+
     private record TestAgentPayload(string AgentId) : IAgentLifecyclePayload;
 }

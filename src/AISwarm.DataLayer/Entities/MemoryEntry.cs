@@ -38,35 +38,56 @@ public class MemoryEntry
     /// <summary>
     /// JSON metadata for extensibility and rich queries
     /// </summary>
-    public string? Metadata { get; set; }
+    public string? Metadata
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Whether the content is compressed
     /// </summary>
-    public bool IsCompressed { get; set; }
+    public bool IsCompressed
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Size of the content in bytes
     /// </summary>
-    public int Size { get; set; }
+    public int Size
+    {
+        get; set;
+    }
 
     /// <summary>
     /// When the entry was created
     /// </summary>
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// When the entry was last updated
     /// </summary>
-    public DateTime LastUpdatedAt { get; set; }
+    public DateTime LastUpdatedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// When the entry was last accessed (for analytics)
     /// </summary>
-    public DateTime? AccessedAt { get; set; }
+    public DateTime? AccessedAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Number of times the entry has been accessed
     /// </summary>
-    public int AccessCount { get; set; }
+    public int AccessCount
+    {
+        get; set;
+    }
 }

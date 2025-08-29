@@ -10,7 +10,7 @@ public static class EventValidation
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException($"{paramName} must be provided", paramName);
     }
-    
+
     public static void ValidateRequiredCollection<T>(IReadOnlyList<T>? collection, string paramName)
     {
         if (collection == null || collection.Count == 0)

@@ -17,7 +17,7 @@ public class LocalAgentServiceTests : ISystemUnderTest<LocalAgentService>
     private readonly IDatabaseScopeService _scopeService;
     private LocalAgentService? _systemUnderTest;
     private readonly FakeTimeService _timeService;
-        private readonly Mock<IAgentNotificationService> _mockNotificationService;
+    private readonly Mock<IAgentNotificationService> _mockNotificationService;
     private readonly Mock<IProcessTerminationService> _mockProcessTerminationService;
     private readonly IAgentStateService _agentStateService;
 

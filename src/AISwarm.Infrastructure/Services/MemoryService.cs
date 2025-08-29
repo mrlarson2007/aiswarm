@@ -62,7 +62,7 @@ public class MemoryService : IMemoryService
         }
 
         await scope.SaveChangesAsync();
-        
+
         // Complete transaction - this will be cached until DI scope disposal
         await _scopedDbService.CompleteAsync();
     }
@@ -105,7 +105,7 @@ public class MemoryService : IMemoryService
         entity.AccessedAt = _timeService.UtcNow;
         entity.AccessCount++;
         await scope.SaveChangesAsync();
-        
+
         // Complete transaction
         await _scopedDbService.CompleteAsync();
     }

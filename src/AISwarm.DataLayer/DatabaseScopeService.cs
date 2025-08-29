@@ -44,13 +44,13 @@ public class DatabaseScopeService : IDatabaseScopeService
     public IWriteScope GetWriteScope()
     {
         ThrowIfDisposed();
-        
+
         // If cached scope is disposed, clear the cache and create a new one
         if (_cachedWriteScope != null && IsDisposed(_cachedWriteScope))
         {
             _cachedWriteScope = null;
         }
-        
+
         if (_cachedWriteScope == null)
         {
             _cachedWriteScope = CreateWriteScope();
@@ -66,13 +66,13 @@ public class DatabaseScopeService : IDatabaseScopeService
     public IReadScope GetReadScope()
     {
         ThrowIfDisposed();
-        
+
         // If cached scope is disposed, clear the cache and create a new one
         if (_cachedReadScope != null && IsDisposed(_cachedReadScope))
         {
             _cachedReadScope = null;
         }
-        
+
         if (_cachedReadScope == null)
         {
             _cachedReadScope = CreateReadScope();
@@ -88,13 +88,13 @@ public class DatabaseScopeService : IDatabaseScopeService
     public Task CompleteAsync()
     {
         ThrowIfDisposed();
-        
+
         if (_cachedWriteScope != null && !_completed)
         {
             _cachedWriteScope.Complete();
             _completed = true;
         }
-        
+
         return Task.CompletedTask;
     }
 
@@ -138,7 +138,7 @@ public class DatabaseScopeService : IDatabaseScopeService
         {
             return true;
         }
-        
+
         return false;
     }
 }

@@ -18,8 +18,8 @@ public abstract class BaseNotificationService<TEventType, TPayload, TEventEnvelo
     }
 
     protected ValueTask PublishEventAsync<TConcretePayload>(
-        TEventType eventType, 
-        TConcretePayload payload, 
+        TEventType eventType,
+        TConcretePayload payload,
         CancellationToken ct = default)
         where TConcretePayload : class, TPayload
     {
