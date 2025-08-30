@@ -46,7 +46,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
         services.AddSingleton<ITimeService>(_timeService);
 
         // Add MCP tools (WaitForMemoryKeyMcpTool will be added later)
-        services.AddSingleton<WaitForMemoryKeyMcpTool>();
+        services.AddSingleton(sp => new WaitForMemoryKeyMcpTool(sp.GetRequiredService<IMemoryService>()));
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -82,5 +82,31 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
         // Assert
         result.Success.ShouldBeFalse();
         result.ErrorMessage.ShouldContain("Wait for memory key timed out."); // Updated expected error message
+    }
+
+    [Fact]
+    public async Task WhenMemoryKeyIsCreated_ShouldReturnImmediately()
+    {
+        // Arrange
+        var waitForMemoryTool = _serviceProvider.GetRequiredService<WaitForMemoryKeyMcpTool>();
+        var memoryService = _serviceProvider.GetRequiredService<IMemoryService>(); // Need to inject IMemoryService
+        const string key = "existing-key";
+        const string value = "initial-value";
+        const string @namespace = "test-namespace";
+
+        // Create the memory entry before waiting
+        await memoryService.SaveMemoryAsync(key, value, @namespace: @namespace);
+
+        // Act
+        // The current implementation of WaitForMemoryKeyAsync will still just delay and return failure
+        // This will make the test fail, which is the RED state.
+        var result = await waitForMemoryTool.WaitForMemoryKeyAsync(key, @namespace, TimeSpan.FromSeconds(1));
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.MemoryEntry.ShouldNotBeNull();
+        result.MemoryEntry.Key.ShouldBe(key);
+        result.MemoryEntry.Value.ShouldBe(value);
+        result.MemoryEntry.Namespace.ShouldBe(@namespace);
     }
 }
