@@ -167,7 +167,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         await _memoryService.SaveMemoryAsync(key, "initial-value", @namespace: targetNamespace);
 
         // --- Event Subscription Setup ---
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Overall test timeout[]
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Overall test timeout
 
         var readTask = Task.Run(async () =>
             await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, targetNamespace, 10000), cts.Token);
