@@ -57,6 +57,7 @@ User guides, operational procedures, and development workflows.
 
 - [CI/CD Guide](help/CICD.md) - Continuous integration and deployment procedures
 - [Copilot Integration](help/COPILOT.md) - AI coding assistant configuration and usage
+- [Local Deployment](help/local-deployment.md) - Deploy AISwarm.Server locally for meta-development
 
 ## 🧭 Navigation Guidelines
 

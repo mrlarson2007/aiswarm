@@ -1,3 +1,4 @@
+// AISwarm.Server - MCP coordination server providing agent management and task coordination tools for VS Code
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using Microsoft.AspNetCore.Builder;
