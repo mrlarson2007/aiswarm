@@ -42,11 +42,57 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ToolsPackagesDir = Join-Path $ProjectRoot "tools-packages"
 $McpConfigPath = Join-Path $ProjectRoot ".vscode\mcp.json"
+$AgentLauncherCsprojPath = Join-Path $ProjectRoot "src\AgentLauncher\AgentLauncher.csproj"
+$McpServerCsprojPath = Join-Path $ProjectRoot "src\AISwarm.Server\AISwarm.Server.csproj"
 
 Write-Host "🚀 AISwarm Local Tool Deployment" -ForegroundColor Cyan
 Write-Host "=================================" -ForegroundColor Cyan
 Write-Host "Project Root: $ProjectRoot" -ForegroundColor Gray
 Write-Host ""
+
+# Step 0: Auto-increment version
+Write-Host "🔢 Auto-incrementing version..." -ForegroundColor Yellow
+if (Test-Path $McpServerCsprojPath) {
+    $csprojContent = Get-Content $McpServerCsprojPath -Raw
+    $versionMatch = [regex]::Match($csprojContent, '<Version>([^<]+)</Version>')
+    
+    if ($versionMatch.Success) {
+        $currentVersion = $versionMatch.Groups[1].Value
+        
+        # Parse version (handle both x.y.z and x.y.z-dev formats)
+        $versionParts = $currentVersion -split '-'
+        $baseVersion = $versionParts[0]
+        $suffix = if ($versionParts.Length -gt 1) { "-" + $versionParts[1] } else { "" }
+        
+        $parts = $baseVersion -split '\.'
+        if ($parts.Length -eq 3) {
+            $major = [int]$parts[0]
+            $minor = [int]$parts[1]
+            $patch = [int]$parts[2]
+            
+            # Increment patch version
+            $newPatch = $patch + 1
+            $newBaseVersion = "$major.$minor.$newPatch"
+            $newVersion = "$newBaseVersion$suffix"
+            
+            # Update the csproj file
+            $newCsprojContent = $csprojContent -replace '<Version>[^<]+</Version>', "<Version>$newVersion</Version>"
+            Set-Content -Path $McpServerCsprojPath -Value $newCsprojContent -Encoding UTF8
+            
+            Write-Host "  Version incremented: $currentVersion → $newVersion" -ForegroundColor Gray
+            $toolVersion = $newVersion
+        } else {
+            Write-Host "⚠️  Could not parse version format, using current: $currentVersion" -ForegroundColor Orange
+            $toolVersion = $currentVersion
+        }
+    } else {
+        Write-Host "⚠️  Could not find version in csproj, using default" -ForegroundColor Orange
+        $toolVersion = "1.0.0-dev"
+    }
+} else {
+    Write-Host "⚠️  AISwarm.Server.csproj not found, using default version" -ForegroundColor Orange
+    $toolVersion = "1.0.0-dev"
+}
 
 # Step 1: Clean build if requested
 if ($Clean) {
@@ -96,7 +142,7 @@ if ($LASTEXITCODE -eq 0) {
 
 # Step 5: Install the new tool locally
 Write-Host "📥 Installing local tool..." -ForegroundColor Yellow
-$installResult = dotnet tool install aiswarm-server --local --version "1.0.0-dev" --add-source $ToolsPackagesDir
+$installResult = dotnet tool install aiswarm-server --local --version $toolVersion --add-source $ToolsPackagesDir
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Tool installation failed!" -ForegroundColor Red
     exit 1

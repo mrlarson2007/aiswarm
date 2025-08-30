@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "aiswarm-server": {
-      "version": "1.0.0-dev",
+      "version": "1.0.6-dev",
       "commands": [
         "aiswarm-server"
       ],

@@ -37,9 +37,22 @@ public partial class GitService(
             else if (line.StartsWith("branch "))
                 if (currentWorktreePath != null)
                 {
-                    var worktreeName = Path.GetFileName(currentWorktreePath);
-                    if (!string.IsNullOrEmpty(worktreeName))
-                        dict[worktreeName] = currentWorktreePath;
+                    var fullWorktreeName = Path.GetFileName(currentWorktreePath);
+                    if (!string.IsNullOrEmpty(fullWorktreeName))
+                    {
+                        // Handle both full name and suffix after repo name
+                        // For "aiswarm-event-subscription-dev", try both:
+                        // 1. Full name: "aiswarm-event-subscription-dev" 
+                        // 2. Suffix: "event-subscription-dev"
+                        dict[fullWorktreeName] = currentWorktreePath;
+                        
+                        var repoNamePrefix = "aiswarm-";
+                        if (fullWorktreeName.StartsWith(repoNamePrefix))
+                        {
+                            var suffixName = fullWorktreeName.Substring(repoNamePrefix.Length);
+                            dict[suffixName] = currentWorktreePath;
+                        }
+                    }
                 }
 
         return dict;
@@ -68,7 +81,7 @@ public partial class GitService(
 
         var repoName = Path.GetFileName(repoRoot);
         var worktreePath = Path.Combine(repoParent, $"{repoName}-{name}");
-        
+
         // If directory exists, check if it's already listed as a worktree
         if (fileSystem.DirectoryExists(worktreePath))
         {
@@ -77,7 +90,7 @@ public partial class GitService(
                 logger.Info($"Worktree '{name}' already exists at: {worktreePath}");
                 return worktreePath;
             }
-            
+
             // Directory exists but is not a worktree - this should be allowed for multiple agents
             logger.Info($"Directory exists but is not a git worktree, will create worktree: {worktreePath}");
         }

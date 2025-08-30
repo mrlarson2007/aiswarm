@@ -44,7 +44,7 @@ The deployment script creates a local dotnet tool that:
 
 ### Local Tool Installation
 
-- **Package Location:** `./tools-packages/aiswarm-server.1.0.0-dev.nupkg`
+- **Package Location:** `./tools-packages/aiswarm-server.1.0.1dev.nupkg`
 - **Tool Command:** `dotnet tool run aiswarm-server`
 - **MCP Integration:** Automatically configured in `.vscode/mcp.json`
 - **Database:** Stored in `.aiswarm/local.db`

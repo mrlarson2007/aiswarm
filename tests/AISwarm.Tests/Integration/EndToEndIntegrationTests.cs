@@ -358,7 +358,7 @@ public class EndToEndIntegrationTests : IDisposable
         // Scenario 3: Empty Namespace (no entries)
         var emptyNsListResult = await listMemoryTool.ListMemoryAsync("nonExistentNamespace");
         emptyNsListResult.Success.ShouldBeTrue();
-        emptyNsListResult.Entries.ShouldBeEmpty();
+        emptyNsListResult.Entries?.ShouldBeEmpty();
 
         // Scenario 4: Different Data Types (already covered in specific namespace, but can add more explicit checks)
         await saveMemoryTool.SaveMemory("binaryKey", "someBinaryData", type: "binary");

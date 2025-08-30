@@ -10,7 +10,7 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>aiswarm-server</ToolCommandName>
         <PackageId>aiswarm-server</PackageId>
-        <Version>1.0.0-dev</Version>
+        <Version>1.0.6-dev</Version>
         <Authors>AISwarm Development Team</Authors>
         <Description>AISwarm MCP coordination server for multi-agent development workflows</Description>
         <PackageProjectUrl>https://github.com/mrlarson2007/aiswarm</PackageProjectUrl>
@@ -48,3 +48,7 @@
     </ItemGroup>
 
 </Project>
+
+
+
+

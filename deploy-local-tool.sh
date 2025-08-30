@@ -88,7 +88,7 @@ fi
 
 # Step 5: Install the new tool locally
 echo -e "${YELLOW}📥 Installing local tool...${NC}"
-if ! dotnet tool install aiswarm-server --local --version "1.0.0-dev" --add-source "$TOOLS_PACKAGES_DIR"; then
+if ! dotnet tool install aiswarm-server --local --version "1.0.1-dev" --add-source "$TOOLS_PACKAGES_DIR"; then
     echo -e "${RED}❌ Tool installation failed!${NC}"
     exit 1
 fi
