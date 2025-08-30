@@ -1,6 +1,5 @@
 using System.Threading.Channels;
 using AISwarm.Infrastructure.Eventing;
-using AISwarm.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

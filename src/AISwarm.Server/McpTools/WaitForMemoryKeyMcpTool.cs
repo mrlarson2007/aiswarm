@@ -18,7 +18,10 @@ namespace AISwarm.Server.McpTools
         _memoryEventBus = memoryEventBus;
     }
 
-        public async Task<WaitForMemoryKeyResult> WaitForMemoryKeyAsync(string key, string @namespace, TimeSpan timeout)
+        /// <summary>
+        /// Waits for a memory key to be created. If the key already exists, returns immediately.
+        /// </summary>
+        public async Task<WaitForMemoryKeyResult> WaitForMemoryKeyCreationAsync(string key, string @namespace, TimeSpan timeout)
         {
             // 1. Check if the key already exists
             var existingMemory = await _memoryService.ReadMemoryAsync(key, @namespace);
@@ -27,56 +30,75 @@ namespace AISwarm.Server.McpTools
                 return WaitForMemoryKeyResult.SuccessWithMemoryEntry(existingMemory);
             }
 
-            // 2. If not found, subscribe to events and wait with a timeout
+            // since memory does not exist, we need to wait for creation event
             var filter = new EventFilter<MemoryEventType, IMemoryLifecyclePayload>
             {
                 Predicate = envelope =>
                     envelope.Payload.MemoryEntry.Key == key &&
                     envelope.Payload.MemoryEntry.Namespace == @namespace &&
-                    (envelope.Type == MemoryEventType.Created || envelope.Type == MemoryEventType.Updated)
+                    envelope.Type == MemoryEventType.Created
             };
 
             // Create a CancellationTokenSource for the overall timeout
             using var overallCts = new CancellationTokenSource(timeout);
 
-            // Create a TaskCompletionSource to signal when the event is received
-            var eventReceivedTcs = new TaskCompletionSource<MemoryEntryDto>();
-
-            // Start a task to consume events from the bus
-            var consumerTask = Task.Run(async () =>
+            try
             {
-                try
+                var createdValue = await _memoryEventBus.Subscribe(filter, overallCts.Token).FirstOrDefaultAsync(overallCts.Token);
+                if (createdValue == null)
                 {
-                    await foreach (var envelope in _memoryEventBus.Subscribe(filter, overallCts.Token))
-                    {
-                        eventReceivedTcs.TrySetResult(envelope.Payload.MemoryEntry);
-                        break; // Found the event, stop consuming
-                    }
+                    return WaitForMemoryKeyResult.Failure("Wait for memory key timed out.");
                 }
-                catch (OperationCanceledException)
-                {
-                    // Expected if overallCts is cancelled
-                    eventReceivedTcs.TrySetCanceled(overallCts.Token);
-                }
-                catch (Exception ex)
-                {
-                    eventReceivedTcs.TrySetException(ex);
-                }
-            }, overallCts.Token);
 
-            // Wait for either the event to be received or the timeout to occur
-            var completedTask = await Task.WhenAny(eventReceivedTcs.Task, Task.Delay(timeout, overallCts.Token));
-
-            if (completedTask == eventReceivedTcs.Task)
-            {
-                // Event was received
-                overallCts.Cancel(); // Cancel the consumer task
-                return WaitForMemoryKeyResult.SuccessWithMemoryEntry(await eventReceivedTcs.Task);
+                return WaitForMemoryKeyResult.SuccessWithMemoryEntry(new MemoryEntryDto(
+                    createdValue.Payload.MemoryEntry.Key,
+                    createdValue.Payload.MemoryEntry.Value,
+                    createdValue.Payload.MemoryEntry.Namespace,
+                    createdValue.Payload.MemoryEntry.Type,
+                    createdValue.Payload.MemoryEntry.Size,
+                    createdValue.Payload.MemoryEntry.Metadata));
             }
-            else
+            catch (OperationCanceledException)
             {
-                // Timeout occurred
-                overallCts.Cancel(); // Cancel the consumer task
+                return WaitForMemoryKeyResult.Failure("Wait for memory key timed out.");
+            }
+        }
+
+        /// <summary>
+        /// Waits for a memory key to be updated. Always waits for the next update event, even if the key already exists.
+        /// </summary>
+        public async Task<WaitForMemoryKeyResult> WaitForMemoryKeyUpdateAsync(string key, string @namespace, TimeSpan timeout)
+        {
+            // Always subscribe to Update events and wait for changes
+            var filter = new EventFilter<MemoryEventType, IMemoryLifecyclePayload>
+            {
+                Predicate = envelope =>
+                    envelope.Payload.MemoryEntry.Key == key &&
+                    envelope.Payload.MemoryEntry.Namespace == @namespace &&
+                    envelope.Type == MemoryEventType.Updated
+            };
+
+            // Create a CancellationTokenSource for the overall timeout
+            using var overallCts = new CancellationTokenSource(timeout);
+
+            try
+            {
+                var updatedValue = await _memoryEventBus.Subscribe(filter, overallCts.Token).FirstOrDefaultAsync(overallCts.Token);
+                if (updatedValue == null)
+                {
+                    return WaitForMemoryKeyResult.Failure("Wait for memory key timed out.");
+                }
+
+                return WaitForMemoryKeyResult.SuccessWithMemoryEntry(new MemoryEntryDto(
+                    updatedValue.Payload.MemoryEntry.Key,
+                    updatedValue.Payload.MemoryEntry.Value,
+                    updatedValue.Payload.MemoryEntry.Namespace,
+                    updatedValue.Payload.MemoryEntry.Type,
+                    updatedValue.Payload.MemoryEntry.Size,
+                    updatedValue.Payload.MemoryEntry.Metadata));
+            }
+            catch (OperationCanceledException)
+            {
                 return WaitForMemoryKeyResult.Failure("Wait for memory key timed out.");
             }
         }

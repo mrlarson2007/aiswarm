@@ -1,6 +1,5 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

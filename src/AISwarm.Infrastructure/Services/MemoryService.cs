@@ -2,10 +2,12 @@ using System.Text;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Entities;
+using AISwarm.Infrastructure.Eventing;
 using Microsoft.EntityFrameworkCore;
-using AISwarm.Infrastructure.Eventing; // Added for event bus
 
-namespace AISwarm.Infrastructure.Services;
+// Added for event bus
+
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 ///     Memory service that uses per-request transaction coordination.

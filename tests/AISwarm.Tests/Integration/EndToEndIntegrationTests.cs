@@ -1,7 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
-using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -337,8 +336,9 @@ public class EndToEndIntegrationTests : IDisposable
         await saveMemoryTool.SaveMemory("defaultKey1", "defaultValue1");
         await saveMemoryTool.SaveMemory("defaultKey2", "defaultValue2", metadata: "{\"some\":\"data\"}");
 
-        var defaultListResult = await listMemoryTool.ListMemoryAsync(null); // null for default namespace
+        var defaultListResult = await listMemoryTool.ListMemoryAsync(string.Empty); // null for default namespace
         defaultListResult.Success.ShouldBeTrue();
+        defaultListResult.Entries.ShouldNotBeNull();
         defaultListResult.Entries.Count.ShouldBeGreaterThanOrEqualTo(2); // May contain other test data
         defaultListResult.Entries.ShouldContain(m => m.Key == "defaultKey1" && m.Value == "defaultValue1" && m.Namespace == "");
         defaultListResult.Entries.ShouldContain(m => m.Key == "defaultKey2" && m.Value == "defaultValue2" && m.Namespace == "" && m.Metadata == "{\"some\":\"data\"}");
@@ -350,6 +350,7 @@ public class EndToEndIntegrationTests : IDisposable
 
         var nsListResult = await listMemoryTool.ListMemoryAsync(testNamespace);
         nsListResult.Success.ShouldBeTrue();
+        nsListResult.Entries.ShouldNotBeNull();
         nsListResult.Entries.Count.ShouldBe(2);
         nsListResult.Entries.ShouldContain(m => m.Key == "nsKey1" && m.Value == "nsValue1" && m.Namespace == testNamespace && m.Type == "text");
         nsListResult.Entries.ShouldContain(m => m.Key == "nsKey2" && m.Value == "nsValue2" && m.Namespace == testNamespace && m.Type == "json");
@@ -361,8 +362,9 @@ public class EndToEndIntegrationTests : IDisposable
 
         // Scenario 4: Different Data Types (already covered in specific namespace, but can add more explicit checks)
         await saveMemoryTool.SaveMemory("binaryKey", "someBinaryData", type: "binary");
-        var binaryListResult = await listMemoryTool.ListMemoryAsync(null);
+        var binaryListResult = await listMemoryTool.ListMemoryAsync(string.Empty);
         binaryListResult.Success.ShouldBeTrue();
+        binaryListResult.Entries.ShouldNotBeNull();
         binaryListResult.Entries.ShouldContain(m => m.Key == "binaryKey" && m.Value == "someBinaryData" && m.Type == "binary");
     }
 }

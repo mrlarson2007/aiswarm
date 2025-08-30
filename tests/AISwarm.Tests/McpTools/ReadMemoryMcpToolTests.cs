@@ -2,7 +2,6 @@ using System.Text;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
