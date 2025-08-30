@@ -107,4 +107,23 @@ public class MemoryService(
         // Complete transaction
         await _scopedDbService.CompleteAsync();
     }
+
+    public async Task<IEnumerable<MemoryEntryDto>> ListMemoryAsync(string @namespace)
+    {
+        var scope = _scopedDbService.GetReadScope();
+        var namespaceName = @namespace ?? "";
+
+        var entities = await scope.MemoryEntries
+            .AsNoTracking()
+            .Where(m => m.Namespace == namespaceName)
+            .ToListAsync();
+
+        return entities.Select(entity => new MemoryEntryDto(
+            entity.Key,
+            entity.Value,
+            entity.Namespace,
+            entity.Type,
+            entity.Size,
+            entity.Metadata));
+    }
 }
