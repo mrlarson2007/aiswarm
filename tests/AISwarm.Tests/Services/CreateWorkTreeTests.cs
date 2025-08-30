@@ -29,7 +29,7 @@ public class CreateWorkTreeTests : ISystemUnderTest<GitService>
     }
 
     [Fact]
-    public async Task ShouldFail_WhenWorktreeAlreadyListed()
+    public async Task ShouldReturnExistingPath_WhenWorktreeAlreadyListed()
     {
         var worktreeListOutput = "worktree /repo/worktrees/feature_a\nbranch refs/heads/feature_a\n";
         _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
@@ -39,8 +39,7 @@ public class CreateWorkTreeTests : ISystemUnderTest<GitService>
         _process.Enqueue("git", a => a.StartsWith("worktree list"),
             new ProcessResult(true, worktreeListOutput, string.Empty, 0));
 
-        var ex = await Should.ThrowAsync<InvalidOperationException>(() =>
-            SystemUnderTest.CreateWorktreeAsync("feature_a"));
-        ex.Message.ShouldContain("already exists");
+        var result = await SystemUnderTest.CreateWorktreeAsync("feature_a");
+        result.ShouldBe("/repo/worktrees/feature_a");
     }
 }
