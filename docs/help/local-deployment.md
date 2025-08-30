@@ -169,8 +169,7 @@ Check these locations for debugging:
 
 - **VS Code Output Panel:** MCP Server logs
 - **Terminal:** Server console output
-- **Database:** `.aiswarm/local.db` for persisted data
-- **Version info:** `~/.aiswarm/server/version.json`
+- **Version info:** `./AISwarm.Server/version.json`
 
 ## 🔄 Development Workflow
 
