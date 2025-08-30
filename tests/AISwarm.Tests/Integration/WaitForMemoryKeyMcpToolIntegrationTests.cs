@@ -176,4 +176,67 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
         receivedMemoryEntry.Value.ShouldBe(updatedValue); // Expect the updated value
         receivedMemoryEntry.Namespace.ShouldBe(@namespace);
     }
+
+    [Fact]
+    public async Task WhenNamespaceFiltering_ShouldOnlyReturnMatchingKeys()
+    {
+        // Arrange
+        var waitForMemoryTool = _serviceProvider.GetRequiredService<WaitForMemoryKeyMcpTool>();
+        var memoryService = _serviceProvider.GetRequiredService<IMemoryService>();
+        const string key = "filtered-key";
+        const string value = "filtered-value";
+        const string targetNamespace = "target-namespace";
+        const string otherNamespace = "other-namespace";
+
+        // Create a memory entry in the target namespace
+        await memoryService.SaveMemoryAsync(key, "initial-value", @namespace: targetNamespace);
+
+        // --- Event Subscription Setup ---
+        var eventReceivedTcs = new TaskCompletionSource<MemoryEntryDto>();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); // Overall test timeout
+        var token = cts.Token;
+
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                // Subscribe to events for the target namespace
+                await foreach (var envelope in (_memoryEventBus as TestEventBus<MemoryEventType, IMemoryLifecyclePayload>)!.Subscribe(
+                    new EventFilter<MemoryEventType, IMemoryLifecyclePayload>
+                    {
+                        Predicate = e => e.Payload.MemoryEntry.Key == key && e.Payload.MemoryEntry.Namespace == targetNamespace
+                    }, token))
+                {
+                    if (envelope.Type == MemoryEventType.Updated) // Only interested in updated events
+                    {
+                        eventReceivedTcs.TrySetResult(envelope.Payload.MemoryEntry);
+                        break; // Event received, stop consuming
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                eventReceivedTcs.TrySetCanceled(token);
+            }
+            catch (Exception ex)
+            {
+                eventReceivedTcs.TrySetException(ex);
+            }
+        }, token);
+
+        // --- Synchronization Delay ---
+        await Task.Delay(30, token); // Give the subscription a moment to become active
+
+        // Act: Publish events in different namespaces
+        await memoryService.SaveMemoryAsync(key, value, @namespace: otherNamespace); // This should NOT trigger the subscription
+        await memoryService.SaveMemoryAsync(key, value, @namespace: targetNamespace); // This SHOULD trigger the subscription
+
+        // --- Assert: Wait for the event to be received ---
+        var receivedMemoryEntry = await eventReceivedTcs.Task; // Wait for the event to be signaled
+
+        receivedMemoryEntry.ShouldNotBeNull();
+        receivedMemoryEntry.Key.ShouldBe(key);
+        receivedMemoryEntry.Value.ShouldBe(value);
+        receivedMemoryEntry.Namespace.ShouldBe(targetNamespace); // Ensure it's from the target namespace
+    }
 }
