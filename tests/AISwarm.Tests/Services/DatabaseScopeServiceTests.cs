@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
+
 namespace AISwarm.Tests.Services;
 
 /// <summary>
@@ -16,6 +18,7 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly ITimeService _timeService;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     public DatabaseScopeServiceTests()
     {
@@ -29,7 +32,10 @@ public class DatabaseScopeServiceTests : IDisposable, ISystemUnderTest<MemorySer
         services.AddScoped<IDatabaseScopeService>(sp =>
             new DatabaseScopeService(sp.GetRequiredService<IDbContextFactory<CoordinationDbContext>>()));
         services.AddSingleton<ITimeService, FakeTimeService>();
-        services.AddScoped<IMemoryService, MemoryService>();
+        services.AddScoped<IMemoryService>(sp => new MemoryService(
+            sp.GetRequiredService<IDatabaseScopeService>(),
+            sp.GetRequiredService<ITimeService>(),
+            _memoryEventBus)); // Updated MemoryService registration
 
         _serviceProvider = services.BuildServiceProvider();
         _timeService = _serviceProvider.GetRequiredService<ITimeService>();

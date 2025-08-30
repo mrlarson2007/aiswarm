@@ -10,6 +10,8 @@ using Shouldly;
 using AISwarm.Infrastructure.Entities; // Add this using directive
 using AISwarm.Server.Entities; // Add this using directive
 
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
+
 namespace AISwarm.Tests.Integration;
 
 /// <summary>
@@ -20,6 +22,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
     private readonly string _databasePath;
     private readonly IServiceProvider _serviceProvider;
     private readonly FakeTimeService _timeService;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new TestEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     public WaitForMemoryKeyMcpToolIntegrationTests()
     {
@@ -45,8 +48,9 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
         _timeService = new FakeTimeService();
         services.AddSingleton<ITimeService>(_timeService);
 
-        // Add MCP tools (WaitForMemoryKeyMcpTool will be added later)
-        services.AddSingleton(sp => new WaitForMemoryKeyMcpTool(sp.GetRequiredService<IMemoryService>()));
+        // Add MCP tools
+        services.AddSingleton<WaitForMemoryKeyMcpTool>();
+        services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_memoryEventBus); // Register the TestEventBus instance
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -71,7 +75,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
     {
         // Arrange
         // This will cause a compilation error until WaitForMemoryKeyMcpTool is created
-        var waitForMemoryTool = _serviceProvider.GetRequiredService<WaitForMemoryKeyMcpTool>(); 
+        var waitForMemoryTool = _serviceProvider.GetRequiredService<WaitForMemoryKeyMcpTool>();
         const string key = "non-existent-key";
         const string @namespace = "test-namespace";
         var timeout = TimeSpan.FromSeconds(1);
@@ -108,5 +112,68 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : IDisposable
         result.MemoryEntry.Key.ShouldBe(key);
         result.MemoryEntry.Value.ShouldBe(value);
         result.MemoryEntry.Namespace.ShouldBe(@namespace);
+    }
+
+    [Fact]
+    public async Task WhenMemoryKeyIsUpdated_ShouldReturnNewValue()
+    {
+        // Arrange
+        var waitForMemoryTool = _serviceProvider.GetRequiredService<WaitForMemoryKeyMcpTool>();
+        var memoryService = _serviceProvider.GetRequiredService<IMemoryService>();
+        const string key = "update-test-key";
+        const string initialValue = "initial-value";
+        const string updatedValue = "updated-value";
+        const string @namespace = "test-namespace";
+
+        // Create the memory entry with an initial value
+        await memoryService.SaveMemoryAsync(key, initialValue, @namespace: @namespace);
+
+        // --- Event Subscription Setup (similar to ReportTaskCompletionMcpToolTests.cs) ---
+        var eventReceivedTcs = new TaskCompletionSource<MemoryEntryDto>(); // To signal when the event is received
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)); // Overall test timeout
+        var token = cts.Token;
+
+        var readTask = Task.Run(async () =>
+        {
+            try
+            {
+                // This is where WaitForMemoryKeyAsync would subscribe to events
+                // For now, we'll simulate it by directly subscribing to the TestEventBus
+                await foreach (var envelope in (_memoryEventBus as TestEventBus<MemoryEventType, IMemoryLifecyclePayload>)!.Subscribe(
+                    new EventFilter<MemoryEventType, IMemoryLifecyclePayload>
+                    {
+                        Predicate = e => e.Payload.MemoryEntry.Key == key && e.Payload.MemoryEntry.Namespace == @namespace
+                    }, token))
+                {
+                    if (envelope.Type == MemoryEventType.Updated) // Only interested in updated events
+                    {
+                        eventReceivedTcs.TrySetResult(envelope.Payload.MemoryEntry);
+                        break; // Event received, stop consuming
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                eventReceivedTcs.TrySetCanceled(token);
+            }
+            catch (Exception ex)
+            {
+                eventReceivedTcs.TrySetException(ex);
+            }
+        }, token);
+
+        // --- Synchronization Delay ---
+        await Task.Delay(30, token); // Give the subscription a moment to become active
+
+        // --- Act: Publish the event ---
+        await memoryService.SaveMemoryAsync(key, updatedValue, @namespace: @namespace);
+
+        // --- Assert: Wait for the event to be received ---
+        var receivedMemoryEntry = await eventReceivedTcs.Task; // Wait for the event to be signaled
+
+        receivedMemoryEntry.ShouldNotBeNull();
+        receivedMemoryEntry.Key.ShouldBe(key);
+        receivedMemoryEntry.Value.ShouldBe(updatedValue); // Expect the updated value
+        receivedMemoryEntry.Namespace.ShouldBe(@namespace);
     }
 }

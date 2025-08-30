@@ -41,7 +41,7 @@ public class InMemoryEventBus<TType, TPayload> : IEventBus<TType, TPayload>, IDi
             ch.Writer.TryComplete();
     }
 
-    public IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter,
+    public virtual IAsyncEnumerable<EventEnvelope<TType, TPayload>> Subscribe(EventFilter<TType, TPayload> filter,
         CancellationToken ct = default)
     {
         if (_disposed)

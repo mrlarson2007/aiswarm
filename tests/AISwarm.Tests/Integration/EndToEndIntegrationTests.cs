@@ -1,6 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Eventing;
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
 using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
@@ -20,6 +20,7 @@ public class EndToEndIntegrationTests : IDisposable
 {
     private readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
     private readonly ServiceProvider _serviceProvider;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     public EndToEndIntegrationTests()
     {
@@ -47,7 +48,10 @@ public class EndToEndIntegrationTests : IDisposable
         // Add real services
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
-        services.AddSingleton<IMemoryService, MemoryService>();
+        services.AddSingleton<IMemoryService>(sp => new MemoryService(
+            sp.GetRequiredService<IDatabaseScopeService>(),
+            sp.GetRequiredService<ITimeService>(),
+            _memoryEventBus)); // Updated MemoryService registration
         services.AddSingleton<FakeTimeService>();
         services.AddSingleton<ITimeService>(provider => provider.GetRequiredService<FakeTimeService>());
 

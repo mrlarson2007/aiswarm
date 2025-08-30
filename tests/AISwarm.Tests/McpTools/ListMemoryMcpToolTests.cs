@@ -8,12 +8,15 @@ using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using AISwarm.DataLayer.Entities;
 
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
+
 namespace AISwarm.Tests.McpTools;
 
 public class ListMemoryMcpToolTests : ISystemUnderTest<ListMemoryMcpTool>
 {
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     protected ListMemoryMcpToolTests()
     {
@@ -23,7 +26,7 @@ public class ListMemoryMcpToolTests : ISystemUnderTest<ListMemoryMcpTool>
 
         _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
-        IMemoryService memoryService = new MemoryService(_scopeService, _timeService);
+        IMemoryService memoryService = new MemoryService(_scopeService, _timeService, _memoryEventBus); // Added _memoryEventBus
         SystemUnderTest = new ListMemoryMcpTool(memoryService);
     }
 
