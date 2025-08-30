@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "aiswarm-server": {
+      "version": "1.0.0-dev",
+      "commands": [
+        "aiswarm-server"
+      ],
+      "rollForward": false
+    }
+  }
+}

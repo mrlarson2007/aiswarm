@@ -5,6 +5,17 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        
+        <!-- Tool configuration -->
+        <PackAsTool>true</PackAsTool>
+        <ToolCommandName>aiswarm-server</ToolCommandName>
+        <PackageId>aiswarm-server</PackageId>
+        <Version>1.0.0-dev</Version>
+        <Authors>AISwarm Development Team</Authors>
+        <Description>AISwarm MCP coordination server for multi-agent development workflows</Description>
+        <PackageProjectUrl>https://github.com/mrlarson2007/aiswarm</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/mrlarson2007/aiswarm</RepositoryUrl>
+        <PackageTags>mcp;coordination;multi-agent;development;aiswarm</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
