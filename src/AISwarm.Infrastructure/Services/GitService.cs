@@ -42,10 +42,10 @@ public partial class GitService(
                     {
                         // Handle both full name and suffix after repo name
                         // For "aiswarm-event-subscription-dev", try both:
-                        // 1. Full name: "aiswarm-event-subscription-dev" 
+                        // 1. Full name: "aiswarm-event-subscription-dev"
                         // 2. Suffix: "event-subscription-dev"
                         dict[fullWorktreeName] = currentWorktreePath;
-                        
+
                         var repoNamePrefix = "aiswarm-";
                         if (fullWorktreeName.StartsWith(repoNamePrefix))
                         {
