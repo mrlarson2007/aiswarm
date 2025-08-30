@@ -1,11 +1,12 @@
 using System.Text.Json;
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
 
 namespace AISwarm.Tests.McpTools;
 
@@ -14,6 +15,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
     // setup database context factory for testing, and Memory Service
     private readonly DatabaseScopeService _scopeService;
     private readonly ITimeService _timeService = new FakeTimeService();
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     protected SaveMemoryMcpToolTests()
     {
@@ -25,7 +27,7 @@ public class SaveMemoryMcpToolTests : ISystemUnderTest<SaveMemoryMcpTool>
     }
 
     public SaveMemoryMcpTool SystemUnderTest => new(
-        new MemoryService(_scopeService, _timeService));
+        new MemoryService(_scopeService, _timeService, _memoryEventBus)); // Added _memoryEventBus
 
     public class ValidationTests : SaveMemoryMcpToolTests
     {

@@ -1,6 +1,5 @@
 using System.Threading.Channels;
 using AISwarm.Infrastructure.Eventing;
-using AISwarm.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,6 +39,9 @@ public static class ServiceRegistration
         services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
             new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
         services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
+        // Add Memory Event Bus
+        services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
+            new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>());
 
         // Event logging service
         services.AddSingleton<IEventLoggerService, DatabaseEventLoggerService>();
@@ -81,6 +83,8 @@ public static class ServiceRegistration
                 new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options));
             services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
                 new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>(options));
+            services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
+                new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(options));
         }
         else
         {
@@ -88,6 +92,8 @@ public static class ServiceRegistration
                 new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
             services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
                 new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
+            services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
+                new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>());
         }
 
         // High-level notification services (after event bus configuration)

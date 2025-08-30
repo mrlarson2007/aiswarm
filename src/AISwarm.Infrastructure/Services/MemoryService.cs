@@ -2,9 +2,12 @@ using System.Text;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure.Entities;
+using AISwarm.Infrastructure.Eventing;
 using Microsoft.EntityFrameworkCore;
 
-namespace AISwarm.Infrastructure.Services;
+// Added for event bus
+
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 ///     Memory service that uses per-request transaction coordination.
@@ -12,12 +15,14 @@ namespace AISwarm.Infrastructure.Services;
 /// </summary>
 public class MemoryService(
     IDatabaseScopeService scopedDbService,
-    ITimeService timeService) : IMemoryService
+    ITimeService timeService,
+    IEventBus<MemoryEventType, IMemoryLifecyclePayload> memoryEventBus) : IMemoryService
 {
     private const string DefaultContentType = "text";
 
     private readonly IDatabaseScopeService _scopedDbService = scopedDbService;
     private readonly ITimeService _timeService = timeService;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = memoryEventBus;
 
     public async Task SaveMemoryAsync(string key, string value, string? @namespace = null, string? type = null,
         string? metadata = null)
@@ -49,6 +54,10 @@ public class MemoryService(
                 AccessCount = 0
             };
             scope.MemoryEntries.Add(entity);
+            await scope.SaveChangesAsync(); // Save changes before publishing to ensure entity has ID
+            await _memoryEventBus.PublishAsync(new EventEnvelope<MemoryEventType, IMemoryLifecyclePayload>(
+                MemoryEventType.Created, _timeService.UtcNow, new MemoryCreatedPayload(new MemoryEntryDto( // Added _timeService.UtcNow
+                    entity.Key, entity.Value, entity.Namespace, entity.Type, entity.Size, entity.Metadata))));
         }
         else
         {
@@ -57,9 +66,11 @@ public class MemoryService(
             entity.Metadata = metadata ?? entity.Metadata;
             entity.Size = valueBytes.Length;
             entity.LastUpdatedAt = now;
+            await scope.SaveChangesAsync(); // Save changes before publishing to ensure entity has updated values
+            await _memoryEventBus.PublishAsync(new EventEnvelope<MemoryEventType, IMemoryLifecyclePayload>(
+                MemoryEventType.Updated, _timeService.UtcNow, new MemoryUpdatedPayload(new MemoryEntryDto( // Added _timeService.UtcNow
+                    entity.Key, entity.Value, entity.Namespace, entity.Type, entity.Size, entity.Metadata))));
         }
-
-        await scope.SaveChangesAsync();
 
         // Complete transaction - this will be cached until DI scope disposal
         await _scopedDbService.CompleteAsync();
@@ -106,5 +117,24 @@ public class MemoryService(
 
         // Complete transaction
         await _scopedDbService.CompleteAsync();
+    }
+
+    public async Task<IEnumerable<MemoryEntryDto>> ListMemoryAsync(string @namespace)
+    {
+        var scope = _scopedDbService.GetReadScope();
+        var namespaceName = @namespace ?? "";
+
+        var entities = await scope.MemoryEntries
+            .AsNoTracking()
+            .Where(m => m.Namespace == namespaceName)
+            .ToListAsync();
+
+        return entities.Select(entity => new MemoryEntryDto(
+            entity.Key,
+            entity.Value,
+            entity.Namespace,
+            entity.Type,
+            entity.Size,
+            entity.Metadata));
     }
 }

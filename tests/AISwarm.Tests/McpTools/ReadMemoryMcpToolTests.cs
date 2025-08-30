@@ -2,11 +2,12 @@ using System.Text;
 using AISwarm.DataLayer;
 using AISwarm.DataLayer.Entities;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Services;
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
 
 namespace AISwarm.Tests.McpTools;
 
@@ -14,6 +15,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 {
     private readonly IDatabaseScopeService _scopeService;
     private readonly FakeTimeService _timeService;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     protected ReadMemoryMcpToolTests()
     {
@@ -23,7 +25,7 @@ public class ReadMemoryMcpToolTests : ISystemUnderTest<ReadMemoryMcpTool>
 
         _timeService = new FakeTimeService();
         _scopeService = new DatabaseScopeService(new TestDbContextFactory(options));
-        IMemoryService memoryService = new MemoryService(_scopeService, _timeService);
+        IMemoryService memoryService = new MemoryService(_scopeService, _timeService, _memoryEventBus); // Added _memoryEventBus
         SystemUnderTest = new ReadMemoryMcpTool(memoryService);
     }
 
