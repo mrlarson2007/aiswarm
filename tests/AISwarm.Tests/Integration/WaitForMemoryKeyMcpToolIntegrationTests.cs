@@ -52,10 +52,9 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         // This will cause a compilation error until WaitForMemoryKeyMcpTool is created
         const string key = "non-existent-key";
         const string @namespace = "test-namespace";
-        var timeout = TimeSpan.FromSeconds(1);
 
         // Act
-        WaitForMemoryKeyResult result = await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, @namespace, timeout); // Update return type
+        WaitForMemoryKeyResult result = await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, @namespace, 1000); // Update return type
 
         // Assert
         result.ShouldNotBeNull();
@@ -79,7 +78,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         // Act
         // The current implementation of WaitForMemoryKeyAsync will still just delay and return failure
         // This will make the test fail, which is the RED state.
-        var result = await SystemUnderTest.WaitForMemoryKeyCreationAsync(key, @namespace, TimeSpan.FromSeconds(1));
+        var result = await SystemUnderTest.WaitForMemoryKeyCreationAsync(key, @namespace, 1000);
 
         // Assert
         result.Success.ShouldBeTrue();
@@ -102,7 +101,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         var token = cts.Token;
 
         var readTask = Task.Run(async () =>
-            await SystemUnderTest.WaitForMemoryKeyCreationAsync(key, @namespace, TimeSpan.FromSeconds(10)));
+            await SystemUnderTest.WaitForMemoryKeyCreationAsync(key, @namespace, 10000));
         await Task.Delay(30, token); // Give the subscription a moment to become active
 
         // --- Act: Publish the event ---
@@ -136,7 +135,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         var token = cts.Token;
 
         var readTask = Task.Run(async () =>
-            await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, @namespace, TimeSpan.FromSeconds(10)));
+            await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, @namespace, 10000));
 
         // --- Synchronization Delay ---
         await Task.Delay(30, token); // Give the subscription a moment to become active
@@ -172,7 +171,7 @@ public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForM
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Overall test timeout[]
 
         var readTask = Task.Run(async () =>
-            await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, targetNamespace, TimeSpan.FromSeconds(10)), cts.Token);
+            await SystemUnderTest.WaitForMemoryKeyUpdateAsync(key, targetNamespace, 10000), cts.Token);
         await Task.Delay(30, cts.Token); // Give the subscription a moment to become active
 
         // Act: Publish events in different namespaces
