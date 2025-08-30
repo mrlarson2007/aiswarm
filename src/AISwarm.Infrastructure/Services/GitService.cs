@@ -68,8 +68,19 @@ public partial class GitService(
 
         var repoName = Path.GetFileName(repoRoot);
         var worktreePath = Path.Combine(repoParent, $"{repoName}-{name}");
+        
+        // If directory exists, check if it's already listed as a worktree
         if (fileSystem.DirectoryExists(worktreePath))
-            throw new InvalidOperationException($"Directory already exists: {worktreePath}");
+        {
+            if (existing.ContainsValue(worktreePath))
+            {
+                logger.Info($"Worktree '{name}' already exists at: {worktreePath}");
+                return worktreePath;
+            }
+            
+            // Directory exists but is not a worktree - this should be allowed for multiple agents
+            logger.Info($"Directory exists but is not a git worktree, will create worktree: {worktreePath}");
+        }
 
         var command = $"worktree add \"{worktreePath}\"" +
                       (string.IsNullOrEmpty(baseBranch) ? "" : $" \"{baseBranch}\"");
