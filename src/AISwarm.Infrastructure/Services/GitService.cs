@@ -61,7 +61,7 @@ public partial class GitService(
 
         var existing = await GetExistingWorktreesAsync();
         if (existing.TryGetValue(name, out var existingPath))
-            throw new InvalidOperationException($"Worktree '{name}' already exists at: {existingPath}");
+            return existingPath;
 
         var repoParent = Path.GetDirectoryName(repoRoot) ??
                          throw new InvalidOperationException("Could not determine repository parent directory");

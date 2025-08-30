@@ -240,7 +240,7 @@ public class LaunchAgentCommandHandlerTests
         }
 
         [Fact]
-        public async Task WhenWorktreeAlreadyExists_ShouldLogErrorAndAbort()
+        public async Task WhenWorktreeAlreadyExists_ShouldSucceed()
         {
             var porcelain = "worktree /repo/worktrees/feature_dup\nbranch refs/heads/feature_dup\n";
             _process.Enqueue("git", a => a.StartsWith("rev-parse --git-dir"),
@@ -249,6 +249,9 @@ public class LaunchAgentCommandHandlerTests
                 new ProcessResult(true, "/repo", string.Empty, 0));
             _process.Enqueue("git", a => a.StartsWith("worktree list"),
                 new ProcessResult(true, porcelain, string.Empty, 0));
+            _context.Setup(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync("/repo/worktrees/feature_dup/planner_context.md");
+            _fs.AddFile("/repo/worktrees/feature_dup/planner_context.md");
 
             var result = await SystemUnderTest.RunAsync(
                 "planner",
@@ -256,13 +259,10 @@ public class LaunchAgentCommandHandlerTests
                 "feature_dup",
                 null,
                 false);
-            result.ShouldBeFalse();
+            result.ShouldBeTrue();
 
-            _logger.Errors.ShouldContain(e => e.Contains("already exists"));
-            _context.Verify(c => c.CreateContextFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-
-            // Should not have launched any Gemini processes since worktree already exists
-            _process.Invocations.ShouldNotContain(i => i.File == "pwsh.exe" && i.Arguments.Contains("gemini"));
+            _logger.Errors.ShouldNotContain(e => e.Contains("already exists"));
+            _context.Verify(c => c.CreateContextFile("planner", "/repo/worktrees/feature_dup"), Times.Once);
         }
 
         [Fact]
