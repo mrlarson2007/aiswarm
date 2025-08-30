@@ -1,7 +1,6 @@
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using AISwarm.Infrastructure.Eventing;
-using AISwarm.Infrastructure.Services;
+using AISwarm.Infrastructure.Eventing; // Added for InMemoryEventBus and event types
 using AISwarm.Server.McpTools;
 using AISwarm.Tests.TestDoubles;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +19,7 @@ public class EndToEndIntegrationTests : IDisposable
 {
     private readonly IDbContextFactory<CoordinationDbContext> _dbContextFactory;
     private readonly ServiceProvider _serviceProvider;
+    private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus = new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(); // Added
 
     public EndToEndIntegrationTests()
     {
@@ -47,7 +47,10 @@ public class EndToEndIntegrationTests : IDisposable
         // Add real services
         services.AddSingleton<IDatabaseScopeService, DatabaseScopeService>();
         services.AddSingleton<ILocalAgentService, LocalAgentService>();
-        services.AddSingleton<IMemoryService, MemoryService>();
+        services.AddSingleton<IMemoryService>(sp => new MemoryService(
+            sp.GetRequiredService<IDatabaseScopeService>(),
+            sp.GetRequiredService<ITimeService>(),
+            _memoryEventBus)); // Updated MemoryService registration
         services.AddSingleton<FakeTimeService>();
         services.AddSingleton<ITimeService>(provider => provider.GetRequiredService<FakeTimeService>());
 
@@ -73,6 +76,7 @@ public class EndToEndIntegrationTests : IDisposable
         services.AddTransient<ReportTaskCompletionMcpTool>();
         services.AddTransient<SaveMemoryMcpTool>();
         services.AddTransient<ReadMemoryMcpTool>();
+        services.AddTransient<ListMemoryMcpTool>();
         services.AddTransient<AgentManagementMcpTool>();
 
 
@@ -312,5 +316,55 @@ public class EndToEndIntegrationTests : IDisposable
         var readResult = await readMemoryTool.ReadMemoryAsync("key1");
         readResult.Success.ShouldBeTrue();
         readResult.Value.ShouldBe("value1");
+    }
+
+    [Fact]
+    public async Task WhenMemoryEntriesExist_ShouldListThemCorrectly()
+    {
+        var agentTool = _serviceProvider.GetRequiredService<AgentManagementMcpTool>();
+        var saveMemoryTool = _serviceProvider.GetRequiredService<SaveMemoryMcpTool>();
+        var listMemoryTool = _serviceProvider.GetRequiredService<ListMemoryMcpTool>();
+
+        // launch agent (needed for agentId in SaveMemory)
+        var persona = "implementer";
+        var launchResult = await agentTool.LaunchAgentAsync(persona, "Test implementer agent for memory listing");
+        launchResult.Success.ShouldBeTrue();
+        var agentId = launchResult.AgentId!;
+        agentId.ShouldNotBeNullOrEmpty();
+
+        // Scenario 1: Default Namespace
+        await saveMemoryTool.SaveMemory("defaultKey1", "defaultValue1");
+        await saveMemoryTool.SaveMemory("defaultKey2", "defaultValue2", metadata: "{\"some\":\"data\"}");
+
+        var defaultListResult = await listMemoryTool.ListMemoryAsync(string.Empty); // null for default namespace
+        defaultListResult.Success.ShouldBeTrue();
+        defaultListResult.Entries.ShouldNotBeNull();
+        defaultListResult.Entries.Count.ShouldBeGreaterThanOrEqualTo(2); // May contain other test data
+        defaultListResult.Entries.ShouldContain(m => m.Key == "defaultKey1" && m.Value == "defaultValue1" && m.Namespace == "");
+        defaultListResult.Entries.ShouldContain(m => m.Key == "defaultKey2" && m.Value == "defaultValue2" && m.Namespace == "" && m.Metadata == "{\"some\":\"data\"}");
+
+        // Scenario 2: Specific Namespace
+        const string testNamespace = "myTestNamespace";
+        await saveMemoryTool.SaveMemory("nsKey1", "nsValue1", @namespace: testNamespace);
+        await saveMemoryTool.SaveMemory("nsKey2", "nsValue2", @namespace: testNamespace, type: "json");
+
+        var nsListResult = await listMemoryTool.ListMemoryAsync(testNamespace);
+        nsListResult.Success.ShouldBeTrue();
+        nsListResult.Entries.ShouldNotBeNull();
+        nsListResult.Entries.Count.ShouldBe(2);
+        nsListResult.Entries.ShouldContain(m => m.Key == "nsKey1" && m.Value == "nsValue1" && m.Namespace == testNamespace && m.Type == "text");
+        nsListResult.Entries.ShouldContain(m => m.Key == "nsKey2" && m.Value == "nsValue2" && m.Namespace == testNamespace && m.Type == "json");
+
+        // Scenario 3: Empty Namespace (no entries)
+        var emptyNsListResult = await listMemoryTool.ListMemoryAsync("nonExistentNamespace");
+        emptyNsListResult.Success.ShouldBeTrue();
+        emptyNsListResult.Entries.ShouldBeEmpty();
+
+        // Scenario 4: Different Data Types (already covered in specific namespace, but can add more explicit checks)
+        await saveMemoryTool.SaveMemory("binaryKey", "someBinaryData", type: "binary");
+        var binaryListResult = await listMemoryTool.ListMemoryAsync(string.Empty);
+        binaryListResult.Success.ShouldBeTrue();
+        binaryListResult.Entries.ShouldNotBeNull();
+        binaryListResult.Entries.ShouldContain(m => m.Key == "binaryKey" && m.Value == "someBinaryData" && m.Type == "binary");
     }
 }
