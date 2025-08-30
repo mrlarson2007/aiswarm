@@ -4,9 +4,18 @@ namespace AISwarm.Server.Entities;
 
 public class ListMemoryResult
 {
-    public bool Success { get; init; }
-    public string? ErrorMessage { get; init; }
-    public List<MemoryEntryDto>? Entries { get; init; }
+    public bool Success
+    {
+        get; init;
+    }
+    public string? ErrorMessage
+    {
+        get; init;
+    }
+    public List<MemoryEntryDto>? Entries
+    {
+        get; init;
+    }
 
     public static ListMemoryResult Failure(string message)
     {

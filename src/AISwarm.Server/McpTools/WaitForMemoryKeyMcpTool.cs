@@ -21,9 +21,9 @@ namespace AISwarm.Server.McpTools
         [McpServerTool(Name = "wait_for_memory_key_creation")]
         [Description("Tool to wait for a memory key to be created")]
         public async Task<WaitForMemoryKeyResult> WaitForMemoryKeyCreationAsync(
-            [Description("Key for the memory entry")]string key,
-            [Description("Namespace for the memory entry")]string @namespace,
-            [Description("Timeout duration to wait for the memory key creation in milliseconds, optional parameter")]long timeoutMs = 30000)
+            [Description("Key for the memory entry")] string key,
+            [Description("Namespace for the memory entry")] string @namespace,
+            [Description("Timeout duration to wait for the memory key creation in milliseconds, optional parameter")] long timeoutMs = 30000)
         {
             // 1. Check if the key already exists
             var existingMemory = await memoryService.ReadMemoryAsync(key, @namespace);
@@ -72,9 +72,9 @@ namespace AISwarm.Server.McpTools
         [McpServerTool(Name = "wait_for_memory_key_update")]
         [Description("Tool to wait for a memory key to be updated")]
         public async Task<WaitForMemoryKeyResult> WaitForMemoryKeyUpdateAsync(
-            [Description("Key for the memory entry")]string key,
-            [Description("Namespace for the memory entry")]string @namespace,
-            [Description("Timeout duration to wait for the memory key creation in milliseconds, optional parameter")]long timeoutMs = 30000)
+            [Description("Key for the memory entry")] string key,
+            [Description("Namespace for the memory entry")] string @namespace,
+            [Description("Timeout duration to wait for the memory key creation in milliseconds, optional parameter")] long timeoutMs = 30000)
         {
             // Always subscribe to Update events and wait for changes
             var filter = new EventFilter<MemoryEventType, IMemoryLifecyclePayload>

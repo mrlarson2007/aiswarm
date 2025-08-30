@@ -4,5 +4,8 @@ namespace AISwarm.Infrastructure.Eventing;
 
 public interface IMemoryLifecyclePayload : IEventPayload
 {
-    MemoryEntryDto MemoryEntry { get; }
+    MemoryEntryDto MemoryEntry
+    {
+        get;
+    }
 }
