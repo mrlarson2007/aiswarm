@@ -18,7 +18,6 @@ namespace AISwarm.Tests.Integration;
 /// </summary>
 public class WaitForMemoryKeyMcpToolIntegrationTests : ISystemUnderTest<WaitForMemoryKeyMcpTool>
 {
-    // Removed unused field: private readonly FakeTimeService _timeService;
     private readonly MemoryService _memoryService;
     private readonly IEventBus<MemoryEventType, IMemoryLifecyclePayload> _memoryEventBus;
 
