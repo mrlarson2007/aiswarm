@@ -473,3 +473,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 Made with ❤️ for AI-powered development workflows
+
+## 📚 Documentation & Plans
+
+The following documents capture the current architecture, integration plans, and code samples for the A2A library approach and Gemini CLI integration:
+
+- Implementation
+- `docs/implementation/MASTER_IMPLEMENTATION_ROADMAP.md`
+- `docs/implementation/MASTER_BRANCH_TRANSFER_SUMMARY.md`
+- `docs/implementation/GEMINI_CLI_FORK_INTEGRATION_PLAN.md`
+- `docs/implementation/A2A_SCHEMA_MIGRATION_PLAN.md`
+- `docs/implementation/GEMINI_CLI_CODE_SAMPLES.md`
+- `docs/implementation/A2A_SERVER_CODE_SAMPLES.md`
+
+- System Design
+- `docs/system-design/A2A_IMPLEMENTATION_ROADMAP.md`
+- `docs/system-design/A2A_MCP_UNIFIED_INTEGRATION_PLAN.md`
+- `docs/system-design/A2A_PRODUCTION_INTEGRATION_PLAN.md`
+- `docs/system-design/GEMINI_CLI_A2A_CLIENT_PLAN.md`
+- `docs/system-design/GEMINI_CLI_A2A_IMPLEMENTATION_SUMMARY.md`
+- `docs/system-design/GEMINI_A2A_INTEGRATION_SUMMARY.md`
+- `docs/system-design/VECTOR_EMBEDDINGS_INTEGRATION_PLAN.md`
+- `docs/system-design/ACCELERATED_VECTOR_INTEGRATION_PLAN.md`
+
+- Features
+- `docs/features/EMBEDDING_SETUP_GUIDE.md`
+
+These are the canonical references for the unified MCP + A2A architecture and will be kept current as we implement the A2A library within `AISwarm.Server`.
