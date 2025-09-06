@@ -377,7 +377,7 @@ public class A2AAgentLauncher
         var processInfo = new ProcessStartInfo
         {
             FileName = "npx",
-            Arguments = $"@google/generative-ai-cli --config \"{configPath}\"",
+            Arguments = $"a2a-gemini-agent --config \"{configPath}\"",
             WorkingDirectory = worktreePath,
             UseShellExecute = false,
             CreateNoWindow = false
