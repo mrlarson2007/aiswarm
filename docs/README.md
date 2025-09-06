@@ -17,12 +17,9 @@ Core architectural documentation, database schemas, and foundational design deci
 
 ### A2A Integration
 
-- [A2A Integration Summary](A2A_INTEGRATION_SUMMARY.md) - Executive overview of Agent-to-Agent protocol integration
-- [A2A Architecture Proposal](A2A_ARCHITECTURE_PROPOSAL.md) - Core architectural design for correct A2A implementation
-- [A2A Implementation Plan](A2A_IMPLEMENTATION_PLAN.md) - 4-phase roadmap for A2A integration
-- [A2A Push Architecture](A2A_PUSH_ARCHITECTURE.md) - Push-based task delivery design eliminating polling
-- [A2A Revised Strategy](A2A_REVISED_STRATEGY.md) - Updated strategic approach based on correct A2A understanding
-- [A2A Enhanced Architecture](A2A_ENHANCED_ARCHITECTURE.md) - Task dependencies, response tracking, and mixed agent environments
+- [A2A System Design](A2A_SYSTEM_DESIGN.md) - Consolidated architecture and design for Agent-to-Agent protocol
+- [A2A Implementation Guide](A2A_IMPLEMENTATION_GUIDE.md) - Step-by-step guide for implementing A2A integration
+- [A2A Integration Plan](A2A_INTEGRATION_PLAN.md) - Roadmap and phases for A2A integration
 
 ### Database
 
