@@ -7,6 +7,8 @@
 
 A comprehensive multi-agent coordination platform featuring both CLI tools for launching specialized AI agents and an MCP (Model Context Protocol) server for real-time agent task coordination and management.
 
+> **🚀 A2A Integration Coming Soon**: We're implementing Agent-to-Agent (A2A) protocol support for push-based task delivery and direct agent communication. See [A2A Integration Plan](./docs/A2A_INTEGRATION_SUMMARY.md) for details.
+
 ## 🚀 Core Components
 
 ### 1. Agent Launcher CLI
@@ -495,6 +497,34 @@ The following documents capture the current architecture, integration plans, and
 - `docs/system-design/GEMINI_A2A_INTEGRATION_SUMMARY.md`
 - `docs/system-design/VECTOR_EMBEDDINGS_INTEGRATION_PLAN.md`
 - `docs/system-design/ACCELERATED_VECTOR_INTEGRATION_PLAN.md`
+
+## 🔄 Roadmap: A2A Integration
+
+AgentSwarm is evolving to support the Agent-to-Agent (A2A) protocol for next-generation multi-agent collaboration:
+
+### Current Architecture (MCP-based)
+- MCP server for task orchestration
+- Polling-based agent task retrieval
+- Manual agent coordination
+
+### Future Architecture (MCP + A2A)
+- **Push-based Task Delivery**: Immediate task dispatch via A2A protocol (zero latency vs. 5-30 second polling)
+- **Agent-to-Agent Communication**: Direct communication between specialized agents
+- **Dynamic Agent Discovery**: Automatic discovery of available agents and their capabilities
+- **Enhanced Performance**: 90% reduction in database queries, 300% throughput increase
+
+### Implementation Phases
+1. **A2A Client Integration**: Add A2A client to AgentSwarm server for task dispatch
+2. **A2A Agent Package**: Create reusable package for making gemini agents A2A-capable
+3. **Push-based Dispatch**: Replace polling with immediate task delivery
+4. **Agent Specialization**: Enable delegation to specialized agents (security, testing, documentation)
+
+For detailed design and implementation plans, see:
+- [A2A Integration Summary](./docs/A2A_INTEGRATION_SUMMARY.md)
+- [A2A Implementation Plan](./docs/A2A_IMPLEMENTATION_PLAN.md)
+- [A2A Push Architecture](./docs/A2A_PUSH_ARCHITECTURE.md)
+
+---
 
 - Features
 - `docs/features/EMBEDDING_SETUP_GUIDE.md`
