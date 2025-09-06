@@ -520,9 +520,9 @@ AgentSwarm is evolving to support the Agent-to-Agent (A2A) protocol for next-gen
 4. **Agent Specialization**: Enable delegation to specialized agents (security, testing, documentation)
 
 For detailed design and implementation plans, see:
-- [A2A Integration Summary](./docs/A2A_INTEGRATION_SUMMARY.md)
+- [A2A System Design](./docs/A2A_SYSTEM_DESIGN.md)
+- [A2A Implementation Guide](./docs/A2A_IMPLEMENTATION_GUIDE.md)
 - [A2A Integration Plan](./docs/A2A_INTEGRATION_PLAN.md)
-- [A2A Push Architecture](./docs/A2A_PUSH_ARCHITECTURE.md)
 
 ---
 
