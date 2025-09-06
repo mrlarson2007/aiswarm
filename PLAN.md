@@ -390,5 +390,5 @@ After initial implementation attempts, we've clarified that A2A is designed for 
 - **Flexibility**: Agent discovery and dynamic task delegation
 - **Real-time**: Immediate task notification and status updates
 
-See `/docs/A2A_INTEGRATION_SUMMARY.md` for complete architectural overview.
+See `/docs/A2A_SYSTEM_DESIGN.md` for complete architectural overview.
 
