@@ -7,7 +7,7 @@
 
 A comprehensive multi-agent coordination platform featuring both CLI tools for launching specialized AI agents and an MCP (Model Context Protocol) server for real-time agent task coordination and management.
 
-> **🚀 A2A Integration Coming Soon**: We're implementing Agent-to-Agent (A2A) protocol support for push-based task delivery and direct agent communication. See [A2A Integration Plan](./docs/A2A_INTEGRATION_SUMMARY.md) for details.
+> **🚀 A2A Integration Coming Soon**: We're implementing Agent-to-Agent (A2A) protocol support for push-based task delivery and direct agent communication. See [A2A Integration Plan](./docs/A2A_INTEGRATION_PLAN.md) for details.
 
 ## 🚀 Core Components
 
