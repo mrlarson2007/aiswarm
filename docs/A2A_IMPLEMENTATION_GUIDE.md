@@ -363,7 +363,8 @@ public class A2AAgentLauncher
         
         if (File.Exists(personaSourcePath))
         {
-            await File.CopyAsync(personaSourcePath, personaDestPath);
+            var bytes = await File.ReadAllBytesAsync(personaSourcePath);
+            await File.WriteAllBytesAsync(personaDestPath, bytes);
         }
         else
         {
