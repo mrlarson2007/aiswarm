@@ -86,9 +86,13 @@ else
     echo -e "${NC}  No existing tool to uninstall${NC}"
 fi
 
+# Determine version from csproj
+VERSION=$(grep -oP '<Version>\K[^<]+' "src/AISwarm.Server/AISwarm.Server.csproj" | head -n1)
+[ -z "$VERSION" ] && VERSION="1.0.0-dev"
+
 # Step 5: Install the new tool locally
-echo -e "${YELLOW}📥 Installing local tool...${NC}"
-if ! dotnet tool install aiswarm-server --local --version "1.0.1-dev" --add-source "$TOOLS_PACKAGES_DIR"; then
+echo -e "${YELLOW}📥 Installing local tool (version ${VERSION})...${NC}"
+if ! dotnet tool install aiswarm-server --local --version "$VERSION" --add-source "$TOOLS_PACKAGES_DIR"; then
     echo -e "${RED}❌ Tool installation failed!${NC}"
     exit 1
 fi

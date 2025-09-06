@@ -82,29 +82,30 @@ if (Test-Path $McpServerCsprojPath) {
             Write-Host "  Version incremented: $currentVersion → $newVersion" -ForegroundColor Gray
             $toolVersion = $newVersion
         } else {
-            Write-Host "⚠️  Could not parse version format, using current: $currentVersion" -ForegroundColor Orange
+            Write-Host "⚠️  Could not parse version format, using current: $currentVersion" -ForegroundColor DarkYellow
             $toolVersion = $currentVersion
         }
     } else {
-        Write-Host "⚠️  Could not find version in csproj, using default" -ForegroundColor Orange
+    Write-Host "⚠️  Could not find version in csproj, using default" -ForegroundColor DarkYellow
         $toolVersion = "1.0.0-dev"
     }
 } else {
-    Write-Host "⚠️  AISwarm.Server.csproj not found, using default version" -ForegroundColor Orange
+    Write-Host "⚠️  AISwarm.Server.csproj not found, using default version" -ForegroundColor DarkYellow
     $toolVersion = "1.0.0-dev"
 }
 
 # Step 1: Clean build if requested
 if ($Clean) {
     Write-Host "🧹 Cleaning build artifacts..." -ForegroundColor Yellow
-    Get-ChildItem -Path $ProjectRoot -Recurse -Directory -Name "bin", "obj" | 
-        ForEach-Object { 
-            $fullPath = Join-Path $ProjectRoot $_
-            if (Test-Path $fullPath) {
-                Remove-Item $fullPath -Recurse -Force
-                Write-Host "  Removed: $fullPath" -ForegroundColor Gray
-            }
+    Get-ChildItem -Path $ProjectRoot -Recurse -Directory | Where-Object { $_.Name -in @('bin','obj') } | ForEach-Object {
+        $fullPath = $_.FullName
+        try {
+            Remove-Item $fullPath -Recurse -Force -ErrorAction Stop
+            Write-Host "  Removed: $fullPath" -ForegroundColor Gray
+        } catch {
+            Write-Host "  ⚠️  Could not remove: $fullPath ($_ )" -ForegroundColor DarkYellow
         }
+    }
 }
 
 # Step 2: Run tests (unless skipped)
@@ -119,14 +120,24 @@ if (-not $SkipTests) {
 }
 
 # Step 3: Build and package the tool
-Write-Host "📦 Building and packaging AISwarm.Server..." -ForegroundColor Yellow
+Write-Host "�️  Building AISwarm.Server (Release)..." -ForegroundColor Yellow
+dotnet build $McpServerCsprojPath -c Release -v:minimal
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Build failed!" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "📦 Packing AISwarm.Server as dotnet tool..." -ForegroundColor Yellow
 if (-not (Test-Path $ToolsPackagesDir)) {
     New-Item -ItemType Directory -Path $ToolsPackagesDir -Force | Out-Null
 }
 
-$packResult = dotnet pack "src\AISwarm.Server\AISwarm.Server.csproj" -o $ToolsPackagesDir --configuration Release --force
+$packResult = dotnet pack $McpServerCsprojPath -o $ToolsPackagesDir --configuration Release --force -v:normal 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Package build failed!" -ForegroundColor Red
+    Write-Host "--- dotnet pack output ---" -ForegroundColor DarkYellow
+    Write-Host $packResult
+    Write-Host "--------------------------" -ForegroundColor DarkYellow
     exit 1
 }
 Write-Host "✅ Package built successfully!" -ForegroundColor Green
@@ -167,10 +178,10 @@ if (Test-Path $McpConfigPath) {
         Set-Content -Path $McpConfigPath -Value $jsonOutput -Encoding UTF8
         Write-Host "✅ Updated .vscode\mcp.json to use local tool" -ForegroundColor Green
     } else {
-        Write-Host "⚠️  No 'aiswarm' server found in MCP config - you may need to add it manually" -ForegroundColor Orange
+        Write-Host "⚠️  No 'aiswarm' server found in MCP config - you may need to add it manually" -ForegroundColor DarkYellow
     }
 } else {
-    Write-Host "⚠️  MCP config file not found - creating basic configuration..." -ForegroundColor Orange
+    Write-Host "⚠️  MCP config file not found - creating basic configuration..." -ForegroundColor DarkYellow
     $newMcpConfig = @{
         servers = @{
             aiswarm = @{

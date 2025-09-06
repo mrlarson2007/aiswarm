@@ -12,8 +12,8 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<IGeminiService, GeminiService>();
-        services.AddSingleton<IAgentStateService, AgentStateService>();
-        services.AddSingleton<ILocalAgentService, LocalAgentService>();
+        services.AddScoped<IAgentStateService, AgentStateService>();
+        services.AddScoped<ILocalAgentService, LocalAgentService>();
         services.AddSingleton<IContextService, ContextService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
         services.AddSingleton<IProcessLauncher, ProcessLauncher>();
@@ -44,7 +44,7 @@ public static class ServiceRegistration
             new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>());
 
         // Event logging service
-        services.AddSingleton<IEventLoggerService, DatabaseEventLoggerService>();
+        services.AddScoped<IEventLoggerService, DatabaseEventLoggerService>();
 
         return services;
     }
@@ -101,7 +101,7 @@ public static class ServiceRegistration
         services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
 
         // Event logging service
-        services.AddSingleton<IEventLoggerService, DatabaseEventLoggerService>();
+        services.AddScoped<IEventLoggerService, DatabaseEventLoggerService>();
 
         return services;
     }
