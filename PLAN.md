@@ -345,3 +345,50 @@ Note: `get_agent_status` removed as redundant with `list_agents` functionality.
 - CI/CD pipelines: Automated releases  
 - Infrastructure as Code: Deployment automation
 
+---
+
+## A2A Integration Roadmap (Agent-to-Agent Protocol)
+
+### Current Understanding ✅
+
+After initial implementation attempts, we've clarified that A2A is designed for **agent-to-agent client communication**, not hosting server endpoints. The correct architecture uses:
+
+- **A2AClient** for direct agent-to-agent messaging
+- **A2ACardResolver** for agent discovery
+- **Push-based task delivery** eliminating polling inefficiencies
+
+### Implementation Strategy
+
+#### Phase 1: Foundation (Weeks 1-2)
+
+- Database schema extensions for A2A metadata
+- A2A .NET SDK integration and client setup
+- Basic agent discovery implementation
+
+#### Phase 2: Core Communication (Weeks 3-4)
+
+- Direct agent-to-agent messaging
+- Task dispatch service for push delivery
+- MCP tool enhancements for A2A integration
+
+#### Phase 3: Enhanced Features (Weeks 5-6)
+
+- Multi-agent conversations and collaboration
+- Performance optimizations and monitoring
+- Comprehensive testing and validation
+
+#### Phase 4: Production Ready (Weeks 7-8)
+
+- Documentation and deployment guides
+- Migration from polling to push-based architecture
+- Performance benchmarking and optimization
+
+### Key Benefits
+
+- **Performance**: Eliminates polling overhead with push-based delivery
+- **Scalability**: Direct agent communication without central bottlenecks  
+- **Flexibility**: Agent discovery and dynamic task delegation
+- **Real-time**: Immediate task notification and status updates
+
+See `/docs/A2A_SYSTEM_DESIGN.md` for complete architectural overview.
+

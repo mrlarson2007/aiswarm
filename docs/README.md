@@ -15,6 +15,12 @@ Core architectural documentation, database schemas, and foundational design deci
 - [Event-Driven Architecture](system-design/event-driven-architecture.md) - InMemoryEventBus and notification services documentation
 - [API Documentation](system-design/api-documentation.md) - Comprehensive API reference with configuration options
 
+### A2A Integration
+
+- [A2A System Design](A2A_SYSTEM_DESIGN.md) - Consolidated architecture and design for Agent-to-Agent protocol
+- [A2A Implementation Guide](A2A_IMPLEMENTATION_GUIDE.md) - Step-by-step guide for implementing A2A integration
+- [A2A Integration Plan](A2A_INTEGRATION_PLAN.md) - Roadmap and phases for A2A integration
+
 ### Database
 
 - [Migration Scripts](system-design/migration-scripts/) - Database schema and migration files
