@@ -521,7 +521,7 @@ AgentSwarm is evolving to support the Agent-to-Agent (A2A) protocol for next-gen
 
 For detailed design and implementation plans, see:
 - [A2A Integration Summary](./docs/A2A_INTEGRATION_SUMMARY.md)
-- [A2A Implementation Plan](./docs/A2A_IMPLEMENTATION_PLAN.md)
+- [A2A Integration Plan](./docs/A2A_INTEGRATION_PLAN.md)
 - [A2A Push Architecture](./docs/A2A_PUSH_ARCHITECTURE.md)
 
 ---
