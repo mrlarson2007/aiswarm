@@ -44,3 +44,4 @@ src/AISwarm.Server/.aiswarm/aiswarm.db
 **/TestResults/
 **/*.trx
 **/coverage/
+tools-packages/
