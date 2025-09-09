@@ -55,14 +55,34 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
             int? port = null;
             string? model = null;
 
-            
-
             // Act
             var result = await SystemUnderTest.LaunchA2AAgentAsync(agentName, description, port, model);
 
             // Assert
             result.Success.ShouldBeFalse();
             result.ErrorMessage.ShouldContain("AISwarm.TestAgent.exe not found");
+            _fakeProcessLauncher.LaunchedProcesses.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task WhenPortIsInvalid_ShouldReturnFailureResult()
+        {
+            // Arrange
+            var agentName = "test-agent";
+            var description = "Test description";
+            int? invalidPort = -1; // Example of an invalid port
+            string? model = null;
+
+            // Ensure executable exists so port validation is reached
+            var executablePath = Path.Combine("tools-packages", "AISwarm.TestAgent.exe");
+            _fakeFileSystemService.AddFile(executablePath);
+
+            // Act
+            var result = await SystemUnderTest.LaunchA2AAgentAsync(agentName, description, invalidPort, model);
+
+            // Assert
+            result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldContain("Invalid port number");
             _fakeProcessLauncher.LaunchedProcesses.ShouldBeEmpty();
         }
     }

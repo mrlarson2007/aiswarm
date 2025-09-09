@@ -2,6 +2,7 @@ using System.ComponentModel;
 using AISwarm.Infrastructure;
 using AISwarm.Shared.Models;
 using ModelContextProtocol.Server;
+using System.IO;
 
 namespace AISwarm.Server.McpTools;
 
@@ -34,17 +35,24 @@ public class LaunchA2AAgentTool
         [Description("Optional model for the agent (default 'gemini-1.5-flash')")]
         string? model)
     {
-        // Minimal implementation to make the test fail as expected
+        // Validate agent name
         if (string.IsNullOrEmpty(agentName))
         {
             return LaunchA2AAgentResult.Failure("Agent name is required.");
         }
 
+        // Validate executable path
         var executablePath = Path.Combine("tools-packages", "AISwarm.TestAgent.exe");
         if (!_fileSystemService.FileExists(executablePath))
         {
             _logger.Error($"Executable not found: {executablePath}");
             return LaunchA2AAgentResult.Failure($"AISwarm.TestAgent.exe not found at {executablePath}");
+        }
+
+        // Validate port number if provided
+        if (port.HasValue && (port.Value < 0 || port.Value > 65535))
+        {
+            return LaunchA2AAgentResult.Failure($"Invalid port number: {port.Value}. Port must be between 0 and 65535.");
         }
 
         return LaunchA2AAgentResult.Failure("Not implemented.");
