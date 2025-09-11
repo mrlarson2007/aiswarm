@@ -60,7 +60,7 @@ public class CoordinationDbContext(
             entity.Property(e => e.Status).HasConversion<string>();
             entity.Property(e => e.PersonaId).HasMaxLength(50).IsRequired(false);
             entity.Property(e => e.Description).IsRequired();
-            entity.Property(e => e.Priority).HasConversion<string>().HasDefaultValue(TaskPriority.Normal);
+            entity.Property(e => e.Priority).HasConversion<string>();
             entity.Property(e => e.Result);
         });
 

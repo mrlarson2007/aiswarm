@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace AISwarm.Infrastructure;
 
 /// <summary>
@@ -31,6 +33,15 @@ public interface IProcessLauncher
         string fileName,
         string arguments,
         string workingDirectory);
+
+    /// <summary>
+    ///     Launches a process and returns the Process object.
+    /// </summary>
+    /// <param name="fileName">Executable or shell.</param>
+    /// <param name="arguments">Raw argument string.</param>
+    /// <param name="workingDirectory">Working directory for the process.</param>
+    /// <returns>The launched Process object.</returns>
+    ProcessLaunchResult Launch(string fileName, string arguments, string workingDirectory);
 }
 
 /// <summary>
@@ -45,3 +56,9 @@ public record ProcessResult(
     string StandardOutput,
     string StandardError,
     int ExitCode);
+
+public record ProcessLaunchResult(
+    bool IsSuccess,
+    int ProcessId,
+    Process Process
+);

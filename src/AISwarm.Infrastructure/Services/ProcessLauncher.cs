@@ -157,4 +157,43 @@ public class ProcessLauncher(IAppLogger logger) : IProcessLauncher
             return false;
         }
     }
+
+    /// <inheritdoc />
+    public ProcessLaunchResult Launch(string fileName, string arguments, string workingDirectory)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = true // Required for launching external executables
+        };
+
+        try
+        {
+            var process = new Process { StartInfo = startInfo };
+            process.Start();
+            return new ProcessLaunchResult(true, process.Id, process);
+        }
+        catch (Win32Exception ex)
+        {
+            logger.Error($"Win32Exception launching '{fileName} {arguments}': {ex.Message}");
+            throw new InvalidOperationException($"Failed to launch process due to Win32 error: {ex.Message}", ex);
+        }
+        catch (FileNotFoundException ex)
+        {
+            logger.Error($"File not found for process start '{fileName}': {ex.Message}");
+            throw new InvalidOperationException($"Failed to launch process: executable not found: {ex.Message}", ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Error($"Invalid operation starting process '{fileName} {arguments}': {ex.Message}");
+            throw new InvalidOperationException($"Failed to launch process due to invalid operation: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            logger.Error($"Unexpected exception starting process '{fileName} {arguments}': {ex.Message}");
+            throw new InvalidOperationException($"Failed to launch process due to unexpected error: {ex.Message}", ex);
+        }
+    }
 }

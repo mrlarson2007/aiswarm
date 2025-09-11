@@ -74,30 +74,24 @@ public class FakeProcessLauncher : IProcessLauncher
     /// <summary>
     ///     Records a process launch attempt and returns a fake process without actually starting it.
     /// </summary>
-    /// <param name="startInfo">The process start information</param>
-    /// <returns>A fake process object</returns>
-    public Process LaunchProcess(ProcessStartInfo startInfo)
+    /// <param name="fileName">Executable or shell.</param>
+    /// <param name="arguments">Raw argument string.</param>
+    /// <param name="workingDirectory">Working directory for the process.</param>
+    /// <returns>A fake process launch result</returns>
+    public ProcessLaunchResult Launch(string fileName, string arguments, string workingDirectory)
     {
-        // Create a fake process that appears to be running but doesn't actually start anything
-        var fakeProcess = new Process();
-
-        // Modify the start info to point to a fake executable to avoid actually launching anything
         var fakeStartInfo = new ProcessStartInfo
         {
-            FileName = "fake-process.exe",
-            Arguments = startInfo.Arguments,
-            WorkingDirectory = startInfo.WorkingDirectory,
-            UseShellExecute = startInfo.UseShellExecute,
-            RedirectStandardOutput = startInfo.RedirectStandardOutput,
-            RedirectStandardError = startInfo.RedirectStandardError,
-            CreateNoWindow = startInfo.CreateNoWindow
+            FileName = "fake-" + fileName,
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = true
         };
 
-        fakeProcess.StartInfo = fakeStartInfo;
-
+        var fakeProcess = new Process { StartInfo = fakeStartInfo };
         _launchedProcesses.Add(fakeProcess);
 
-        return fakeProcess;
+        return new ProcessLaunchResult(true, 9999, fakeProcess); // Use dummy ID 9999
     }
 
     /// <summary>

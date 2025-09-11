@@ -42,6 +42,7 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
 
             // Assert
             result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
             result.ErrorMessage.ShouldContain("Agent name is required.");
             _fakeProcessLauncher.LaunchedProcesses.ShouldBeEmpty();
         }
@@ -60,6 +61,7 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
 
             // Assert
             result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
             result.ErrorMessage.ShouldContain("AISwarm.TestAgent.exe not found");
             _fakeProcessLauncher.LaunchedProcesses.ShouldBeEmpty();
         }
@@ -82,6 +84,7 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
 
             // Assert
             result.Success.ShouldBeFalse();
+            result.ErrorMessage.ShouldNotBeNull();
             result.ErrorMessage.ShouldContain("Invalid port number");
             _fakeProcessLauncher.LaunchedProcesses.ShouldBeEmpty();
         }

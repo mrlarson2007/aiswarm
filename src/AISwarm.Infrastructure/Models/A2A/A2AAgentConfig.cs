@@ -11,9 +11,5 @@ public class A2AAgentConfig
     public string PersonaDescription { get; set; } = string.Empty;
     public List<string> Skills { get; set; } = new();
     public List<string> Capabilities { get; set; } = new();
-    public string WorkingDirectory
-    {
-        get;
-        set;
-    }
+    public string WorkingDirectory { get; set; } = string.Empty;
 }

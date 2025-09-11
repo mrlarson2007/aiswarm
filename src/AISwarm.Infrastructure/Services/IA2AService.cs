@@ -1,6 +1,6 @@
 using AISwarm.Infrastructure.Models.A2A;
 
-namespace AISwarm.Infrastructure.Services;
+namespace AISwarm.Infrastructure;
 
 /// <summary>
 /// Service for launching and managing A2A (Agent-to-Agent) protocol agents.

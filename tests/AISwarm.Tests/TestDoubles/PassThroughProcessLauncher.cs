@@ -37,6 +37,14 @@ public sealed class PassThroughProcessLauncher : IProcessLauncher
         return true;
     }
 
+    public ProcessLaunchResult Launch(string fileName, string arguments, string workingDirectory)
+    {
+        Invocations.Add(new Invocation(fileName, arguments, workingDirectory));
+        // Return a dummy process launch result, as this is a pass-through launcher
+        var process = new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo { FileName = fileName, Arguments = arguments, WorkingDirectory = workingDirectory } };
+        return new ProcessLaunchResult(true, 12345, process); // Use dummy process ID
+    }
+
     public void Enqueue(
         string file,
         Func<string, bool> argsMatch,
