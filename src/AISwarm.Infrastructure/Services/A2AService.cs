@@ -28,25 +28,8 @@ namespace AISwarm.Infrastructure
                 throw new ArgumentException("Configuration cannot be null.", "config");
             }
 
-            if (string.IsNullOrEmpty(config.AgentName))
-            {
-                throw new ArgumentException("Agent name must be specified.", nameof(config.AgentName));
-            }
-
-            if (string.IsNullOrEmpty(config.Persona))
-            {
-                throw new ArgumentException("Agent persona must be specified.", nameof(config.Persona));
-            }
-
-            if (string.IsNullOrEmpty(config.PersonaDescription))
-            {
-                throw new ArgumentException("Agent persona description must be specified.", nameof(config.PersonaDescription));
-            }
-
-            if (string.IsNullOrEmpty(config.WorkingDirectory))
-            {
-                throw new ArgumentException("Working directory must be specified.", nameof(config.WorkingDirectory));
-            }
+            // Use the centralized validation method
+            config.Validate();
 
             var agentPath = _agentExecutablePath;
             string finalArgumentsString;
