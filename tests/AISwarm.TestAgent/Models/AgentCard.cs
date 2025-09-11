@@ -6,6 +6,7 @@ public class AgentCard
     public required string Type { get; set; }
     public required string Version { get; set; }
     public required string[] Capabilities { get; set; }
+    public required string[] Skills { get; set; }
     public required AgentEndpoints Endpoints { get; set; }
     public required AgentMetadata Metadata { get; set; }
 }
@@ -23,6 +24,7 @@ public class AgentMetadata
 {
     public required string Persona { get; set; }
     public required string Description { get; set; }
+    public string? SystemPrompt { get; set; }
     public bool TestMode { get; set; }
     public int ServerPort { get; set; }
     public required string StartedAt { get; set; }

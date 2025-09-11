@@ -8,8 +8,11 @@
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>link</TrimMode>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
+  </ItemGroup>
 
 </Project>
