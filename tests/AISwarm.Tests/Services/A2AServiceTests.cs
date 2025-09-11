@@ -7,18 +7,18 @@ using Shouldly;
 namespace AISwarm.Tests.Services;
 
 /// <summary>
-/// Test for the A2AService
+/// Tests for the A2AService
 /// </summary>
-public class A2SServiceTest : ISystemUnderTest<IA2AService>
+public class A2AServiceTest : ISystemUnderTest<IA2AService>
 {
 
     public IA2AService SystemUnderTest => throw new NotImplementedException();
 
-    protected FakeProcessLauncher fakeProcessLauncher = new();
-    protected FakeFileSystemService fakeFileSystem = new();
-    protected TestLogger testLogger = new();
+    protected FakeProcessLauncher FakeProcessLauncher = new();
+    protected FakeFileSystemService FakeFileSystem = new();
+    protected TestLogger TestLogger = new();
 
-    public class ParameterValidation : A2SServiceTest
+    public class ParameterValidation : A2AServiceTest
     {
 
         //[Fact]
@@ -91,9 +91,30 @@ public class A2SServiceTest : ISystemUnderTest<IA2AService>
             exception.ParamName.ShouldNotBeNull();
             exception.ParamName.ShouldContain(nameof(configuration.PersonaDescription));
         }
+
+        //[Fact]
+        public async Task WhenWorkingDirectoryIsNotSpecified_ShouldThrowError()
+        {
+            var configuration = new A2AAgentConfig
+            {
+                AgentName = "agent1",
+                Description = null,
+                Model = null,
+                Port = null,
+                Persona = "implementer",
+                PersonaDescription = "test",
+                WorkingDirectory = string.Empty
+            };
+
+            var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+                await SystemUnderTest.LaunchAgentAsync(configuration)
+            );
+            exception.ParamName.ShouldNotBeNull();
+            exception.ParamName.ShouldContain(nameof(configuration.WorkingDirectory));
+        }
     }
 
-    public class RunAgentTests : A2SServiceTest
+    public class RunAgentTests : A2AServiceTest
     {
         //[Fact]
         public async Task WhenConfigurationIsComplete_AllOptionsShouldBePassedToAgent()
@@ -116,8 +137,8 @@ public class A2SServiceTest : ISystemUnderTest<IA2AService>
             var result = await SystemUnderTest.LaunchAgentAsync(configuration);
 
             // Assert - Verify the process was launched with correct arguments
-            fakeProcessLauncher.LaunchedProcesses.Count.ShouldBe(1);
-            var launchedProcess = fakeProcessLauncher.LaunchedProcesses.First();
+            FakeProcessLauncher.LaunchedProcesses.Count.ShouldBe(1);
+            var launchedProcess = FakeProcessLauncher.LaunchedProcesses.First();
             launchedProcess.StartInfo.WorkingDirectory.ShouldBe(configuration.WorkingDirectory);
 
             // Verify all configuration values are passed as command line arguments
@@ -131,10 +152,12 @@ public class A2SServiceTest : ISystemUnderTest<IA2AService>
             arguments.ShouldContain(configuration.Model);
             arguments.ShouldContain("--port");
             arguments.ShouldContain(configuration.Port.GetValueOrDefault().ToString());
+            arguments.ShouldContain("--persona");
+            arguments.ShouldContain(configuration.Persona);
+            arguments.ShouldContain("--persona-description");
+            arguments.ShouldContain(configuration.PersonaDescription);
             arguments.ShouldContain("--skills");
             arguments.ShouldContain(string.Join(',',configuration.Skills));
-            arguments.ShouldContain("--capabilities");
-            arguments.ShouldContain(string.Join(',',configuration.Capabilities));
             arguments.ShouldContain("--capabilities");
             arguments.ShouldContain(string.Join(',',configuration.Capabilities));
 
@@ -173,16 +196,16 @@ public class A2SServiceTest : ISystemUnderTest<IA2AService>
             var result = await SystemUnderTest.LaunchAgentAsync(configuration);
 
             // Assert - Verify the process was launched with correct arguments
-            fakeProcessLauncher.LaunchedProcesses.Count.ShouldBe(1);
-            var launchedProcess = fakeProcessLauncher.LaunchedProcesses.First();
+            FakeProcessLauncher.LaunchedProcesses.Count.ShouldBe(1);
+            var launchedProcess = FakeProcessLauncher.LaunchedProcesses.First();
             launchedProcess.StartInfo.WorkingDirectory.ShouldBe(configuration.WorkingDirectory);
 
             var arguments = launchedProcess.StartInfo.Arguments;
-            arguments.ShouldContain("--config");
+            arguments.ShouldContain("--config-file");
             arguments.ShouldContain(configuration.AgentName + ".json");
 
-            fakeFileSystem.FileExists(configuration.AgentName + ".json");
-            var configFile = fakeFileSystem.GetFileContent(Path.Join(configuration.WorkingDirectory, configuration.AgentName + ".json"));
+            FakeFileSystem.FileExists(configuration.AgentName + ".json").ShouldBeTrue();
+            var configFile = FakeFileSystem.GetFileContent(Path.Combine(configuration.WorkingDirectory, configuration.AgentName + ".json"));
             configFile.ShouldNotBeNull();
             configFile.ShouldBe(expectedConfig);
 
