@@ -31,6 +31,20 @@ namespace AISwarm.Infrastructure
             // Use the centralized validation method
             config.Validate();
 
+            // Ensure we have a port assigned before launching the agent
+            int assignedPort;
+            if (config.Port.HasValue)
+            {
+                // Use the specified port
+                assignedPort = config.Port.Value;
+            }
+            else
+            {
+                // Auto-assign an available port
+                assignedPort = GetAvailablePort();
+                _logger.Info($"Auto-assigned port {assignedPort} for agent {config.AgentName}");
+            }
+
             var agentPath = _agentExecutablePath;
             string finalArgumentsString;
 
@@ -39,15 +53,14 @@ namespace AISwarm.Infrastructure
             {
                 $"--agent-name \"{config.AgentName}\"",
                 $"--persona \"{config.Persona}\"",
-                $"--persona-description \"{config.PersonaDescription}\""
+                $"--persona-description \"{config.PersonaDescription}\"",
+                $"--port {assignedPort}"
             };
 
             if (!string.IsNullOrEmpty(config.Description))
                 tempArguments.Add($"--description \"{config.Description}\"");
             if (!string.IsNullOrEmpty(config.Model))
                 tempArguments.Add($"--model \"{config.Model}\"");
-            if (config.Port.HasValue)
-                tempArguments.Add($"--port {config.Port.Value}");
             if (config.Skills.Any())
                 tempArguments.Add($"--skills \"{string.Join(",", config.Skills)}\"");
             if (config.Capabilities.Any())
@@ -60,9 +73,24 @@ namespace AISwarm.Infrastructure
                 _logger.Info($"Arguments too long ({combinedArgumentsLength} chars), writing config to file.");
                 var configFileName = $"{config.AgentName}.json";
                 var configFilePath = Path.Combine(config.WorkingDirectory, configFileName);
-                var jsonConfig = JsonSerializer.Serialize(config);
-                await _fileSystemService.WriteAllTextAsync(configFilePath, jsonConfig); // Blocking for simplicity in this context
-                finalArgumentsString = $"--config-file \"{configFilePath}\"" ;
+                
+                // Update config with assigned port for serialization
+                var configForFile = new A2AAgentConfig
+                {
+                    AgentName = config.AgentName,
+                    Port = assignedPort,
+                    Model = config.Model,
+                    Description = config.Description,
+                    Persona = config.Persona,
+                    PersonaDescription = config.PersonaDescription,
+                    Skills = config.Skills,
+                    Capabilities = config.Capabilities,
+                    WorkingDirectory = config.WorkingDirectory
+                };
+                
+                var jsonConfig = JsonSerializer.Serialize(configForFile);
+                await _fileSystemService.WriteAllTextAsync(configFilePath, jsonConfig);
+                finalArgumentsString = $"--config-file \"{configFilePath}\"";
             }
             else
             {
@@ -70,8 +98,6 @@ namespace AISwarm.Infrastructure
             }
 
             var processResult = _processLauncher.Launch(agentPath, finalArgumentsString, config.WorkingDirectory);
-
-            var assignedPort = config.Port ?? 56789; // Use a default test port
 
             return new A2AAgentInstance
             {
@@ -83,6 +109,19 @@ namespace AISwarm.Infrastructure
                 Capabilities = [.. config.Capabilities],
                 LaunchedAt = DateTime.UtcNow
             };
+        }
+
+        /// <summary>
+        /// Gets an available port by creating a temporary TCP listener on port 0 (auto-assign).
+        /// </summary>
+        /// <returns>An available port number</returns>
+        private static int GetAvailablePort()
+        {
+            using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            return port;
         }
     }
 }
