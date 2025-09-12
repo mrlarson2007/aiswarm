@@ -39,7 +39,7 @@ public class FakeContextService : IContextService
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
 
-        return ["implementer", "reviewer", "planner"];
+        return ["implementer", "reviewer", "planner", "tester"];
     }
 
     public bool IsValidAgentType(string agentType)
@@ -57,15 +57,25 @@ public class FakeContextService : IContextService
 
         return new Dictionary<string, string>
         {
-            { "implementer", "Embedded" }, { "reviewer", "Embedded" }, { "planner", "Embedded" }
+            { "implementer", "Embedded" }, 
+            { "reviewer", "Embedded" }, 
+            { "planner", "Embedded" },
+            { "tester", "Embedded" }
         };
     }
 
-    public string GetAgentPrompt(string agentType)
+    public string GetPersonaPrompt(string agentType)
     {
         if (ShouldFail)
             throw new InvalidOperationException(FailureMessage);
 
-        return $"Fake prompt for {agentType}";
+        return agentType switch
+        {
+            "planner" => "# Planner Agent\n\nYou are a planning agent that breaks down tasks and creates structured plans.",
+            "implementer" => "# Implementer Agent\n\nYou are an implementation agent that writes code using TDD methodology.",
+            "reviewer" => "# Reviewer Agent\n\nYou are a code review agent that analyzes code quality and provides feedback.",
+            "tester" => "# Tester Agent\n\nYou are a testing agent that validates functionality and writes comprehensive tests.",
+            _ => $"# {agentType} Agent\n\nYou are a {agentType} agent."
+        };
     }
 }

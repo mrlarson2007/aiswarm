@@ -10,13 +10,16 @@ namespace AISwarm.Server.McpTools;
 public class LaunchA2AAgentTool
 {
     private readonly IA2AService _a2AService;
+    private readonly IContextService _contextService;
     private readonly IAppLogger _logger;
 
     public LaunchA2AAgentTool(
         IA2AService a2AService,
+        IContextService contextService,
         IAppLogger logger)
     {
         _a2AService = a2AService;
+        _contextService = contextService;
         _logger = logger;
     }
 
@@ -30,10 +33,24 @@ public class LaunchA2AAgentTool
         [Description("Optional port for the agent (auto-assign if not provided)")]
         int? port,
         [Description("Optional model for the agent (default 'gemini-2.5-flash')")]
-        string? model)
+        string? model,
+        [Description("Optional persona type (default 'tester' for A2A testing)")]
+        string? persona)
     {
         try
         {
+            // Resolve and validate persona
+            var resolvedPersona = persona ?? "tester"; // Default to 'tester' for A2A testing
+            if (!_contextService.IsValidAgentType(resolvedPersona))
+            {
+                var availablePersonas = string.Join(", ", _contextService.GetAvailableAgentTypes());
+                return LaunchA2AAgentResult.Failure(
+                    $"Invalid persona '{resolvedPersona}'. Available personas: {availablePersonas}");
+            }
+
+            // Generate persona description based on type
+            var personaDescription = _contextService.GetPersonaPrompt(resolvedPersona);
+
             // Create A2A agent configuration
             var config = new A2AAgentConfig
             {
@@ -41,8 +58,8 @@ public class LaunchA2AAgentTool
                 Description = description,
                 Port = port,
                 Model = model ?? "gemini-2.5-flash",
-                Persona = "test-agent",
-                PersonaDescription = "A test agent for A2A protocol testing",
+                Persona = resolvedPersona,
+                PersonaDescription = personaDescription,
                 WorkingDirectory = Environment.CurrentDirectory
             };
 

@@ -43,4 +43,12 @@ public interface IContextService
     /// </summary>
     /// <returns>Dictionary keyed by agent type.</returns>
     Dictionary<string, string> GetAgentTypeSources();
+
+    /// <summary>
+    ///     Get the raw persona prompt content for the specified agent type.
+    /// </summary>
+    /// <param name="agentType">Agent type to get persona content for.</param>
+    /// <returns>The persona prompt content as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when the agent type is unknown.</exception>
+    string GetPersonaPrompt(string agentType);
 }

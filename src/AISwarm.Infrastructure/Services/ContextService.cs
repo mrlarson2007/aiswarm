@@ -92,6 +92,12 @@ Your unique agent ID is: `{agentId}`
         return sources;
     }
 
+    /// <inheritdoc />
+    public string GetPersonaPrompt(string agentType)
+    {
+        return GetAgentPrompt(agentType);
+    }
+
     private string GetAgentPrompt(string agentType)
     {
         var personaFiles = GetAllPersonaFiles();
