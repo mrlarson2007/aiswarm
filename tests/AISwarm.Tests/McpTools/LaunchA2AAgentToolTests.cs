@@ -136,7 +136,7 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
             var description = "Test description";
             int? port = null; // No port specified
             var model = "gemini-2.5-flash";
-            string? persona = null; // No persona specified - should default to 'tester'
+            string? persona = null; // No persona specified - should default to 'implementer'
 
             // Act
             var result = await SystemUnderTest.LaunchA2AAgentAsync(agentName, description, port, model, persona);
@@ -150,8 +150,8 @@ public class LaunchA2AAgentToolTests : ISystemUnderTest<LaunchA2AAgentTool>
             // Verify A2AService was called with null port (for auto-assignment) and default persona
             var config = _fakeA2AService.LaunchedConfigs.First();
             config.Port.ShouldBeNull();
-            config.Persona.ShouldBe("tester"); // Should default to 'tester'
-            config.PersonaDescription.ShouldContain("Tester Agent"); // Should contain actual persona prompt
+            config.Persona.ShouldBe("implementer"); // Should default to 'implementer'
+            config.PersonaDescription.ShouldContain("Implementer Agent"); // Should contain actual persona prompt
         }
     }
 }

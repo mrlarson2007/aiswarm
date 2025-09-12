@@ -34,13 +34,13 @@ public class LaunchA2AAgentTool
         int? port,
         [Description("Optional model for the agent (default 'gemini-2.5-flash')")]
         string? model,
-        [Description("Optional persona type (default 'tester' for A2A testing)")]
+        [Description("Optional persona type (default 'implementer' for A2A testing)")]
         string? persona)
     {
         try
         {
             // Resolve and validate persona
-            var resolvedPersona = persona ?? "tester"; // Default to 'tester' for A2A testing
+            var resolvedPersona = persona ?? "implementer"; // Default to 'implementer' for A2A testing
             if (!_contextService.IsValidAgentType(resolvedPersona))
             {
                 var availablePersonas = string.Join(", ", _contextService.GetAvailableAgentTypes());
