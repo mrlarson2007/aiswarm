@@ -1,26 +1,23 @@
 using System.ComponentModel;
 using AISwarm.Infrastructure;
+using AISwarm.Infrastructure.Models.A2A;
 using AISwarm.Shared.Models;
 using ModelContextProtocol.Server;
-using System.IO;
 
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
 public class LaunchA2AAgentTool
 {
-    private readonly IProcessLauncher _processLauncher;
+    private readonly IA2AService _a2AService;
     private readonly IAppLogger _logger;
-    private readonly IFileSystemService _fileSystemService;
 
     public LaunchA2AAgentTool(
-        IProcessLauncher processLauncher,
-        IAppLogger logger,
-        IFileSystemService fileSystemService)
+        IA2AService a2AService,
+        IAppLogger logger)
     {
-        _processLauncher = processLauncher;
+        _a2AService = a2AService;
         _logger = logger;
-        _fileSystemService = fileSystemService;
     }
 
     [McpServerTool(Name = "launch-a2a-agent")]
@@ -32,30 +29,47 @@ public class LaunchA2AAgentTool
         string? description,
         [Description("Optional port for the agent (auto-assign if not provided)")]
         int? port,
-        [Description("Optional model for the agent (default 'gemini-1.5-flash')")]
+        [Description("Optional model for the agent (default 'gemini-2.5-flash')")]
         string? model)
     {
-        // Validate agent name
-        if (string.IsNullOrEmpty(agentName))
+        try
         {
-            return LaunchA2AAgentResult.Failure("Agent name is required.");
-        }
+            // Create A2A agent configuration
+            var config = new A2AAgentConfig
+            {
+                AgentName = agentName ?? string.Empty,
+                Description = description,
+                Port = port,
+                Model = model ?? "gemini-2.5-flash",
+                Persona = "test-agent",
+                PersonaDescription = "A test agent for A2A protocol testing",
+                WorkingDirectory = Environment.CurrentDirectory
+            };
 
-        // Validate executable path
-        var executablePath = Path.Combine("tools-packages", "AISwarm.TestAgent.exe");
-        if (!_fileSystemService.FileExists(executablePath))
+            // Launch the agent using A2AService
+            var agentInstance = await _a2AService.LaunchAgentAsync(config);
+
+            // Extract port from AgentUrl (e.g., "http://localhost:3001" -> 3001)
+            var uri = new Uri(agentInstance.AgentUrl);
+            var agentPort = uri.Port;
+
+            return LaunchA2AAgentResult.CreateSuccessResult(
+                agentUrl: agentInstance.AgentUrl,
+                port: agentPort,
+                agentName: agentInstance.AgentName,
+                processId: agentInstance.ProcessId,
+                status: agentInstance.Status.ToString());
+        }
+        catch (ArgumentException ex)
         {
-            _logger.Error($"Executable not found: {executablePath}");
-            return LaunchA2AAgentResult.Failure($"AISwarm.TestAgent.exe not found at {executablePath}");
+            _logger.Error($"Invalid configuration for A2A agent: {ex.Message}");
+            return LaunchA2AAgentResult.Failure(ex.Message);
         }
-
-        // Validate port number if provided
-        if (port.HasValue && (port.Value < 0 || port.Value > 65535))
+        catch (Exception ex)
         {
-            return LaunchA2AAgentResult.Failure($"Invalid port number: {port.Value}. Port must be between 0 and 65535.");
+            _logger.Error($"Exception launching A2A agent: {ex.Message}");
+            return LaunchA2AAgentResult.Failure($"Exception: {ex.Message}");
         }
-
-        return LaunchA2AAgentResult.Failure("Not implemented.");
     }
 }
 
