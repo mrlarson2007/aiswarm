@@ -168,14 +168,15 @@ public class OpenCodeProcessRunner : IOpenCodeProcessRunner
                 exception);
         }
 
-        var standardOutput = CaptureAsync(process.StandardOutput);
-        var standardError = CaptureAsync(process.StandardError);
+        var standardOutput = CaptureAsync(process.StandardOutput, cancellationToken);
+        var standardError = CaptureAsync(process.StandardError, cancellationToken);
         try
         {
             try
             {
                 await process.StandardInput.WriteAsync(
                     (request.StandardInput ?? "").AsMemory(), cancellationToken);
+                await process.StandardInput.FlushAsync(cancellationToken);
                 process.StandardInput.Close();
             }
             catch (IOException)
@@ -184,29 +185,53 @@ public class OpenCodeProcessRunner : IOpenCodeProcessRunner
             }
 
             await process.WaitForExitAsync(cancellationToken);
+            var captured = await Task.WhenAll(standardOutput, standardError)
+                .WaitAsync(cancellationToken);
+            return new OpenCodeResult(process.ExitCode, captured[0], captured[1]);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            if (!process.HasExited)
-                process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync(CancellationToken.None);
-            await Task.WhenAll(standardOutput, standardError);
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException) when (process.HasExited)
+            {
+                // The process may exit between checking its state and killing its tree.
+            }
+
+            process.StandardInput.BaseStream.Dispose();
+            process.StandardOutput.Dispose();
+            process.StandardError.Dispose();
+            try
+            {
+                await Task.WhenAll(
+                        process.WaitForExitAsync(CancellationToken.None),
+                        standardOutput,
+                        standardError)
+                    .WaitAsync(TimeSpan.FromMilliseconds(500));
+            }
+            catch (Exception exception) when (
+                exception is OperationCanceledException or IOException or
+                    ObjectDisposedException or TimeoutException)
+            {
+                // Descendants can retain inherited pipes after the root process has exited.
+            }
+
             throw;
         }
-
-        return new OpenCodeResult(
-            process.ExitCode,
-            await standardOutput,
-            await standardError);
     }
 
-    private async Task<string> CaptureAsync(StreamReader reader)
+    private async Task<string> CaptureAsync(
+        StreamReader reader,
+        CancellationToken cancellationToken)
     {
         var captured = new StringBuilder();
         var buffer = new char[4096];
         var truncated = false;
         int count;
-        while ((count = await reader.ReadAsync(buffer.AsMemory())) > 0)
+        while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
         {
             var remaining = _maxCapturedCharacters - captured.Length;
             captured.Append(buffer, 0, Math.Min(count, remaining));

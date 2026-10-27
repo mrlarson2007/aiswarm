@@ -1,4 +1,4 @@
-// AISwarm.Server - MCP coordination server providing agent management and task coordination tools for VS Code
+// AISwarm.Server - stdio MCP server for OpenCode delegation and shared memory.
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
 using AISwarm.Server.Delegation;
@@ -24,7 +24,7 @@ internal static class Program
         // Add database services
         ConfigureDatabaseServices(builder.Services, builder.Configuration);
 
-        // Configure MCP server with BOTH stdio and HTTP transports
+        // Keep stdout exclusively for the Claude Desktop MCP transport.
         builder.Services
             .AddInfrastructureServices(builder.Configuration)
             .AddOpenCodeDelegation(builder.Configuration)

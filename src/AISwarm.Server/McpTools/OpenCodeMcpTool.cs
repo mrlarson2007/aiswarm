@@ -61,14 +61,18 @@ public class OpenCodeMcpTool(
     public string ReadTask(string taskId) =>
         JsonSerializer.Serialize(tasks.GetTask(taskId), JsonSerializerOptions.Web);
 
-    private async Task NotifyAsync(
+    private Task NotifyAsync(
+        McpServer server,
+        DelegatedTask snapshot,
+        CancellationToken cancellationToken) =>
+        localHook.NotifyAsync(snapshot, cancellationToken, SendHostAsync(server, snapshot, cancellationToken));
+
+    private static async Task SendHostAsync(
         McpServer server,
         DelegatedTask snapshot,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            await server.SendNotificationAsync(NotificationMethods.LoggingMessageNotification,
+        await server.SendNotificationAsync(NotificationMethods.LoggingMessageNotification,
                 new LoggingMessageNotificationParams
                 {
                     Level = snapshot.State == "Failed" ? LoggingLevel.Error : LoggingLevel.Info,
@@ -81,10 +85,5 @@ public class OpenCodeMcpTool(
                         snapshot.ExitCode
                     }, JsonSerializerOptions.Web)
                 }, cancellationToken: cancellationToken);
-        }
-        finally
-        {
-            await localHook.NotifyAsync(snapshot, cancellationToken);
-        }
     }
 }

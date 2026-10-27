@@ -5,8 +5,47 @@ using Shouldly;
 
 namespace AISwarm.Tests.Services;
 
+[Collection("OpenCode processes")]
 public class OpenCodeCliTests
 {
+    [Theory]
+    [InlineData(8192)]
+    [InlineData(65536)]
+    public async Task WhenUtf8EncoderHasBufferedInput_ShouldCancelBeforeClosingStdin(int pipeCapacity)
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var runner = new OpenCodeProcessRunner();
+        // AutoFlush leaves a trailing surrogate in the UTF-8 encoder until its final flush.
+        var prompt = new string('x', pipeCapacity) + "\ud800";
+
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            Task.Run(() => runner.RunAsync(new OpenCodeProcessRequest(
+                    "/usr/bin/timeout", ["3", "/usr/bin/sleep", "60"],
+                    Directory.GetCurrentDirectory(), prompt),
+                cancellation.Token)).WaitAsync(TimeSpan.FromSeconds(1)));
+    }
+
+    [Fact]
+    public async Task WhenRootExitsButDescendantKeepsPipesOpen_ShouldBoundCancellationCleanup()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        var runner = new OpenCodeProcessRunner();
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var elapsed = Stopwatch.StartNew();
+
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            runner.RunAsync(new OpenCodeProcessRequest(
+                "/usr/bin/setsid", ["--fork", "/usr/bin/sleep", "2"],
+                Directory.GetCurrentDirectory()), cancellation.Token));
+
+        elapsed.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(1));
+    }
+
     [Theory]
     [InlineData("ollama/hf.co/org/model:Q4_K_M")]
     [InlineData("openrouter/anthropic/claude")]

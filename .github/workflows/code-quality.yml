@@ -65,8 +65,8 @@ jobs:
     - name: Run additional analyzers
       run: |
         # Install additional analyzers if not already included
-        # dotnet add src/AgentLauncher package Microsoft.CodeAnalysis.Analyzers
-        # dotnet add src/AgentLauncher package StyleCop.Analyzers
+        # dotnet add src/AISwarm.Server package Microsoft.CodeAnalysis.Analyzers
+        # dotnet add src/AISwarm.Server package StyleCop.Analyzers
         echo "Code analysis completed"
 
   markdown-lint:
@@ -116,7 +116,7 @@ jobs:
           "LICENSE"
           ".gitignore"
           "aiswarm.sln"
-          "src/AgentLauncher/AgentLauncher.csproj"
+          "src/AISwarm.Server/AISwarm.Server.csproj"
         )
         
         for file in "${required_files[@]}"; do
@@ -125,22 +125,6 @@ jobs:
             exit 1
           else
             echo "✅ Found: $file"
-          fi
-        done
-        
-        # Check for embedded resources
-        resource_files=(
-          "src/AgentLauncher/Resources/planner_prompt.md"
-          "src/AgentLauncher/Resources/implementer_prompt.md"
-          "src/AgentLauncher/Resources/reviewer_prompt.md"
-          "src/AgentLauncher/Resources/tester_prompt.md"
-        )
-        
-        for file in "${resource_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "⚠️  Missing resource file: $file"
-          else
-            echo "✅ Found resource: $file"
           fi
         done
         

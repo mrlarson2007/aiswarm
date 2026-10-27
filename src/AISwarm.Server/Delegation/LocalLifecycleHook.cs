@@ -26,7 +26,13 @@ public class LocalLifecycleHook
         _endpoint = uri;
     }
 
-    public async Task NotifyAsync(
+    public Task NotifyAsync(
+        DelegatedTask snapshot,
+        CancellationToken cancellationToken,
+        Task? hostNotification = null) =>
+        Task.WhenAll(SendLocalAsync(snapshot, cancellationToken), hostNotification ?? Task.CompletedTask);
+
+    private async Task SendLocalAsync(
         DelegatedTask snapshot,
         CancellationToken cancellationToken)
     {

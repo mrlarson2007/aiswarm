@@ -253,6 +253,40 @@ public class DelegationServiceTests
         result.StandardError.ShouldNotBeEmpty();
     }
 
+    [Fact]
+    public async Task WhenFourTasksAreRunning_ShouldRejectAdditionalProcesses()
+    {
+        var execution = new TaskCompletionSource<OpenCodeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cli = CreateCli(execution.Task);
+        cli.Setup(service => service.RunAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string _, string _, string _, CancellationToken token) => execution.Task.WaitAsync(token));
+        await using var systemUnderTest = new DelegationService(cli.Object);
+        for (var index = 0; index < 4; index++)
+            await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            systemUnderTest.DelegateAsync("Extra work", "local/model", Path.GetTempPath()));
+    }
+
+    [Fact]
+    public async Task WhenHistoryIsFull_ShouldRejectRatherThanGrowMemoryOrDiscardResults()
+    {
+        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "retained", "")));
+        await using var systemUnderTest = new DelegationService(cli.Object);
+        string? firstTaskId = null;
+        for (var index = 0; index < 100; index++)
+        {
+            var task = await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
+            firstTaskId ??= task.TaskId;
+            await systemUnderTest.WaitForCompletionAsync(task.TaskId);
+        }
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            systemUnderTest.DelegateAsync("Extra work", "local/model", Path.GetTempPath()));
+        systemUnderTest.GetTask(firstTaskId!).StandardOutput.ShouldBe("retained");
+    }
+
     private static Mock<IOpenCodeCli> CreateCli(Task<OpenCodeResult> execution)
     {
         var cli = new Mock<IOpenCodeCli>();

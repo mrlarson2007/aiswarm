@@ -20,17 +20,12 @@
 
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
-        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="*-*" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
         <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
     <ItemGroup>
@@ -48,7 +43,6 @@
     </ItemGroup>
 
 </Project>
-
 
 
 

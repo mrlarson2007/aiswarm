@@ -63,10 +63,10 @@ jobs:
         retention-days: 30
         
     - name: Create self-contained executable
-      run: dotnet publish src/AgentLauncher --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output publish/${{ matrix.runtime }}
+      run: dotnet publish src/AISwarm.Server --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output publish/${{ matrix.runtime }}
       
     - name: Create NuGet package
-      run: dotnet pack src/AgentLauncher --configuration Release --output packages --no-build
+      run: dotnet pack src/AISwarm.Server --configuration Release --output packages --no-build
       if: matrix.os == 'ubuntu-latest'
       
     - name: Upload build artifacts
@@ -105,6 +105,6 @@ jobs:
         
     - name: Test global tool installation
       run: |
-        dotnet tool install --global --add-source packages AiSwarm.AgentLauncher
-        aiswarm --help
-        dotnet tool uninstall --global AiSwarm.AgentLauncher
+        dotnet tool install --global --add-source packages --prerelease aiswarm-server
+        dotnet tool list --global
+        dotnet tool uninstall --global aiswarm-server

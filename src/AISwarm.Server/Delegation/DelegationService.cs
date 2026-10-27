@@ -56,44 +56,51 @@ public class DelegationService(
         {
             discovery.Token.ThrowIfCancellationRequested();
             ObjectDisposedException.ThrowIf(_stopping, this);
+            if (_tasks.Count >= 100)
+                throw new InvalidOperationException("Task history is full (100 tasks). Retrieve results and restart the server.");
+            if (_tasks.Values.Count(execution => !execution.Completion.IsCompleted) >= 4)
+                throw new InvalidOperationException("At most four tasks may run concurrently.");
             var execution = new Execution(snapshot);
             _tasks[snapshot.TaskId] = execution;
             execution.Completion = Task.Run(async () =>
             {
-            await NotifyAsync(execution, hook);
-            using var deadline = new CancellationTokenSource(timeout ?? TimeSpan.FromMinutes(10));
-            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
-                execution.Cancellation.Token, deadline.Token);
-            OpenCodeResult result;
-            var state = "Failed";
-            try
-            {
-                result = await cli.RunAsync(instructions, model, workingDirectory, cancellation.Token);
-                if (result.ExitCode == 0 && HasUnsuccessfulOutput(result.StandardOutput))
-                    result = result with { StandardError = result.StandardError + "\nOpenCode emitted an error event or output was truncated; success cannot be confirmed." };
-                state = result.ExitCode == 0 ? "Completed" : "Failed";
-                if (HasUnsuccessfulOutput(result.StandardOutput))
-                    state = "Failed";
-            }
-            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-            {
-                state = execution.Cancellation.IsCancellationRequested ? "Cancelled" : "Failed";
-                result = new OpenCodeResult(-1, "",
-                    state == "Cancelled" ? "Task cancelled." : "Task timed out.");
-            }
-            catch (Exception ex)
-            {
-                result = new OpenCodeResult(-1, "", ex.Message);
-            }
-            execution.Snapshot = execution.Snapshot with
-            {
-                State = state,
-                CompletedAt = DateTimeOffset.UtcNow,
-                ExitCode = result.ExitCode,
-                StandardOutput = result.StandardOutput,
-                StandardError = result.StandardError
-            };
-            await NotifyAsync(execution, hook);
+                await NotifyAsync(execution, hook);
+                using var deadline = new CancellationTokenSource(timeout ?? TimeSpan.FromMinutes(10));
+                using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                    execution.Cancellation.Token, deadline.Token);
+                OpenCodeResult result;
+                var state = "Failed";
+                try
+                {
+                    result = await cli.RunAsync(instructions, model, workingDirectory, cancellation.Token);
+                    var unsuccessfulOutput = HasUnsuccessfulOutput(result.StandardOutput);
+                    if (result.ExitCode == 0 && unsuccessfulOutput)
+                        result = result with
+                        {
+                            StandardError = result.StandardError +
+                                "\nOpenCode emitted an error event or output was truncated; success cannot be confirmed."
+                        };
+                    state = result.ExitCode == 0 && !unsuccessfulOutput ? "Completed" : "Failed";
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+                {
+                    state = execution.Cancellation.IsCancellationRequested ? "Cancelled" : "Failed";
+                    result = new OpenCodeResult(-1, "",
+                        state == "Cancelled" ? "Task cancelled." : "Task timed out.");
+                }
+                catch (Exception ex)
+                {
+                    result = new OpenCodeResult(-1, "", ex.Message);
+                }
+                execution.Snapshot = execution.Snapshot with
+                {
+                    State = state,
+                    CompletedAt = DateTimeOffset.UtcNow,
+                    ExitCode = result.ExitCode,
+                    StandardOutput = result.StandardOutput,
+                    StandardError = result.StandardError
+                };
+                await NotifyAsync(execution, hook);
             });
         }
         return snapshot;
@@ -151,7 +158,10 @@ public class DelegationService(
 
         catch (Exception ex)
         {
-            execution.Snapshot = execution.Snapshot with { HookError = ex.Message };
+            execution.Snapshot = execution.Snapshot with
+            {
+                HookError = ex.Message
+            };
         }
     }
 

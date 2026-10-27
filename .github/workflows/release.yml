@@ -56,8 +56,8 @@ jobs:
       run: |
         VERSION="${{ steps.version.outputs.version }}"
         VERSION_NUMBER="${VERSION#v}"
-        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AgentLauncher/AgentLauncher.csproj
-        rm src/AgentLauncher/AgentLauncher.csproj.bak
+        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AISwarm.Server/AISwarm.Server.csproj
+        rm src/AISwarm.Server/AISwarm.Server.csproj.bak
       shell: bash
       
     - name: Restore dependencies
@@ -71,7 +71,7 @@ jobs:
       continue-on-error: true
       
     - name: Publish self-contained
-      run: dotnet publish src/AgentLauncher --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output release/${{ matrix.runtime }}
+      run: dotnet publish src/AISwarm.Server --configuration Release --runtime ${{ matrix.runtime }} --self-contained true --output release/${{ matrix.runtime }}
       
     - name: Create archive (Linux/macOS)
       if: matrix.archive == 'tar.gz'
@@ -130,8 +130,8 @@ jobs:
       run: |
         VERSION="${{ steps.version.outputs.version }}"
         VERSION_NUMBER="${VERSION#v}"
-        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AgentLauncher/AgentLauncher.csproj
-        rm src/AgentLauncher/AgentLauncher.csproj.bak
+        sed -i.bak "s/<Version>.*<\/Version>/<Version>$VERSION_NUMBER<\/Version>/" src/AISwarm.Server/AISwarm.Server.csproj
+        rm src/AISwarm.Server/AISwarm.Server.csproj.bak
       shell: bash
       
     - name: Restore dependencies
@@ -141,7 +141,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
       
     - name: Create NuGet package
-      run: dotnet pack src/AgentLauncher --configuration Release --output packages --no-build
+      run: dotnet pack src/AISwarm.Server --configuration Release --output packages --no-build
       
     - name: Upload NuGet package
       uses: actions/upload-artifact@v4
@@ -183,13 +183,13 @@ jobs:
         generate_release_notes: true
         files: release-assets/*
         body: |
-          ## AI Swarm Agent Launcher ${{ needs.create-nuget-package.outputs.version }}
+          ## AISwarm OpenCode MCP Server ${{ needs.create-nuget-package.outputs.version }}
           
           ### Installation
           
           #### Global Tool (Recommended)
           ```bash
-          dotnet tool install --global AiSwarm.AgentLauncher
+          dotnet tool install --global aiswarm-server
           ```
           
           #### Download Binaries
@@ -203,9 +203,11 @@ jobs:
           
           ### Usage
           ```bash
-          aiswarm --help
-          aiswarm --agent planner --worktree planning
+          aiswarm-server
           ```
+
+          Configure Claude Desktop to launch the server over stdio; see README.md.
+          OpenCode CLI and a configured model provider must be installed separately.
           
           ### What's Changed
           See the generated release notes below for detailed changes.

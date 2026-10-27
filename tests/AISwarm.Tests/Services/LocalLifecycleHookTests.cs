@@ -42,8 +42,28 @@ public class LocalLifecycleHookTests
         handler.Body!.ShouldNotContain("private result");
     }
 
+    [Fact]
+    public async Task WhenHostNotificationStalls_ShouldDeliverLocalCallbackIndependently()
+    {
+        var hostNotification = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new RecordingHandler();
+        using var client = new HttpClient(handler);
+        var systemUnderTest = new LocalLifecycleHook(client, "http://127.0.0.1:8099/hook");
+        var snapshot = new DelegatedTask(
+            "task-id", "Completed", "local/model", Path.GetTempPath(), "test", DateTimeOffset.UtcNow);
+
+        var delivery = systemUnderTest.NotifyAsync(snapshot, CancellationToken.None, hostNotification.Task);
+        await handler.Received.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        delivery.IsCompleted.ShouldBeFalse();
+        handler.Body.ShouldNotBeNull();
+        hostNotification.SetResult();
+        await delivery;
+    }
+
     private sealed class RecordingHandler : HttpMessageHandler
     {
+        public readonly TaskCompletionSource Received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public string? Body;
         public HttpMethod? Method;
         public Uri? Endpoint;
@@ -55,6 +75,7 @@ public class LocalLifecycleHookTests
             Method = request.Method;
             Endpoint = request.RequestUri;
             Body = await request.Content!.ReadAsStringAsync(cancellationToken);
+            Received.SetResult();
             return new HttpResponseMessage(HttpStatusCode.NoContent);
         }
     }

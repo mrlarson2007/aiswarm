@@ -15,8 +15,49 @@ using Shouldly;
 
 namespace AISwarm.Tests.Integration;
 
+[CollectionDefinition("OpenCode processes", DisableParallelization = true)]
+public class OpenCodeProcessCollection
+{
+}
+
+[Collection("OpenCode processes")]
 public class OpenCodeDelegationIntegrationTests
 {
+    [Fact]
+    public async Task WhenStartingRealStdioServer_ShouldExposeMvpToolsWithoutWritingLogsToStdout()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "aiswarm-stdio-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        try
+        {
+            await using var client = await McpClient.CreateAsync(new StdioClientTransport(new()
+            {
+                Command = "dotnet",
+                Arguments = [typeof(OpenCodeMcpTool).Assembly.Location],
+                EnvironmentVariables = new Dictionary<string, string?>
+                {
+                    ["WorkingDirectory"] = directory,
+                    ["OpenCode__Executable"] = Path.Combine(directory, "missing-opencode")
+                }
+            }), cancellationToken: timeout.Token);
+
+            var tools = await client.ListToolsAsync(cancellationToken: timeout.Token);
+
+            tools.Select(tool => tool.Name).ShouldContain("list_models");
+            tools.Select(tool => tool.Name).ShouldContain("delegate_task");
+            tools.Select(tool => tool.Name).ShouldContain("get_task_result");
+            tools.Select(tool => tool.Name).ShouldContain("cancel_task");
+            tools.Select(tool => tool.Name).ShouldContain("save_memory");
+            tools.Select(tool => tool.Name).ShouldNotContain("get_next_task");
+            File.Exists(Path.Combine(directory, ".aiswarm", "opencode-mvp.db")).ShouldBeTrue();
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task WhenDelegatingOverMcp_ShouldPushCompletionAndExposeResultWithoutPolling()
     {
