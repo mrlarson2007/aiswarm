@@ -28,34 +28,31 @@ public class DatabaseScopeTests : IDisposable
     public async Task WhenUsingReadScope_ShouldReturnData()
     {
         // Arrange
-        var agent = new Agent
+        var agent = new MemoryEntry
         {
             Id = "read-test-agent",
-            PersonaId = "tester",
-            WorkingDirectory = "/read/test",
-            Status = AgentStatus.Starting,
-            RegisteredAt = DateTime.UtcNow,
-            LastHeartbeat = DateTime.UtcNow
+            Key = "tester",
+            Value = "read value"
         };
 
         // Arrange - Setup test data
         using (var setupScope = _scopeService.GetWriteScope())
         {
-            setupScope.Agents.Add(agent);
+            setupScope.MemoryEntries.Add(agent);
             await setupScope.SaveChangesAsync();
             setupScope.Complete();
         }
 
         // Act
-        Agent? retrievedAgent;
+        MemoryEntry? retrievedAgent;
         using (var scope = _scopeService.GetReadScope())
         {
-            retrievedAgent = await scope.Agents.FindAsync("read-test-agent");
+            retrievedAgent = await scope.MemoryEntries.FindAsync("read-test-agent");
         }
 
         // Assert
         retrievedAgent.ShouldNotBeNull();
-        retrievedAgent.PersonaId.ShouldBe("tester");
+        retrievedAgent.Key.ShouldBe("tester");
     }
 
     [Fact]
@@ -65,17 +62,14 @@ public class DatabaseScopeTests : IDisposable
         string agentId;
         using (var scope = _scopeService.GetWriteScope())
         {
-            var agent = new Agent
+            var agent = new MemoryEntry
             {
                 Id = "write-test-agent",
-                PersonaId = "implementer",
-                WorkingDirectory = "/write/test",
-                Status = AgentStatus.Starting,
-                RegisteredAt = DateTime.UtcNow,
-                LastHeartbeat = DateTime.UtcNow
+                Key = "implementer",
+                Value = "write value"
             };
 
-            scope.Agents.Add(agent);
+            scope.MemoryEntries.Add(agent);
             await scope.SaveChangesAsync();
             agentId = agent.Id;
             scope.Complete();
@@ -83,9 +77,9 @@ public class DatabaseScopeTests : IDisposable
 
         // Assert - Verify agent was saved
         using var assertScope = _scopeService.GetReadScope();
-        var savedAgent = await assertScope.Agents.FindAsync(agentId);
+        var savedAgent = await assertScope.MemoryEntries.FindAsync(agentId);
         savedAgent.ShouldNotBeNull();
-        savedAgent.PersonaId.ShouldBe("implementer");
+        savedAgent.Key.ShouldBe("implementer");
     }
 
 
@@ -97,24 +91,21 @@ public class DatabaseScopeTests : IDisposable
         // Act & Assert - Should not throw
         using (var scope = _scopeService.GetWriteScope())
         {
-            var agent = new Agent
+            var agent = new MemoryEntry
             {
                 Id = "transaction-scope-test",
-                PersonaId = "tester",
-                WorkingDirectory = "/scope/test",
-                Status = AgentStatus.Starting,
-                RegisteredAt = DateTime.UtcNow,
-                LastHeartbeat = DateTime.UtcNow
+                Key = "tester",
+                Value = "transaction value"
             };
 
-            scope.Agents.Add(agent);
+            scope.MemoryEntries.Add(agent);
             await scope.SaveChangesAsync();
             scope.Complete();
         }
 
         // Verify the agent was saved
         using var verifyScope = _scopeService.GetReadScope();
-        var savedAgent = await verifyScope.Agents.FindAsync("transaction-scope-test");
+        var savedAgent = await verifyScope.MemoryEntries.FindAsync("transaction-scope-test");
         savedAgent.ShouldNotBeNull();
     }
 }

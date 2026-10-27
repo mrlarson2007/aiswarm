@@ -19,23 +19,23 @@ public class EventBusConfigurationTests
         builder.Services.AddInfrastructureServices(builder.Configuration);
 
         await using var sp = builder.Services.BuildServiceProvider();
-        var bus = sp.GetService<IEventBus<TaskEventType, ITaskLifecyclePayload>>();
+        var bus = sp.GetService<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>();
         bus.ShouldNotBeNull(); // Expect DI to provide an event bus
-
-        var service = sp.GetRequiredService<IWorkItemNotificationService>();
-        var agentId = "agent-di-backpressure";
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var token = cts.Token;
 
         // Create subscription (do not consume yet)
-        var stream = service.SubscribeForAgent(agentId, token);
+        var stream = bus.Subscribe(new EventFilter<MemoryEventType, IMemoryLifecyclePayload>(), token);
 
         // Fill capacity
-        await service.PublishTaskCreated("t1", agentId, null, CancellationToken.None);
+        var firstEvent = new EventEnvelope<MemoryEventType, IMemoryLifecyclePayload>(
+            MemoryEventType.Created, DateTimeOffset.UtcNow,
+            new MemoryCreatedPayload(new AISwarm.Infrastructure.Entities.MemoryEntryDto("key", "value", "", "text", 5, null)));
+        await bus.PublishAsync(firstEvent);
 
         // Second publish should be blocked until we read
-        var second = service.PublishTaskCreated("t2", agentId, null, CancellationToken.None).AsTask();
+        var second = bus.PublishAsync(firstEvent).AsTask();
         await Task.Delay(100, token);
         second.IsCompleted.ShouldBeFalse();
 

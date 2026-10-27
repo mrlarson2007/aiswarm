@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "AgentLauncher": {
-      "commandName": "Project",
-      "commandLineArgs": "--agent reviewer"
-    }
-  }
-}

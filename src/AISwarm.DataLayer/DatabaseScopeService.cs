@@ -138,8 +138,6 @@ public class ReadScope(CoordinationDbContext context, bool ownsContext = true) :
         get;
     } = context;
 
-    public DbSet<Agent> Agents => Context.Agents;
-    public DbSet<WorkItem> Tasks => Context.Tasks;
     public DbSet<MemoryEntry> MemoryEntries => Context.MemoryEntries;
     public DbSet<EventLog> EventLogs => Context.EventLogs;
 
@@ -167,8 +165,6 @@ public class WriteScope(CoordinationDbContext context, bool ownsContext = true) 
         get;
     } = context;
 
-    public DbSet<Agent> Agents => Context.Agents;
-    public DbSet<WorkItem> Tasks => Context.Tasks;
     public DbSet<MemoryEntry> MemoryEntries => Context.MemoryEntries;
     public DbSet<EventLog> EventLogs => Context.EventLogs;
 
