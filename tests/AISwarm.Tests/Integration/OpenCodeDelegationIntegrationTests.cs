@@ -23,7 +23,7 @@ public class OpenCodeDelegationIntegrationTests
     [Fact]
     public async Task WhenStartingRealStdioServer_ShouldExposeMvpToolsWithoutWritingLogsToStdout()
     {
-        var directory = Path.Combine(Environment.CurrentDirectory, ".stdio-test-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Join(Environment.CurrentDirectory, ".stdio-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         try
@@ -35,7 +35,7 @@ public class OpenCodeDelegationIntegrationTests
                 EnvironmentVariables = new Dictionary<string, string?>
                 {
                     ["WorkingDirectory"] = directory,
-                    ["OpenCode__Executable"] = Path.Combine(directory, "missing-opencode")
+                    ["OpenCode__Executable"] = Path.Join(directory, "missing-opencode")
                 }
             }), cancellationToken: timeout.Token);
 
@@ -48,7 +48,7 @@ public class OpenCodeDelegationIntegrationTests
             tools.Select(tool => tool.Name).ShouldContain("save_memory");
             tools.Select(tool => tool.Name).ShouldNotContain("get_next_task");
             client.ServerCapabilities.Extensions!.ShouldContainKey(TasksProtocol.ExtensionId);
-            File.Exists(Path.Combine(directory, ".aiswarm", "aiswarm.db")).ShouldBeTrue();
+            File.Exists(Path.Join(directory, ".aiswarm", "aiswarm.db")).ShouldBeTrue();
         }
         finally
         {

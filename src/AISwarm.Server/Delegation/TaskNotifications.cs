@@ -43,7 +43,7 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
         CancellationToken cancellationToken)
     {
         await SetCompletedAsync(taskId, result, cancellationToken);
-        _ = NotifyAsync(taskId);
+        Notify(taskId);
     }
 
     async Task IMcpTaskStore.SetFailedAsync(
@@ -52,7 +52,7 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
         CancellationToken cancellationToken)
     {
         await SetFailedAsync(taskId, error, cancellationToken);
-        _ = NotifyAsync(taskId);
+        Notify(taskId);
     }
 
     async Task<bool> IMcpTaskStore.SetCancelledAsync(
@@ -61,7 +61,7 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
     {
         var cancelled = await SetCancelledAsync(taskId, cancellationToken);
         if (cancelled)
-            _ = NotifyAsync(taskId);
+            Notify(taskId);
         return cancelled;
     }
 
@@ -71,7 +71,7 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
         CancellationToken cancellationToken)
     {
         await SetInputRequestsAsync(taskId, inputRequests, cancellationToken);
-        _ = NotifyAsync(taskId);
+        Notify(taskId);
     }
 
     async Task IMcpTaskStore.ResolveInputRequestsAsync(
@@ -80,7 +80,16 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
         CancellationToken cancellationToken)
     {
         await ResolveInputRequestsAsync(taskId, inputResponses, cancellationToken);
-        _ = NotifyAsync(taskId);
+        Notify(taskId);
+    }
+
+    private void Notify(string taskId)
+    {
+        _ = NotifyAsync(taskId).ContinueWith(failed =>
+        {
+            var error = failed.Exception!.GetBaseException();
+            Logger?.LogWarning(error, "Unable to deliver task status notification for {TaskId}", taskId);
+        }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
     }
 
     private async Task NotifyAsync(string taskId)
@@ -88,12 +97,10 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
         if (Server is null)
             return;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        try
-        {
-            var task = await GetTaskAsync(taskId, CancellationToken.None);
-            if (task is null)
-                return;
-            TaskStatusNotificationParams notification = task.Status switch
+        var task = await GetTaskAsync(taskId, CancellationToken.None);
+        if (task is null)
+            return;
+        TaskStatusNotificationParams notification = task.Status switch
             {
                 McpTaskStatus.Completed => new CompletedTaskNotificationParams
                 {
@@ -129,14 +136,9 @@ internal sealed class TaskNotifications : InMemoryMcpTaskStore, IMcpTaskStore
                     LastUpdatedAt = task.LastUpdatedAt
                 }
             };
-            notification.TimeToLive = task.TimeToLive;
-            notification.PollIntervalMs = task.PollIntervalMs;
-            notification.StatusMessage = task.StatusMessage;
-            await Server.SendTaskStatusNotificationAsync(notification, timeout.Token).WaitAsync(timeout.Token);
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogWarning(ex, "Unable to deliver task status notification for {TaskId}", taskId);
-        }
+        notification.TimeToLive = task.TimeToLive;
+        notification.PollIntervalMs = task.PollIntervalMs;
+        notification.StatusMessage = task.StatusMessage;
+        await Server.SendTaskStatusNotificationAsync(notification, timeout.Token).WaitAsync(timeout.Token);
     }
 }

@@ -210,7 +210,7 @@ public class OpenCodeCliTests
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
-        var cli = new OpenCodeCli(Path.Combine(
+        var cli = new OpenCodeCli(Path.Join(
             Directory.GetCurrentDirectory(), "must-not-be-started"));
 
         await Should.ThrowAsync<OperationCanceledException>(async () =>
@@ -260,7 +260,7 @@ public class OpenCodeCliTests
             await WaitUntilAsync(() =>
             {
                 var ids = Directory.EnumerateDirectories($"/proc/{Environment.ProcessId}/task")
-                    .SelectMany(directory => File.ReadAllText(Path.Combine(directory, "children"))
+                    .SelectMany(directory => File.ReadAllText(Path.Join(directory, "children"))
                         .Split(' ', StringSplitOptions.RemoveEmptyEntries))
                     .Distinct();
                 parent = ids.Select(id => Process.GetProcessById(int.Parse(id)))
@@ -285,12 +285,14 @@ public class OpenCodeCliTests
         }
         finally
         {
-            if (parent is { HasExited: false })
-                parent.Kill(true);
-            if (child is { HasExited: false })
-                child.Kill();
-            parent?.Dispose();
-            child?.Dispose();
+            using (parent)
+            using (child)
+            {
+                if (parent is { HasExited: false })
+                    parent.Kill(true);
+                if (child is { HasExited: false })
+                    child.Kill();
+            }
         }
     }
 
@@ -332,7 +334,7 @@ public class OpenCodeCliTests
     [Fact]
     public async Task WhenExecutableIsMissing_ShouldExplainHowToFixDiscovery()
     {
-        var executable = Path.Combine(Directory.GetCurrentDirectory(), "missing-opencode-executable");
+        var executable = Path.Join(Directory.GetCurrentDirectory(), "missing-opencode-executable");
         IAgentService cli = new OpenCodeCli(executable);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(

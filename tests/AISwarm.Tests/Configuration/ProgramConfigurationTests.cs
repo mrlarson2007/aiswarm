@@ -12,7 +12,7 @@ public class ProgramConfigurationTests
     [Fact]
     public void WhenRegisteringDataLayer_ShouldKeepTheExistingDatabaseFilename()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "aiswarm-database-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Join(Path.GetTempPath(), "aiswarm-database-" + Guid.NewGuid().ToString("N"));
         try
         {
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -25,8 +25,8 @@ public class ProgramConfigurationTests
             using var provider = services.BuildServiceProvider();
             using var context = provider.GetRequiredService<IDbContextFactory<CoordinationDbContext>>().CreateDbContext();
 
-            context.Database.GetDbConnection().DataSource.ShouldBe(Path.Combine(directory, ".aiswarm", "aiswarm.db"));
-            File.Exists(Path.Combine(directory, ".aiswarm", "opencode-mvp.db")).ShouldBeFalse();
+            context.Database.GetDbConnection().DataSource.ShouldBe(Path.Join(directory, ".aiswarm", "aiswarm.db"));
+            File.Exists(Path.Join(directory, ".aiswarm", "opencode-mvp.db")).ShouldBeFalse();
         }
         finally
         {

@@ -173,7 +173,7 @@ public class DelegationServiceTests
         var cli = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
         var systemUnderTest = CreateExecutor(cli);
         var path = directory == "valid" ? Environment.CurrentDirectory
-            : directory == "missing" ? Path.Combine(Environment.CurrentDirectory, Guid.NewGuid().ToString()) : directory;
+            : directory == "missing" ? Path.Join(Environment.CurrentDirectory, Guid.NewGuid().ToString()) : directory;
 
         await Should.ThrowAsync<ArgumentException>(() => systemUnderTest.ExecuteAsync(instructions, model, path));
 
