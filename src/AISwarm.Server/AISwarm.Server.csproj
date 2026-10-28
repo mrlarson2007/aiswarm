@@ -19,37 +19,32 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ModelContextProtocol" Version="*-*"/>
-        <PackageReference Include="ModelContextProtocol.AspNetCore" Version="*-*"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0"/>
-        <PackageReference Include="System.Linq.Async" Version="6.0.1"/>
+        <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks" Version="2.3.0" />
+        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj" />
+        <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj" />
+        <ProjectReference Include="..\AISwarm.Shared\AISwarm.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AISwarm.Infrastructure\AISwarm.Infrastructure.csproj"/>
-        <ProjectReference Include="..\AISwarm.DataLayer\AISwarm.DataLayer.csproj"/>
-        <ProjectReference Include="..\AISwarm.Shared\AISwarm.Shared.csproj"/>
+        <Folder Include="Configuration\" />
+        <InternalsVisibleTo Include="AISwarm.Tests" />
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Configuration\"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Compile Remove="Configuration\McpToolConfiguration.cs"/>
+        <Compile Remove="Configuration\McpToolConfiguration.cs" />
     </ItemGroup>
 
 </Project>
-
-
 
 
 

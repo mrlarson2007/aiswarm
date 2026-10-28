@@ -22,22 +22,6 @@ public interface IDatabaseScopeService : IReadOnlyDatabaseScopeService
 /// </summary>
 public interface IReadScope : IDisposable
 {
-    /// <summary>
-    ///     Agents DbSet for direct access
-    /// </summary>
-    DbSet<Agent> Agents
-    {
-        get;
-    }
-
-    /// <summary>
-    ///     Tasks DbSet for direct access
-    /// </summary>
-    DbSet<WorkItem> Tasks
-    {
-        get;
-    }
-
     DbSet<MemoryEntry> MemoryEntries
     {
         get;

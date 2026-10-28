@@ -11,10 +11,6 @@ public static class ServiceRegistration
         this IServiceCollection services)
     {
         services.AddSingleton<IGitService, GitService>();
-        services.AddSingleton<IGeminiService, GeminiService>();
-        services.AddScoped<IAgentStateService, AgentStateService>();
-        services.AddScoped<ILocalAgentService, LocalAgentService>();
-        services.AddSingleton<IContextService, ContextService>();
         services.AddSingleton<IProcessTerminationService, ProcessTerminationService>();
         services.AddSingleton<IProcessLauncher, ProcessLauncher>();
         services.AddSingleton<IAppLogger, ConsoleAppLogger>();
@@ -32,19 +28,9 @@ public static class ServiceRegistration
         services.AddSingleton<ITimeService, SystemTimeService>();
         services.AddScoped<IMemoryService, MemoryService>();
 
-        // Eventing defaults (unbounded) and high-level notification service
-        services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
-            new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
-        services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
-        services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
-            new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
-        services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
         // Add Memory Event Bus
         services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
             new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>());
-
-        // Event logging service
-        services.AddScoped<IEventLoggerService, DatabaseEventLoggerService>();
 
         return services;
     }
@@ -79,29 +65,14 @@ public static class ServiceRegistration
             };
 
             // Replace the default IEventBus with a bounded instance
-            services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
-                new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>(options));
-            services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
-                new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>(options));
             services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
                 new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>(options));
         }
         else
         {
-            services.AddSingleton<IEventBus<TaskEventType, ITaskLifecyclePayload>>(_ =>
-                new InMemoryEventBus<TaskEventType, ITaskLifecyclePayload>());
-            services.AddSingleton<IEventBus<AgentEventType, IAgentLifecyclePayload>>(_ =>
-                new InMemoryEventBus<AgentEventType, IAgentLifecyclePayload>());
             services.AddSingleton<IEventBus<MemoryEventType, IMemoryLifecyclePayload>>(_ =>
                 new InMemoryEventBus<MemoryEventType, IMemoryLifecyclePayload>());
         }
-
-        // High-level notification services (after event bus configuration)
-        services.AddSingleton<IWorkItemNotificationService, WorkItemNotificationService>();
-        services.AddSingleton<IAgentNotificationService, AgentNotificationService>();
-
-        // Event logging service
-        services.AddScoped<IEventLoggerService, DatabaseEventLoggerService>();
 
         return services;
     }

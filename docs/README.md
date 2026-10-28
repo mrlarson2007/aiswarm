@@ -1,5 +1,9 @@
 # AI Swarm Documentation
 
+> Historical documentation: Gemini, personas, worker polling, and A2A designs below are superseded
+> by the OpenCode CLI MVP in [the main README](../README.md). They are not supported setup instructions.
+> A2A and OpenCode server/API integration are deferred.
+
 This documentation is organized into three main categories for easy navigation and maintenance.
 
 ## 📐 System Design
@@ -93,4 +97,3 @@ User guides, operational procedures, and development workflows.
 - **Help**: Operational guides, development workflows, troubleshooting
 
 All documentation follows Markdown standards with proper linking and cross-references for easy navigation.
-

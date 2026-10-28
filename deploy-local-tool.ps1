@@ -9,7 +9,7 @@
     1. Builds and packages AISwarm.Server as a dotnet tool
     2. Installs/updates the tool locally
     3. Updates VS Code MCP configuration to use the local tool
-    4. Ensures the tool is ready for use in VS Code and Gemini CLI
+    4. Ensures the tool is ready for use in stdio MCP clients
 
 .PARAMETER Clean
     Perform a clean build (remove bin/obj directories first)
@@ -42,7 +42,6 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ToolsPackagesDir = Join-Path $ProjectRoot "tools-packages"
 $McpConfigPath = Join-Path $ProjectRoot ".vscode\mcp.json"
-$AgentLauncherCsprojPath = Join-Path $ProjectRoot "src\AgentLauncher\AgentLauncher.csproj"
 $McpServerCsprojPath = Join-Path $ProjectRoot "src\AISwarm.Server\AISwarm.Server.csproj"
 
 Write-Host "🚀 AISwarm Local Tool Deployment" -ForegroundColor Cyan

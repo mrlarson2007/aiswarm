@@ -1,8 +1,7 @@
-// AISwarm.Server - MCP coordination server providing agent management and task coordination tools for VS Code
+// AISwarm.Server - stdio MCP server for OpenCode delegation and shared memory.
 using AISwarm.DataLayer;
 using AISwarm.Infrastructure;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+using AISwarm.Server.Delegation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,7 +13,7 @@ internal static class Program
 {
     private static async Task Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        var builder = Host.CreateApplicationBuilder(args);
 
         // Configure console logging to stderr (MCP standard)
         builder.Logging.AddConsole(options =>
@@ -25,44 +24,18 @@ internal static class Program
         // Add database services
         ConfigureDatabaseServices(builder.Services, builder.Configuration);
 
-        // Configure MCP server with BOTH stdio and HTTP transports
+        // Keep stdout exclusively for the Claude Desktop MCP transport.
         builder.Services
             .AddInfrastructureServices(builder.Configuration)
+            .AddOpenCodeDelegation(builder.Configuration)
             .AddMcpServer()
-            .WithStdioServerTransport() // For VS Code
-            .WithHttpTransport() // For Gemini CLI
+            .WithDelegationTasks()
+            .WithStdioServerTransport()
             .WithToolsFromAssembly();
-
-        builder.WebHost.ConfigureKestrel(serverOptions =>
-        {
-            // Set a longer timeout for long polling requests
-            serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(10);
-        });
 
         var app = builder.Build();
 
-        // Start event logging service
-        var eventLogger = app.Services.GetRequiredService<IEventLoggerService>();
-        await eventLogger.StartAsync();
-
-        // Register shutdown handling for graceful event logger cleanup
-        var appLifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
-        appLifetime.ApplicationStopping.Register(() =>
-        {
-            // Note: We can't await here, but StopAsync should handle cleanup synchronously if needed
-            _ = eventLogger.StopAsync();
-        });
-
-        // Map MCP HTTP endpoints
-        app.MapMcp();
-        var task = app.RunAsync();
-        var url = app.Urls.FirstOrDefault();
-        Console.WriteLine("AISwarm MCP Server starting with dual transport support:");
-        Console.WriteLine("- Stdio transport for VS Code MCP integration");
-        Console.WriteLine($"- HTTP transport for Gemini CLI at {url}");
-        Console.WriteLine("- Event logging service started for audit trail");
-
-        await task;
+        await app.RunAsync();
     }
 
     private static void ConfigureDatabaseServices(

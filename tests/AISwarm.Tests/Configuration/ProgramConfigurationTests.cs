@@ -10,6 +10,33 @@ namespace AISwarm.Tests.Configuration;
 public class ProgramConfigurationTests
 {
     [Fact]
+    public void WhenRegisteringDataLayer_ShouldKeepTheExistingDatabaseFilename()
+    {
+        var directory = Path.Join(Path.GetTempPath(), "aiswarm-database-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["WorkingDirectory"] = directory
+            }).Build();
+            var services = new ServiceCollection();
+
+            services.AddDataLayerServices(configuration);
+            using var provider = services.BuildServiceProvider();
+            using var context = provider.GetRequiredService<IDbContextFactory<CoordinationDbContext>>().CreateDbContext();
+
+            context.Database.GetDbConnection().DataSource.ShouldBe(Path.Join(directory, ".aiswarm", "aiswarm.db"));
+            File.Exists(Path.Join(directory, ".aiswarm", "opencode-mvp.db")).ShouldBeFalse();
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void WhenWorkingDirectoryConfigured_ShouldConfigureSqliteDatabase()
     {
         // Arrange
