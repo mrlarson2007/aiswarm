@@ -44,6 +44,7 @@ public class OpenCodeCliTests
             return;
 
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var token = cancellation.Token;
         var runner = new OpenCodeProcessRunner();
         // AutoFlush leaves a trailing surrogate in the UTF-8 encoder until its final flush.
         var prompt = new string('x', pipeCapacity) + "\ud800";
@@ -52,7 +53,7 @@ public class OpenCodeCliTests
             Task.Run(() => runner.RunAsync(new OpenCodeProcessRequest(
                     "/usr/bin/timeout", ["3", "/usr/bin/sleep", "60"],
                     Directory.GetCurrentDirectory(), prompt),
-                cancellation.Token)).WaitAsync(TimeSpan.FromSeconds(1)));
+                token)).WaitAsync(TimeSpan.FromSeconds(1)));
     }
 
     [Fact]
@@ -63,12 +64,13 @@ public class OpenCodeCliTests
 
         var runner = new OpenCodeProcessRunner();
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var token = cancellation.Token;
         var elapsed = Stopwatch.StartNew();
 
         await Should.ThrowAsync<OperationCanceledException>(() =>
             runner.RunAsync(new OpenCodeProcessRequest(
                 "/usr/bin/setsid", ["--fork", "/usr/bin/sleep", "2"],
-                Directory.GetCurrentDirectory()), cancellation.Token));
+                Directory.GetCurrentDirectory()), token));
 
         elapsed.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(1));
     }
@@ -109,12 +111,13 @@ public class OpenCodeCliTests
 
         var runner = new OpenCodeProcessRunner();
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var token = cancellation.Token;
         var elapsed = Stopwatch.StartNew();
 
         await Should.ThrowAsync<OperationCanceledException>(() => Task.Run(() =>
             runner.RunAsync(new OpenCodeProcessRequest(
                 "/usr/bin/timeout", ["3", "/usr/bin/sleep", "60"],
-                Directory.GetCurrentDirectory(), new string('x', 65537)), cancellation.Token)));
+                Directory.GetCurrentDirectory(), new string('x', 65537)), token)));
 
         elapsed.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(2));
     }
@@ -127,26 +130,28 @@ public class OpenCodeCliTests
         int cancelledCommand)
     {
         using var cancellation = new CancellationTokenSource();
+        var token = cancellation.Token;
+        Action cancel = cancellation.Cancel;
         var runner = new Mock<IOpenCodeProcessRunner>();
         var outputs = new[] { "1.2.3", "--model --format", "provider/model" };
         var calls = 0;
         runner.Setup(x => x.RunAsync(
-                It.IsAny<OpenCodeProcessRequest>(), cancellation.Token))
-            .Returns((OpenCodeProcessRequest _, CancellationToken token) =>
+                It.IsAny<OpenCodeProcessRequest>(), token))
+            .Returns((OpenCodeProcessRequest _, CancellationToken callbackToken) =>
             {
                 var index = calls++;
                 if (index != cancelledCommand)
                     return Task.FromResult(new AgentResult(0, outputs[index], ""));
 
-                cancellation.Cancel();
-                return Task.FromCanceled<AgentResult>(token);
+                cancel();
+                return Task.FromCanceled<AgentResult>(callbackToken);
             });
         var cli = new OpenCodeCli(runner.Object);
 
         var exception = await Should.ThrowAsync<OperationCanceledException>(
-            () => cli.ListModelsAsync(Directory.GetCurrentDirectory(), cancellation.Token));
+            () => cli.ListModelsAsync(Directory.GetCurrentDirectory(), token));
 
-        exception.CancellationToken.ShouldBe(cancellation.Token);
+        exception.CancellationToken.ShouldBe(token);
         calls.ShouldBe(cancelledCommand + 1);
     }
 
@@ -346,10 +351,11 @@ public class OpenCodeCliTests
         var runner = new Mock<IOpenCodeProcessRunner>();
         OpenCodeProcessRequest? captured = null;
         using var cancellation = new CancellationTokenSource();
+        var token = cancellation.Token;
         var expected = new AgentResult(exitCode, "json output", "diagnostic");
         runner.Setup(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
-                cancellation.Token))
+                token))
             .Callback<OpenCodeProcessRequest, CancellationToken>((request, _) => captured = request)
             .ReturnsAsync(expected);
         IAgentService cli = new OpenCodeCli(runner.Object, "custom opencode");
@@ -357,7 +363,7 @@ public class OpenCodeCliTests
         var directory = Directory.GetCurrentDirectory();
 
         var result = await cli.RunAsync(
-            instructions, "provider/model", directory, cancellation.Token);
+            instructions, "provider/model", directory, token);
 
         result.ShouldBe(expected);
         captured.ShouldNotBeNull();
@@ -366,7 +372,7 @@ public class OpenCodeCliTests
         captured.WorkingDirectory.ShouldBe(directory);
         captured.StandardInput.ShouldBe(instructions);
         runner.Verify(x => x.RunAsync(
-            It.IsAny<OpenCodeProcessRequest>(), cancellation.Token), Times.Once);
+            It.IsAny<OpenCodeProcessRequest>(), token), Times.Once);
     }
 
     [Theory]

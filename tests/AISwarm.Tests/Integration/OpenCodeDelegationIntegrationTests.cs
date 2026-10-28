@@ -105,7 +105,7 @@ public class OpenCodeDelegationIntegrationTests
             started.TrySetResult();
             try
             {
-                await Task.Delay(System.Threading.Timeout.Infinite, token);
+                await Task.Delay(Timeout.Infinite, token);
                 return new AgentResult(0, "", "");
             }
             finally
@@ -157,7 +157,7 @@ public class OpenCodeDelegationIntegrationTests
         {
             try
             {
-                await Task.Delay(System.Threading.Timeout.Infinite, token);
+                await Task.Delay(Timeout.Infinite, token);
                 return new AgentResult(0, "", "");
             }
             finally

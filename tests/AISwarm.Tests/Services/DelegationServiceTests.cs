@@ -100,7 +100,8 @@ public class DelegationServiceTests
             ["input"] = new() { Method = "elicitation/create" }
         });
         using var request = new CancellationTokenSource();
-        store.InputResponseReceived += _ => request.Cancel();
+        Action cancelRequest = request.Cancel;
+        store.InputResponseReceived += _ => cancelRequest();
 
         await store.ResolveInputRequestsAsync(task.TaskId, new Dictionary<string, InputResponse>
         {

@@ -18,7 +18,7 @@ public static class DelegationMcpExtensions
             // This server has one stdio connection. The SDK owns all task state and execution.
             store.Server = request.Server;
             store.Logger = request.Services?.GetService<ILoggerFactory>()?.CreateLogger<TaskNotifications>();
-            return request.Params?.Name == "delegate_task"
+            return request.Params.Name == "delegate_task"
                 ? McpTaskExecutionMode.Required
                 : McpTaskExecutionMode.Synchronous;
         });
