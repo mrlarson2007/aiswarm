@@ -1,5 +1,10 @@
-using AISwarm.Infrastructure.OpenCode;
+using AISwarm.Infrastructure;
 using AISwarm.Server.Delegation;
+using Microsoft.Extensions.Hosting;
+using ModelContextProtocol.Extensions.Tasks;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+using System.Text.Json;
 using Moq;
 using Shouldly;
 
@@ -7,88 +12,151 @@ namespace AISwarm.Tests.Services;
 
 public class DelegationServiceTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenStatusDeliveryStalls_ShouldNotDelaySdkTransition(bool cancel)
+    {
+        var attempted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseNotification = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var server = new Mock<McpServer>();
+        server.Setup(service => service.SendMessageAsync(
+                It.IsAny<JsonRpcMessage>(), It.IsAny<CancellationToken>()))
+            .Returns((JsonRpcMessage _, CancellationToken token) =>
+            {
+                attempted.TrySetResult();
+                return releaseNotification.Task.WaitAsync(token);
+            });
+        IMcpTaskStore store = new TaskNotifications { Server = server.Object };
+        var task = await store.CreateTaskAsync();
+
+        Task transition = cancel
+            ? store.SetCancelledAsync(task.TaskId)
+            : store.SetCompletedAsync(task.TaskId, JsonSerializer.SerializeToElement(new
+            {
+                content = "done"
+            }));
+        await attempted.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        try
+        {
+            transition.IsCompleted.ShouldBeTrue();
+            (await store.GetTaskAsync(task.TaskId))!.Status.ShouldBe(
+                cancel ? McpTaskStatus.Cancelled : McpTaskStatus.Completed);
+        }
+        finally
+        {
+            releaseNotification.TrySetResult();
+            await transition;
+        }
+    }
+
+    [Fact]
+    public async Task WhenStoppingHost_ShouldWaitForAgentCancellationCleanup()
+    {
+        using var stopping = new CancellationTokenSource();
+        var lifetime = new Mock<IHostApplicationLifetime>();
+        lifetime.SetupGet(service => service.ApplicationStopping).Returns(stopping.Token);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleaningUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanedUp = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var agent = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
+        agent.Setup(service => service.RunAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(async (string _, string _, string _, CancellationToken token) =>
+            {
+                started.TrySetResult();
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, token);
+                    return new AgentResult(0, "", "");
+                }
+                finally
+                {
+                    cleaningUp.TrySetResult();
+                    await cleanedUp.Task;
+                }
+            });
+        var systemUnderTest = new DelegationService(agent.Object, lifetime.Object);
+        var execution = systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        stopping.Cancel();
+        await cleaningUp.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        var shutdown = systemUnderTest.StopAsync(CancellationToken.None);
+
+        shutdown.IsCompleted.ShouldBeFalse();
+        cleanedUp.SetResult();
+        await shutdown.WaitAsync(TimeSpan.FromSeconds(5));
+        await Should.ThrowAsync<OperationCanceledException>(() => execution);
+    }
+
+    [Fact]
+    public async Task WhenInputResponseCallbackCancelsRequest_ShouldNotFailStoredTransition()
+    {
+        IMcpTaskStore store = new TaskNotifications();
+        var task = await store.CreateTaskAsync();
+        await store.SetInputRequestsAsync(task.TaskId, new Dictionary<string, InputRequest>
+        {
+            ["input"] = new() { Method = "elicitation/create" }
+        });
+        using var request = new CancellationTokenSource();
+        store.InputResponseReceived += _ => request.Cancel();
+
+        await store.ResolveInputRequestsAsync(task.TaskId, new Dictionary<string, InputResponse>
+        {
+            ["input"] = new() { RawValue = JsonSerializer.SerializeToElement(new { action = "accept" }) }
+        }, request.Token);
+
+        request.IsCancellationRequested.ShouldBeTrue();
+        (await store.GetTaskAsync(task.TaskId))!.Status.ShouldBe(McpTaskStatus.Working);
+    }
+
     [Fact]
     public async Task WhenModelIsUnavailable_ShouldRejectWithoutLaunching()
     {
-        var cli = new Mock<IOpenCodeCli>();
-        cli.Setup(service => service.ListModelsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeModels("test", ["local/available"]));
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var cli = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
+        var systemUnderTest = CreateExecutor(cli);
 
         await Should.ThrowAsync<ArgumentException>(() =>
-            systemUnderTest.DelegateAsync("Do work", "local/missing", Path.GetTempPath()));
+            systemUnderTest.ExecuteAsync("Do work", "local/missing", Environment.CurrentDirectory));
 
         cli.Verify(service => service.RunAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task WhenDelegating_ShouldReturnBeforeExecutionAndDeliverCompletedResultToHook()
+    public async Task WhenExecutingInline_ShouldReturnAgentOutputWithoutCreatingApplicationTaskState()
     {
-        var execution = new TaskCompletionSource<OpenCodeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cli = CreateCli(execution.Task);
-        var events = new List<DelegatedTask>();
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var cli = CreateAgent(Task.FromResult(new AgentResult(0, "done", "")));
+        var systemUnderTest = CreateExecutor(cli);
 
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Implement the task", "local/model", Path.GetTempPath(),
-            hook: (snapshot, _) =>
-            {
-                events.Add(snapshot);
-                return Task.CompletedTask;
-            }).WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
 
-        accepted.State.ShouldBe("Running");
-        execution.Task.IsCompleted.ShouldBeFalse();
-        execution.SetResult(new OpenCodeResult(0, "task output", ""));
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId).WaitAsync(TimeSpan.FromSeconds(5));
-
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Completed");
-        result.StandardOutput.ShouldBe("task output");
         result.ExitCode.ShouldBe(0);
-        result.ResultUri.ShouldBe($"aiswarm://tasks/{accepted.TaskId}");
-        events.Select(snapshot => snapshot.State).ShouldBe(["Running", "Completed"]);
-        events.Last().ShouldBe(result);
-        cli.Verify(service => service.RunAsync(
-            "Implement the task", "local/model", Path.GetTempPath(), It.IsAny<CancellationToken>()), Times.Once);
+        result.StandardOutput.ShouldBe("done");
     }
 
     [Fact]
-    public async Task WhenProcessFails_ShouldRetainExitCodeAndNotifyFailure()
+    public async Task WhenProcessFails_ShouldRetainExitCodeAndOutput()
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(7, "partial", "model failed")));
-        var events = new List<string>();
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var systemUnderTest = CreateExecutor(CreateAgent(Task.FromResult(new AgentResult(7, "partial", "model failed"))));
 
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(), (snapshot, _) =>
-            {
-                events.Add(snapshot.State);
-                return Task.CompletedTask;
-            });
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId);
+        var result = await systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
 
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Failed");
         result.ExitCode.ShouldBe(7);
+        result.StandardOutput.ShouldBe("partial");
         result.StandardError.ShouldBe("model failed");
-        events.ShouldBe(["Running", "Failed"]);
     }
 
     [Fact]
-    public async Task WhenExecutionThrows_ShouldRetainFailureAndCompleteHook()
+    public async Task WhenExecutionThrows_ShouldReturnAgentFailure()
     {
-        var cli = CreateCli(Task.FromException<OpenCodeResult>(new IOException("CLI disappeared")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var systemUnderTest = CreateExecutor(CreateAgent(Task.FromException<AgentResult>(new IOException("CLI disappeared"))));
 
-        var accepted = await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId);
+        var result = await systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
 
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Failed");
+        result.ExitCode.ShouldBe(-1);
         result.StandardError.ShouldContain("CLI disappeared");
-        result.CompletedAt.ShouldNotBeNull();
     }
 
     [Theory]
@@ -101,85 +169,42 @@ public class DelegationServiceTests
         string model,
         string directory)
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "", "")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        var path = directory == "valid" ? Path.GetTempPath()
-            : directory == "missing" ? Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()) : directory;
+        var cli = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
+        var systemUnderTest = CreateExecutor(cli);
+        var path = directory == "valid" ? Environment.CurrentDirectory
+            : directory == "missing" ? Path.Combine(Environment.CurrentDirectory, Guid.NewGuid().ToString()) : directory;
 
-        await Should.ThrowAsync<ArgumentException>(() => systemUnderTest.DelegateAsync(instructions, model, path));
+        await Should.ThrowAsync<ArgumentException>(() => systemUnderTest.ExecuteAsync(instructions, model, path));
 
         cli.Verify(service => service.ListModelsAsync(
             It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task WhenHookFails_ShouldStillRunTaskAndRetainItsResult()
-    {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "done", "")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
-
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(),
-            (_, _) => Task.FromException(new IOException("hook unavailable")));
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId);
-
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Completed");
-        result.StandardOutput.ShouldBe("done");
-        result.HookError.ShouldNotBeNull();
-        result.HookError.ShouldContain("hook unavailable");
-    }
-
-    [Fact]
-    public async Task WhenCancelling_ShouldSignalProcessAndNotifyCancelledOnce()
+    public async Task WhenCancelling_ShouldSignalProcessAndPropagateCancellationToSdk()
     {
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "", "")));
-        cli.Setup(service => service.RunAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(async (string _, string _, string _, CancellationToken token) =>
-            {
-                started.SetResult();
-                await Task.Delay(Timeout.Infinite, token);
-                return new OpenCodeResult(0, "", "");
-            });
-        var states = new List<string>();
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(), (snapshot, _) =>
-            {
-                states.Add(snapshot.State);
-                return Task.CompletedTask;
-            });
+        var cli = CreateBlockingAgent(started);
+        var systemUnderTest = CreateExecutor(cli);
+        using var cancellation = new CancellationTokenSource();
+        var execution = systemUnderTest.ExecuteAsync(
+            "Do work", "local/model", Environment.CurrentDirectory, cancellationToken: cancellation.Token);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        systemUnderTest.CancelTask(accepted.TaskId).ShouldBeTrue();
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId).WaitAsync(TimeSpan.FromSeconds(5));
+        cancellation.Cancel();
 
-        systemUnderTest.GetTask(accepted.TaskId).State.ShouldBe("Cancelled");
-        states.ShouldBe(["Running", "Cancelled"]);
-        systemUnderTest.CancelTask(accepted.TaskId).ShouldBeFalse();
+        await Should.ThrowAsync<OperationCanceledException>(() => execution);
     }
 
     [Fact]
-    public async Task WhenTimeoutExpires_ShouldCancelProcessAndRetainTimeoutFailure()
+    public async Task WhenTimeoutExpires_ShouldCancelProcessAndReturnTimeoutFailure()
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "", "")));
-        cli.Setup(service => service.RunAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(async (string _, string _, string _, CancellationToken token) =>
-            {
-                await Task.Delay(Timeout.Infinite, token);
-                return new OpenCodeResult(0, "", "");
-            });
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var systemUnderTest = CreateExecutor(CreateBlockingAgent());
 
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(), timeout: TimeSpan.FromMilliseconds(50));
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId).WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await systemUnderTest.ExecuteAsync(
+            "Do work", "local/model", Environment.CurrentDirectory, timeout: TimeSpan.FromMilliseconds(50));
 
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Failed");
+        result.ExitCode.ShouldBe(-1);
         result.StandardError.ShouldContain("timed out");
     }
 
@@ -189,66 +214,47 @@ public class DelegationServiceTests
     [InlineData(86401)]
     public async Task WhenTimeoutIsInvalid_ShouldRejectBeforeDiscovery(int seconds)
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "", "")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var cli = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
+        var systemUnderTest = CreateExecutor(cli);
 
-        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(), timeout: TimeSpan.FromSeconds(seconds)));
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => systemUnderTest.ExecuteAsync(
+            "Do work", "local/model", Environment.CurrentDirectory, timeout: TimeSpan.FromSeconds(seconds)));
 
         cli.Verify(service => service.ListModelsAsync(
             It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task WhenHostStops_ShouldCancelOutstandingWorkAndRejectNewTasks()
+    public async Task WhenHostStops_ShouldCancelOutstandingWorkAndRejectNewExecution()
     {
-        var execution = new TaskCompletionSource<OpenCodeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cli = CreateCli(execution.Task);
-        cli.Setup(service => service.RunAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string _, string _, string _, CancellationToken token) => execution.Task.WaitAsync(token));
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        var accepted = await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
+        using var stopping = new CancellationTokenSource();
+        var lifetime = new Mock<IHostApplicationLifetime>();
+        lifetime.SetupGet(service => service.ApplicationStopping).Returns(stopping.Token);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var systemUnderTest = new DelegationService(CreateBlockingAgent(started).Object, lifetime.Object);
+        var execution = systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
-        await systemUnderTest.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        stopping.Cancel();
 
-        systemUnderTest.GetTask(accepted.TaskId).State.ShouldBe("Cancelled");
-        await Should.ThrowAsync<ObjectDisposedException>(() =>
-            systemUnderTest.DelegateAsync("More work", "local/model", Path.GetTempPath()));
-    }
-
-    [Fact]
-    public async Task WhenCallerCancelsAfterAcceptance_ShouldNotCancelBackgroundExecution()
-    {
-        var execution = new TaskCompletionSource<OpenCodeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cli = CreateCli(execution.Task);
-        using var request = new CancellationTokenSource();
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        var accepted = await systemUnderTest.DelegateAsync(
-            "Do work", "local/model", Path.GetTempPath(), cancellationToken: request.Token);
-
-        request.Cancel();
-        execution.SetResult(new OpenCodeResult(0, "done", ""));
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId);
-
-        systemUnderTest.GetTask(accepted.TaskId).State.ShouldBe("Completed");
+        await Should.ThrowAsync<OperationCanceledException>(() => execution);
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            systemUnderTest.ExecuteAsync("More work", "local/model", Environment.CurrentDirectory));
     }
 
     [Theory]
-    [InlineData("{\"type\":\"error\",\"error\":{\"message\":\"provider failed\"}}")]
-    [InlineData("{\"type\":\"text\"}\n{\"type\":\"error\"}\n")]
-    [InlineData("{\"type\":\"text\"}\n[output truncated]")]
-    public async Task WhenCliReportsAnErrorDespiteZeroExit_ShouldNotReportSuccess(string output)
+    [InlineData("provider event output")]
+    [InlineData("partial response")]
+    [InlineData("")]
+    public async Task WhenAgentReportsFailureDespiteZeroExit_ShouldPreserveNeutralFailure(string output)
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, output, "")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
+        var systemUnderTest = CreateExecutor(CreateAgent(Task.FromResult(
+            new AgentResult(0, output, "provider failed") { IsError = true })));
 
-        var accepted = await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
-        await systemUnderTest.WaitForCompletionAsync(accepted.TaskId);
+        var result = await systemUnderTest.ExecuteAsync("Do work", "local/model", Environment.CurrentDirectory);
 
-        var result = systemUnderTest.GetTask(accepted.TaskId);
-        result.State.ShouldBe("Failed");
         result.ExitCode.ShouldBe(0);
+        result.IsError.ShouldBeTrue();
         result.StandardOutput.ShouldBe(output);
         result.StandardError.ShouldNotBeEmpty();
     }
@@ -256,42 +262,42 @@ public class DelegationServiceTests
     [Fact]
     public async Task WhenFourTasksAreRunning_ShouldRejectAdditionalProcesses()
     {
-        var execution = new TaskCompletionSource<OpenCodeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cli = CreateCli(execution.Task);
+        var systemUnderTest = CreateExecutor(CreateBlockingAgent());
+        using var cancellation = new CancellationTokenSource();
+        var executions = Enumerable.Range(0, 4).Select(_ => systemUnderTest.ExecuteAsync(
+            "Do work", "local/model", Environment.CurrentDirectory, cancellationToken: cancellation.Token)).ToArray();
+
+        var rejected = await systemUnderTest.ExecuteAsync("Extra work", "local/model", Environment.CurrentDirectory);
+
+        rejected.ExitCode.ShouldBe(-1);
+        rejected.StandardError.ShouldContain("four tasks");
+        cancellation.Cancel();
+        foreach (var execution in executions)
+            await Should.ThrowAsync<OperationCanceledException>(() => execution);
+    }
+
+    private static DelegationService CreateExecutor(Mock<IAgentService> agent) =>
+        new(agent.Object, Mock.Of<IHostApplicationLifetime>());
+
+    private static Mock<IAgentService> CreateBlockingAgent(TaskCompletionSource? started = null)
+    {
+        var cli = CreateAgent(Task.FromResult(new AgentResult(0, "", "")));
         cli.Setup(service => service.RunAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string _, string _, string _, CancellationToken token) => execution.Task.WaitAsync(token));
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        for (var index = 0; index < 4; index++)
-            await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
-
-        await Should.ThrowAsync<InvalidOperationException>(() =>
-            systemUnderTest.DelegateAsync("Extra work", "local/model", Path.GetTempPath()));
+            .Returns(async (string _, string _, string _, CancellationToken token) =>
+            {
+                started?.TrySetResult();
+                await Task.Delay(Timeout.Infinite, token);
+                return new AgentResult(0, "", "");
+            });
+        return cli;
     }
 
-    [Fact]
-    public async Task WhenHistoryIsFull_ShouldRejectRatherThanGrowMemoryOrDiscardResults()
+    private static Mock<IAgentService> CreateAgent(Task<AgentResult> execution)
     {
-        var cli = CreateCli(Task.FromResult(new OpenCodeResult(0, "retained", "")));
-        await using var systemUnderTest = new DelegationService(cli.Object);
-        string? firstTaskId = null;
-        for (var index = 0; index < 100; index++)
-        {
-            var task = await systemUnderTest.DelegateAsync("Do work", "local/model", Path.GetTempPath());
-            firstTaskId ??= task.TaskId;
-            await systemUnderTest.WaitForCompletionAsync(task.TaskId);
-        }
-
-        await Should.ThrowAsync<InvalidOperationException>(() =>
-            systemUnderTest.DelegateAsync("Extra work", "local/model", Path.GetTempPath()));
-        systemUnderTest.GetTask(firstTaskId!).StandardOutput.ShouldBe("retained");
-    }
-
-    private static Mock<IOpenCodeCli> CreateCli(Task<OpenCodeResult> execution)
-    {
-        var cli = new Mock<IOpenCodeCli>();
+        var cli = new Mock<IAgentService>();
         cli.Setup(service => service.ListModelsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeModels("test", ["local/model"]));
+            .ReturnsAsync(new AgentModels("test", ["local/model"]));
         cli.Setup(service => service.RunAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(execution);

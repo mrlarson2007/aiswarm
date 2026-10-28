@@ -17,7 +17,7 @@ public static class ServiceRegistration
         // Ensure .aiswarm directory exists
         Directory.CreateDirectory(aiswarmDirectory);
 
-        var databasePath = Path.Combine(aiswarmDirectory, "opencode-mvp.db");
+        var databasePath = Path.Combine(aiswarmDirectory, "aiswarm.db");
         services.AddDbContextFactory<CoordinationDbContext>(options =>
             options.UseSqlite($"Data Source={databasePath};Cache=Shared")
                 .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.AmbientTransactionWarning)));

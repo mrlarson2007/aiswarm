@@ -1,13 +1,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace AISwarm.Infrastructure.OpenCode;
-
-public record OpenCodeModels(string Version, IReadOnlyList<string> Models);
-
-public record OpenCodeResult(int ExitCode, string StandardOutput, string StandardError);
 
 public record OpenCodeProcessRequest(
     string Executable,
@@ -17,25 +14,12 @@ public record OpenCodeProcessRequest(
 
 public interface IOpenCodeProcessRunner
 {
-    Task<OpenCodeResult> RunAsync(
+    Task<AgentResult> RunAsync(
         OpenCodeProcessRequest request,
         CancellationToken cancellationToken = default);
 }
 
-public interface IOpenCodeCli
-{
-    Task<OpenCodeModels> ListModelsAsync(
-        string workingDirectory,
-        CancellationToken cancellationToken = default);
-
-    Task<OpenCodeResult> RunAsync(
-        string instructions,
-        string model,
-        string workingDirectory,
-        CancellationToken cancellationToken = default);
-}
-
-public class OpenCodeCli : IOpenCodeCli
+public class OpenCodeCli : IAgentService
 {
     private readonly IOpenCodeProcessRunner _processRunner;
     private readonly string _executable;
@@ -53,7 +37,7 @@ public class OpenCodeCli : IOpenCodeCli
         _executable = executable;
     }
 
-    public async Task<OpenCodeModels> ListModelsAsync(
+    public async Task<AgentModels> ListModelsAsync(
         string workingDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -76,10 +60,10 @@ public class OpenCodeCli : IOpenCodeCli
             throw new InvalidOperationException(
                 "OpenCode returned an empty or malformed model listing; expected provider/model IDs.");
 
-        return new OpenCodeModels(version.StandardOutput.Trim(), models);
+        return new AgentModels(version.StandardOutput.Trim(), models);
     }
 
-    public Task<OpenCodeResult> RunAsync(
+    public async Task<AgentResult> RunAsync(
         string instructions,
         string model,
         string workingDirectory,
@@ -88,13 +72,43 @@ public class OpenCodeCli : IOpenCodeCli
         if (string.IsNullOrEmpty(model) || !IsValidModel(model))
             throw new ArgumentException("An explicit provider/model ID is required.", nameof(model));
 
-        return _processRunner.RunAsync(
+        var result = await _processRunner.RunAsync(
             new OpenCodeProcessRequest(
                 _executable,
                 ["run", "--model", model, "--format", "json"],
                 workingDirectory,
                 instructions),
             cancellationToken);
+        if (result.ExitCode == 0 && HasUnsuccessfulOutput(result.StandardOutput))
+            return result with
+            {
+                IsError = true,
+                StandardError = result.StandardError +
+                    "\nOpenCode emitted an error event or output was truncated; success cannot be confirmed."
+            };
+        return result;
+    }
+
+    private static bool HasUnsuccessfulOutput(string output)
+    {
+        if (output.EndsWith("\n[output truncated]", StringComparison.Ordinal))
+            return true;
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(line);
+                if (document.RootElement.ValueKind == JsonValueKind.Object
+                    && document.RootElement.TryGetProperty("type", out var type)
+                    && type.ValueKind == JsonValueKind.String && type.GetString() == "error")
+                    return true;
+            }
+            catch (JsonException)
+            {
+                // OpenCode diagnostics can appear alongside JSON events.
+            }
+        }
+        return false;
     }
 
     private static bool IsValidModel(string model)
@@ -105,7 +119,7 @@ public class OpenCodeCli : IOpenCodeCli
             !model.Any(character => char.IsWhiteSpace(character) || char.IsControl(character));
     }
 
-    private async Task<OpenCodeResult> DiscoverAsync(
+    private async Task<AgentResult> DiscoverAsync(
         IReadOnlyList<string> arguments,
         string workingDirectory,
         CancellationToken cancellationToken)
@@ -134,7 +148,7 @@ public class OpenCodeProcessRunner : IOpenCodeProcessRunner
         _maxCapturedCharacters = maxCapturedCharacters;
     }
 
-    public async Task<OpenCodeResult> RunAsync(
+    public async Task<AgentResult> RunAsync(
         OpenCodeProcessRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -187,7 +201,7 @@ public class OpenCodeProcessRunner : IOpenCodeProcessRunner
             await process.WaitForExitAsync(cancellationToken);
             var captured = await Task.WhenAll(standardOutput, standardError)
                 .WaitAsync(cancellationToken);
-            return new OpenCodeResult(process.ExitCode, captured[0], captured[1]);
+            return new AgentResult(process.ExitCode, captured[0], captured[1]);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

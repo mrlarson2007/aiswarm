@@ -1,3 +1,4 @@
+using AISwarm.Infrastructure;
 using AISwarm.Infrastructure.OpenCode;
 using System.Diagnostics;
 using Moq;
@@ -8,6 +9,32 @@ namespace AISwarm.Tests.Services;
 [Collection("OpenCode processes")]
 public class OpenCodeCliTests
 {
+    [Theory]
+    [InlineData("{\"type\":\"error\",\"error\":{\"message\":\"provider failed\"}}")]
+    [InlineData("{\"type\":\"text\"}\n{\"type\":\"error\"}\n")]
+    [InlineData("{\"type\":\"text\"}\n[output truncated]")]
+    public async Task WhenRunReportsErrorWithZeroExit_ShouldPreserveExitAndFlagNeutralFailure(string output)
+    {
+        var runner = new Mock<IOpenCodeProcessRunner>();
+        runner.Setup(service => service.RunAsync(
+                It.IsAny<OpenCodeProcessRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentResult(0, output, ""));
+        var systemUnderTest = new OpenCodeCli(runner.Object);
+
+        var result = await systemUnderTest.RunAsync("Do work", "local/model", Environment.CurrentDirectory);
+
+        result.ExitCode.ShouldBe(0);
+        result.StandardOutput.ShouldBe(output);
+        result.IsError.ShouldBeTrue();
+        result.StandardError.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void WhenUsingOpenCodeCli_ShouldImplementProviderNeutralAgentService()
+    {
+        typeof(IAgentService).IsAssignableFrom(typeof(OpenCodeCli)).ShouldBeTrue();
+    }
+
     [Theory]
     [InlineData(8192)]
     [InlineData(65536)]
@@ -65,7 +92,7 @@ public class OpenCodeCliTests
         runner.Setup(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeResult(4, "unsupported version option", ""));
+            .ReturnsAsync(new AgentResult(4, "unsupported version option", ""));
         var cli = new OpenCodeCli(runner.Object);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -109,10 +136,10 @@ public class OpenCodeCliTests
             {
                 var index = calls++;
                 if (index != cancelledCommand)
-                    return Task.FromResult(new OpenCodeResult(0, outputs[index], ""));
+                    return Task.FromResult(new AgentResult(0, outputs[index], ""));
 
                 cancellation.Cancel();
-                return Task.FromCanceled<OpenCodeResult>(token);
+                return Task.FromCanceled<AgentResult>(token);
             });
         var cli = new OpenCodeCli(runner.Object);
 
@@ -301,7 +328,7 @@ public class OpenCodeCliTests
     public async Task WhenExecutableIsMissing_ShouldExplainHowToFixDiscovery()
     {
         var executable = Path.Combine(Directory.GetCurrentDirectory(), "missing-opencode-executable");
-        IOpenCodeCli cli = new OpenCodeCli(executable);
+        IAgentService cli = new OpenCodeCli(executable);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => cli.ListModelsAsync(Directory.GetCurrentDirectory()));
@@ -319,13 +346,13 @@ public class OpenCodeCliTests
         var runner = new Mock<IOpenCodeProcessRunner>();
         OpenCodeProcessRequest? captured = null;
         using var cancellation = new CancellationTokenSource();
-        var expected = new OpenCodeResult(exitCode, "json output", "diagnostic");
+        var expected = new AgentResult(exitCode, "json output", "diagnostic");
         runner.Setup(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
                 cancellation.Token))
             .Callback<OpenCodeProcessRequest, CancellationToken>((request, _) => captured = request)
             .ReturnsAsync(expected);
-        IOpenCodeCli cli = new OpenCodeCli(runner.Object, "custom opencode");
+        IAgentService cli = new OpenCodeCli(runner.Object, "custom opencode");
         const string instructions = "quotes \" ' $(touch unsafe)\n--model other/model";
         var directory = Directory.GetCurrentDirectory();
 
@@ -375,7 +402,7 @@ public class OpenCodeCliTests
             .ReturnsAsync(() =>
             {
                 var index = call++;
-                return new OpenCodeResult(
+                return new AgentResult(
                     index == failedCommand ? 7 : 0,
                     outputs[index],
                     index == failedCommand ? "discovery failed" : "");
@@ -418,8 +445,8 @@ public class OpenCodeCliTests
         runner.SetupSequence(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeResult(0, "1.2.3", ""))
-            .ReturnsAsync(new OpenCodeResult(0, help, ""));
+            .ReturnsAsync(new AgentResult(0, "1.2.3", ""))
+            .ReturnsAsync(new AgentResult(0, help, ""));
         var cli = new OpenCodeCli(runner.Object);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -436,7 +463,7 @@ public class OpenCodeCliTests
         runner.Setup(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeResult(0, " \n", ""));
+            .ReturnsAsync(new AgentResult(0, " \n", ""));
         var cli = new OpenCodeCli(runner.Object);
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -451,9 +478,9 @@ public class OpenCodeCliTests
         runner.SetupSequence(x => x.RunAsync(
                 It.IsAny<OpenCodeProcessRequest>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OpenCodeResult(0, "1.2.3\n", ""))
-            .ReturnsAsync(new OpenCodeResult(0, "--model MODEL --format json", ""))
-            .ReturnsAsync(new OpenCodeResult(0, models, ""));
+            .ReturnsAsync(new AgentResult(0, "1.2.3\n", ""))
+            .ReturnsAsync(new AgentResult(0, "--model MODEL --format json", ""))
+            .ReturnsAsync(new AgentResult(0, models, ""));
         return runner;
     }
 

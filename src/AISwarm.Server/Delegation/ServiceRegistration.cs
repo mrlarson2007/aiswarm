@@ -1,4 +1,5 @@
 using AISwarm.Infrastructure.OpenCode;
+using AISwarm.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,17 +11,10 @@ public static class ServiceRegistration
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddSingleton<IOpenCodeCli>(_ =>
+        services.AddSingleton<IAgentService>(_ =>
             new OpenCodeCli(configuration["OpenCode:Executable"] ?? "opencode"));
         services.AddSingleton<DelegationService>();
         services.AddHostedService(provider => provider.GetRequiredService<DelegationService>());
-        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler
-        {
-            AllowAutoRedirect = false,
-            UseProxy = false
-        }));
-        services.AddSingleton(provider => new LocalLifecycleHook(
-            provider.GetRequiredService<HttpClient>(), configuration["OpenCode:HookEndpoint"]));
         return services;
     }
 }

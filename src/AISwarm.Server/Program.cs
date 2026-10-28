@@ -28,12 +28,10 @@ internal static class Program
         builder.Services
             .AddInfrastructureServices(builder.Configuration)
             .AddOpenCodeDelegation(builder.Configuration)
-#pragma warning disable MCP9005 // Desktop lifecycle diagnostics; automatic resumption is not guaranteed.
-            .AddMcpServer(options => options.Capabilities = new() { Logging = new() })
-#pragma warning restore MCP9005
+            .AddMcpServer()
+            .WithDelegationTasks()
             .WithStdioServerTransport()
-            .WithToolsFromAssembly()
-            .WithResourcesFromAssembly();
+            .WithToolsFromAssembly();
 
         var app = builder.Build();
 

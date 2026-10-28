@@ -8,7 +8,8 @@ logs go to stderr, and AISwarm does not run an HTTP server.
 
 - .NET 9 SDK and runtime.
 - A native OpenCode executable, installed and configured for your providers/models.
-- Claude Desktop or another stdio MCP client.
+- A stdio MCP client supporting the official Tasks extension for delegation
+  (MCP protocol `2026-07-28` or later).
 
 From the repository root:
 
@@ -39,17 +40,15 @@ with absolute paths on your machine:
 
 Restart Desktop after changing its configuration. `WorkingDirectory` is the
 absolute repository directory, not a shell variable or Desktop's current folder.
+Desktop's support for the Tasks extension and automatic conversation resumption
+has not been verified. Unsupported clients can discover models, but delegation
+fails explicitly rather than silently falling back to a blocking call.
 
 Optional environment settings:
 
 | Setting | Meaning |
 | --- | --- |
 | `OpenCode__Executable` | Absolute path to a native executable; defaults to `opencode` on `PATH`. |
-| `OpenCode__HookEndpoint` | Fixed local observer URL, for example `http://127.0.0.1:8099/events`. |
-
-Omit `OpenCode__HookEndpoint` unless you separately run a local callback observer.
-Desktop has no native arbitrary callback receiver configured by this example;
-there is no built-in Desktop wake mechanism.
 
 ## Discover and delegate
 
@@ -76,7 +75,8 @@ Example tool arguments (replace the model placeholder with a discovered ID):
 }
 ```
 
-`delegate_task` returns a task ID for later retrieval. The timeout defaults to
+`delegate_task` uses the official MCP Tasks extension to return a task ID while
+OpenCode continues in the background. The timeout defaults to
 600 seconds and cannot exceed 86,400 seconds.
 
 Configure local models in OpenCode yourself (for example, using Ollama).
@@ -85,9 +85,9 @@ AISwarm does not bypass OpenCode permissions or provide a YOLO mode.
 
 ### Results and retained memory tools
 
-- `get_task_result(taskId)` retrieves task state and captured results.
-- `cancel_task(taskId)` cancels a task with best-effort termination of its live root process tree.
-- Read MCP resource `aiswarm://tasks/{taskId}` for task details/results.
+- Use the extension's `tasks/get` to retrieve task state and final results.
+- Use `tasks/cancel` to cancel a task with best-effort termination of its live root process tree.
+- Custom `get_task_result`, `cancel_task`, and task resources have been removed.
 - Existing save/read/list/wait memory tools remain available.
 
 Use separate directories or Git worktrees for concurrent edits to avoid conflicts.
@@ -108,35 +108,47 @@ opencode run --model <exact-discovered-id> --format json
 Instructions are supplied through stdin, not an interactive terminal. Raw NDJSON
 stdout is retained rather than converted into a fabricated final answer.
 
-## Lifecycle notifications and optional local hooks
+## MCP task lifecycle
 
-The supervisor emits `Running`, `Completed`, `Failed`, and `Cancelled` hooks as
-MCP `notifications/message` diagnostics with logger `aiswarm.tasks`. If configured,
-it also sends a local JSON callback containing only
-`{taskId,state,resultUri,exitCode}` — never the prompt or captured output.
+AISwarm uses `ModelContextProtocol` and the official
+`ModelContextProtocol.Extensions.Tasks` package at version **2.3.0**, the latest
+release verified for this change. The SDK manages task creation, background
+execution, cancellation, state, and results; AISwarm does not maintain a parallel
+task registry. OpenCode implements the provider-neutral `IAgentService` contract.
 
-Callback URLs must use HTTP(S) and a literal loopback IP address: no DNS hostnames,
-credentials, or fragments. Redirects and proxy use are disabled. Hooks are local
-only; there is no arbitrary shell hook. Delivery failures are retained as
-`HookError` and do not discard task results.
+The client must opt into `io.modelcontextprotocol/tasks` in the request's
+`io.modelcontextprotocol/clientCapabilities` metadata. The previous diagnostic
+logging notifications and custom HTTP lifecycle callbacks have been removed.
 
-**MCP diagnostic notifications DO NOT guarantee that Desktop resumes.** The user
-may request the result once using the task ID or resource URI. There is no
-automated polling or UI automation.
+SDK 2.3.0 does not automatically publish task transitions. A small stdio-only
+adapter sends the SDK's typed `notifications/tasks/status` messages after SDK
+store updates, including the final result, without periodic status calls. These
+are best-effort transport notifications, not a negotiated subscription or durable
+event stream; the SDK's subscription API does not yet expose task subscriptions.
+Clients must handle the notification method explicitly. `tasks/get` remains
+available for one-time retrieval or recovery after a missed notification.
+Notifications may be duplicated or arrive out of order; use `lastUpdatedAt` and
+the authoritative task state rather than treating arrival order as state order.
+
+**A protocol notification does not guarantee that Claude Desktop resumes.**
+There is no UI automation or built-in Desktop wake mechanism. Live client
+compatibility must be checked before relying on unattended delegation.
 
 ## Limits and persistence
 
-- At most four concurrent tasks and 100 task records over the server's lifetime.
+- At most four concurrent agent executions.
 - Each output stream is capped at 1 Mi characters, with a truncation marker.
-- Error NDJSON or truncated stdout makes a task `Failed` even with exit code 0;
-  these failures retain the actual process exit code. Startup failure, cancellation,
-  and timeout use synthetic exit code `-1`.
+- Process errors, error NDJSON, truncated stdout, and timeouts produce tool errors.
+  Under SDK semantics, a completed task can contain a `CallToolResult` with
+  `IsError = true`; clients must check that flag, not just task status.
 - Termination is best-effort: deliberately detached descendants can outlive the
   root. The MVP does not provide process-group/job-object containment.
-- Host shutdown requests task termination. Task records/results exist in memory only and
-  expire when the process exits: no durable replay or restart recovery.
-- Retained memory uses a fresh SQLite database at `.aiswarm/opencode-mvp.db`.
-  There is no migration; the old database is left untouched.
+- Host shutdown requests task termination and awaits active execution cleanup.
+  The SDK's task records/results are
+  retained in memory with a two-day TTL and are lost when the process exits:
+  no durable replay or restart recovery.
+- Shared memory uses the existing SQLite filename `.aiswarm/aiswarm.db`.
+  No schema migration or compatibility with earlier installations is provided.
 
 ## Development and verification scope
 
@@ -150,12 +162,12 @@ OpenCode and Claude Desktop were unavailable in the validation environment.
 The CLI contract was checked against current official development sources
 ([`cli.mdx`](https://github.com/anomalyco/opencode/blob/dev/packages/web/src/content/docs/cli.mdx)
 and implementations under [`packages/cli`](https://github.com/anomalyco/opencode/tree/dev/packages/cli)), not a live
-OpenCode/Desktop session. An in-process MCP test verifies transport from lifecycle
-hook to resource retrieval using a simulated CLI; native process tests cover
-Linux. This does not verify Desktop auto-resume.
+OpenCode/Desktop session. In-process MCP tests exercise the SDK task lifecycle
+with a simulated agent; native process tests cover Linux. This does not verify
+Desktop auto-resume.
 
-OpenCode server API, A2A, distributed queues, and standard MCP task integration
-are deferred, not MVP features. The [historical documentation index](docs/README.md)
+OpenCode server API, A2A, and distributed queues remain deferred.
+The [historical documentation index](docs/README.md)
 is **superseded** for current usage by this README.
 
 Licensed under the [MIT License](LICENSE).

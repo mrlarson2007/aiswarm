@@ -1,25 +1,21 @@
 using System.ComponentModel;
 using System.Text.Json;
-using AISwarm.Infrastructure.OpenCode;
+using AISwarm.Infrastructure;
 using AISwarm.Server.Delegation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-#pragma warning disable MCP9005 // Desktop lifecycle diagnostics are not an automatic task-resumption protocol.
-
 namespace AISwarm.Server.McpTools;
 
 [McpServerToolType]
-[McpServerResourceType]
 public class OpenCodeMcpTool(
-    IOpenCodeCli cli,
-    DelegationService tasks,
-    LocalLifecycleHook localHook)
+    IAgentService agent,
+    DelegationService executor)
 {
     [McpServerTool(Name = "list_models", ReadOnly = true)]
-    [Description("Discover OpenCode provider/model IDs in a working directory. Listing does not prove a model is local or reachable.")]
-    public async Task<OpenCodeModels> ListModelsAsync(
-        [Description("Existing absolute working directory used to resolve OpenCode configuration.")]
+    [Description("Discover configured provider/model IDs. Listing does not prove a model is local or reachable.")]
+    public async Task<AgentModels> ListModelsAsync(
+        [Description("Existing absolute working directory used to resolve agent configuration.")]
         string workingDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -27,63 +23,29 @@ public class OpenCodeMcpTool(
             throw new ArgumentException("Working directory must be an existing absolute path.", nameof(workingDirectory));
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
-        return await cli.ListModelsAsync(workingDirectory, timeout.Token);
+        return await agent.ListModelsAsync(workingDirectory, timeout.Token);
     }
 
     [McpServerTool(Name = "delegate_task")]
-    [Description("Run instructions in a background OpenCode CLI process using an explicit discovered provider/model ID. Returns immediately after validation. Lifecycle diagnostics are pushed, but Claude Desktop may not resume automatically; retrieve the result once requested, rather than polling.")]
-    public Task<DelegatedTask> DelegateTaskAsync(
-        McpServer server,
+    [Description("Execute instructions as an MCP SDK task. Requires the io.modelcontextprotocol/tasks extension and July 2026 or later protocol. Use tasks/get for results and tasks/cancel for cancellation. Host support, including Claude Desktop, must be verified; automatic resumption is not guaranteed.")]
+    public async Task<CallToolResult> DelegateTaskAsync(
         [Description("Instructions for this task; no named personas.")]
         string instructions,
-        [Description("Exact provider/model ID from list_models. No default or fallback model is selected by AISwarm.")]
+        [Description("Exact provider/model ID from list_models. No default or fallback model is selected.")]
         string model,
         [Description("Existing absolute working directory. Use a separate worktree for concurrent edits.")]
         string workingDirectory,
         [Description("Execution timeout in seconds, from 1 to 86400.")]
         int timeoutSeconds = 600,
-        CancellationToken cancellationToken = default) =>
-        tasks.DelegateAsync(
-            instructions, model, workingDirectory,
-            (snapshot, token) => NotifyAsync(server, snapshot, token),
-            TimeSpan.FromSeconds(timeoutSeconds), cancellationToken);
-
-    [McpServerTool(Name = "get_task_result", ReadOnly = true)]
-    [Description("Retrieve retained task state, raw OpenCode JSON event output, stderr, exit code and hook errors. Use on completion or explicit user request, not in a polling loop.")]
-    public DelegatedTask GetTaskResult(string taskId) => tasks.GetTask(taskId);
-
-    [McpServerTool(Name = "cancel_task", Destructive = true)]
-    [Description("Request cancellation of a background task and terminate its process tree.")]
-    public bool CancelTask(string taskId) => tasks.CancelTask(taskId);
-
-    [McpServerResource(UriTemplate = "aiswarm://tasks/{taskId}", MimeType = "application/json")]
-    [Description("Retained background task state and result, available for this server process lifetime.")]
-    public string ReadTask(string taskId) =>
-        JsonSerializer.Serialize(tasks.GetTask(taskId), JsonSerializerOptions.Web);
-
-    private Task NotifyAsync(
-        McpServer server,
-        DelegatedTask snapshot,
-        CancellationToken cancellationToken) =>
-        localHook.NotifyAsync(snapshot, cancellationToken, SendHostAsync(server, snapshot, cancellationToken));
-
-    private static async Task SendHostAsync(
-        McpServer server,
-        DelegatedTask snapshot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
-        await server.SendNotificationAsync(NotificationMethods.LoggingMessageNotification,
-                new LoggingMessageNotificationParams
-                {
-                    Level = snapshot.State == "Failed" ? LoggingLevel.Error : LoggingLevel.Info,
-                    Logger = "aiswarm.tasks",
-                    Data = JsonSerializer.SerializeToElement(new
-                    {
-                        snapshot.TaskId,
-                        snapshot.State,
-                        snapshot.ResultUri,
-                        snapshot.ExitCode
-                    }, JsonSerializerOptions.Web)
-                }, cancellationToken: cancellationToken);
+        var result = await executor.ExecuteAsync(
+            instructions, model, workingDirectory, TimeSpan.FromSeconds(timeoutSeconds), cancellationToken);
+        return new CallToolResult
+        {
+            IsError = result.IsError || result.ExitCode != 0,
+            Content = [new TextContentBlock { Text = JsonSerializer.Serialize(result, JsonSerializerOptions.Web) }],
+            StructuredContent = JsonSerializer.SerializeToElement(result, JsonSerializerOptions.Web)
+        };
     }
 }
